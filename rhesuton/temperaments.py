@@ -1,15 +1,30 @@
+"""Tuning temperaments.
+
+Resources:
+  - https://www.earmaster.com/fr/music-theory-online/ch06/chapter-6-2.html
+  - https://en.wikipedia.org/wiki/Meantone_temperament
+  - https://en.wikipedia.org/wiki/Pythagorean_tuning
+"""
 import numpy as np
 
 from rhesuton.constants import DODE, REF_OCTAVE
 from rhesuton.midi import pitch_2_frequency
 
 
-EQUAL_TEMPERAMENT_RATIOS = np.power(2., np.arange(DODE) / DODE)
-THOMAS_YOUNG_TEMPERAMENT_RATIOS = np.array([
-    1, 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
-    1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
-    1.878842233,
-])
+FREQUENCIES_RATIOS = {
+    'Equal': np.power(2., np.arange(DODE) / DODE),
+    'Young': np.array([
+        1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
+        1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
+        1.878842233,
+    ]),
+    'Pythagorean': np.array([
+        1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
+        7./4., 11./6.,
+    ]),
+    'Random': 1. + np.sort(np.random.random(DODE)),
+}
+"""dict: Temperament name (str) -> Frequency ratios (array)."""
 
 
 class Temperament:
@@ -47,15 +62,14 @@ class Temperament:
         )
 
 
-c0 = pitch_2_frequency(60)
-EQUAL_TEMPERAMENT = Temperament.from_ratios('Equal', c0, EQUAL_TEMPERAMENT_RATIOS)
-YOUNG_TEMPERAMENT = Temperament.from_ratios('Young', c0, THOMAS_YOUNG_TEMPERAMENT_RATIOS)
+C4 = pitch_2_frequency(60)
+"""float: Reference base c frequency."""
 
+TEMPERAMENTS = {}
+"""dict: Temperament name (str) -> Temperament."""
 
-TEMPERAMENTS = {
-    'Equal': EQUAL_TEMPERAMENT,
-    'Young': YOUNG_TEMPERAMENT,
-}
+for name, ratios in FREQUENCIES_RATIOS.items():
+    TEMPERAMENTS[name] = Temperament.from_ratios(name, C4, ratios)
 
 
 def get_temperament_by_name(name):
