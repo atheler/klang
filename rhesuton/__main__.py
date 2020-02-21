@@ -2,25 +2,35 @@
 # -*- coding: utf-8 -*-
 """Had to run as root!"""
 import collections
-import threading
 import string
 
-import pynput.keyboard
+from pynput.keyboard import Listener, Key
 
 from config import TEMPERAMENT_NAME
 from rhesuton.synthesizer import CHAR_2_BASE_PITCH, Synthesizer
 from rhesuton.temperaments import TEMPERAMENTS, get_temperament_by_name
 
 
+DIGITS = set(string.digits)
+"""set: String digits. We use this since '' in string.digits would return
+true.
+"""
+
+
 class App:
 
-    """Synthesizer application object.
-
-    Debounce key inputs.
+    """Synthesizer application object. Handles keyboard listener (with
+    debouncing), user input and thread managment.
     """
 
     def __init__(self, synthesizer):
         self.synthesizer = synthesizer
+
+        self.keyWorker = Listener(
+            on_press=self.on_press,
+            on_release=self.on_release,
+            suppress=True,
+        )
         self.keyState = collections.defaultdict(bool)
 
     def do_stuff(self, key, down=True):
@@ -28,25 +38,27 @@ class App:
         try:
             char = key.char
         except AttributeError:
-            return
+            char = ''
+
+        if key == Key.esc or char == '\x03':  # 'c' + ctrl (left)
+            return self.stop()
 
         if char in CHAR_2_BASE_PITCH:
-            self.synthesizer.play_key_note(char.lower(), noteOn=down)
+            return self.synthesizer.play_key_note(char.lower(), noteOn=down)
 
         if not down:
             return
 
-        if char in string.digits:
+        if char in DIGITS:
             # Switch temperament
             temps = list(TEMPERAMENTS.items())
             idx = int(char)
             if idx < len(temps):
                 name, temperament = temps[idx]
                 self.synthesizer.temperament = temperament
-
                 print('Switched to %s temperament' % temperament)
         else:
-            # TODO: Switch temperament? Volumen?
+            # TODO: Volumen? Octave?
             pass
 
     def on_press(self, key):
@@ -55,8 +67,6 @@ class App:
             return
 
         self.keyState[key] = True
-        print(key, 'pressed')
-
         self.do_stuff(key, down=True)
 
     def on_release(self, key):
@@ -65,25 +75,20 @@ class App:
             return
 
         self.keyState[key] = False
-        print(key, 'released')
-
         self.do_stuff(key, down=False)
 
-    def process_key_events(self):
-        """pynput main loop. Can be used as thread target function."""
-        with pynput.keyboard.Listener(
-                on_press=self.on_press,
-                on_release=self.on_release) as listener:
-            listener.join()
-
     def run(self):
-        keyWorker = threading.Thread(target=self.process_key_events)
-        keyWorker.start()
+        """Main loop."""
+        self.keyWorker.start()
         self.synthesizer.start()
 
     def start(self):
         """Start application."""
         self.run()
+
+    def stop(self):
+        """Shutdown application."""
+        self.synthesizer.stop()
 
 
 if __name__ == '__main__':
