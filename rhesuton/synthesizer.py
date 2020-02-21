@@ -7,14 +7,14 @@ import pyaudio
 from config import SAMPLING_RATE, ATTACK_RELEASE
 from rhesuton.constants import TAU, REF_OCTAVE, DODE
 from rhesuton.math import wrap
-from rhesuton.temperaments import EQUAL_TEMPERAMENT
+from rhesuton.temperaments import get_temperament_by_name
 
 
 DT = 1. / SAMPLING_RATE
 """float: Sampling interval."""
 
 
-KEY_2_PTICH = {
+CHAR_2_BASE_PITCH = {
     'a': 0,
     'w': 1,
     's': 2,
@@ -35,10 +35,13 @@ KEY_2_PTICH = {
 """dict: Keyboard character (str) -> Pitch number."""
 
 
-def key_2_pitch(char):
+EQUAL_TEMPERAMENT = get_temperament_by_name('Equal')
+
+
+def char_2_pitch(char):
     """Keyboard character -> frequency."""
     try:
-        return KEY_2_PTICH[char.lower()] + REF_OCTAVE * DODE
+        return CHAR_2_BASE_PITCH[char.lower()] + REF_OCTAVE * DODE
     except KeyError:
         raise ValueError('Invalid char %r' % char)
 
@@ -95,56 +98,28 @@ class Oscillator:
 
 
 class Synthesizer:
-    def __init__(self, temperament):
+    def __init__(self, temperament=EQUAL_TEMPERAMENT):
         self.temperament = temperament
-
-        self.keyState = collections.defaultdict(bool)
         self.oscillators = {}
 
-    def on_press(self, key):
+    def play_key_note(self, char, noteOn=True):
         try:
-            char = key.char
-        except AttributeError:
-            return
-
-        if self.keyState[char]:
-            # Debounce
-            return
-
-        self.keyState[char] = True
-        self.process_key(char, down=True)
-
-    def on_release(self, key):
-        try:
-            char = key.char
-        except AttributeError:
-            return
-
-        if not self.keyState[char]:
-            # Debounce
-            return
-
-        self.keyState[char] = False
-        self.process_key(char, down=False)
-
-    def process_key(self, char, down=True):
-        try:
-            pitch = key_2_pitch(char)
+            pitch = char_2_pitch(char)
         except ValueError:
             return
 
         frequency = self.temperament(pitch)
 
-        if down:
+        if noteOn:
             # New note
             osc = Oscillator(frequency)
             self.oscillators[frequency] = osc
         elif frequency in self.oscillators:
             # Erase old note
-            #del self.oscillators[frequency]
             self.oscillators[frequency].terminate()
 
     def stream_callback(self, inData, frameCount, timeInfo, status):
+        """Audio stream callback for pyaudio."""
         data = np.zeros(frameCount, dtype=np.float32)
         for freq, osc in dict(self.oscillators).items():
             data += .1 * osc.sample(frameCount)
