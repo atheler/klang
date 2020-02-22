@@ -1,0 +1,2 @@
+class RhesutonError(Exception):
+    pass
