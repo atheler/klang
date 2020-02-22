@@ -10,6 +10,9 @@ class AlreadyConnected(RhesutonError):
 
 
 class Connectable:
+
+    """Base class."""
+
     def __init__(self):
         self.connections = set()
 
@@ -32,6 +35,19 @@ class Connectable:
 
 
 class Input(Connectable):
+
+    """Input slot.
+
+    Can be connected to only one output.
+    """
+
+    def __init__(self, value=0.):
+        """Kwargs:
+            value (?): Initial placeholder value.
+        """
+        super().__init__()
+        self._value = value
+
     def connect(self, output):
         assert isinstance(output, Output)
         if self.connected:
@@ -42,14 +58,23 @@ class Input(Connectable):
 
     def get_value(self):
         if not self.connected:
-            raise NotConnected
+            return self._value
 
         output, = self.connections
         return output.get_value()
 
 
 class Output(Connectable):
+
+    """Output slot.
+
+    Holds the value. Can be connected to multiple inputs.
+    """
+
     def __init__(self, value=0.):
+        """Kwargs:
+            value (?): Initial value.
+        """
         super().__init__()
         self._value = value
 
