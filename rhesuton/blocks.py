@@ -1,3 +1,7 @@
+import collections
+
+import matplotlib.pyplot as plt
+
 from rhesuton.errors import RhesutonError
 
 
@@ -55,6 +59,9 @@ class Input(Connectable):
             raise AlreadyConnected(msg)
 
         super().connect(output)
+
+    def set_value(self, value):
+        self._value = value
 
     def get_value(self):
         if not self.connected:
@@ -144,3 +151,21 @@ class Block(object):
             return '%s(%s)' % (self.__class__.__name__, self.name)
 
         return self.__class__.__name__
+
+
+class Plotter(Block):
+    def __init__(self):
+        self.buffers = collections.defaultdict(list)
+
+    def register(self, output):
+        self.inputs.append(Input())
+        output.connect.self.inputs[-1]
+
+    def update(self):
+        for input in self.inputs:
+            value = input.get_value()
+            self.buffers[input].append(value)
+
+    def plot(self):
+        for input, chunks in self.buffers.items():
+            plt.plot(np.concatenate(chunks))

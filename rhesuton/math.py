@@ -17,3 +17,8 @@ def normalize_values(array):
         raise ValueError('Zero amplitude! Can not normalize!')
 
     return array / maxAmplitude
+
+
+def clip(value, lower, upper):
+    """Clip value to [lower, upper]."""
+    return min(max(value, lower), upper)

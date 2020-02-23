@@ -1,11 +1,8 @@
 """Audio effects."""
 from rhesuton.blocks import Block
+from rhesuton.math import clip
 from rhesuton.oscillators import Oscillator
-
-
-def clip(value, lower, upper):
-    """Clip value to [lower, upper]."""
-    return min(max(value, lower), upper)
+from rhesuton.constants import TAU
 
 
 class Tremolo(Block):
@@ -20,20 +17,23 @@ class Tremolo(Block):
         self.intensity.set_value(intensity)
 
         self.lfo = Oscillator(frequency=rate)
+        self.lfo.currentPhase = TAU / 4.
 
     def update(self):
         # Fetch inputs
         samples = self.input.get_value()
         rate = self.rate.get_value()
-        intensity = clip(self.intensity.get_value(), 0., 1.)
+        intensity = self.intensity.get_value()
 
         # Update LFO
         self.lfo.frequency.set_value(rate)
         self.lfo.update()
 
-        # Calculate tremolo envelope
+        # Calculate tremolo envelope. [-1, +1] mod signal gets mapped onto
+        # [0., 1.] and then used to subtract from unity. Depending on intensity
+        # level.
         mod = self.lfo.output.get_value()
-        env = 1. - intensity * ((1. + mod) / 2.)
+        env = 1. - clip(intensity, 0., 1.) * ((1. + mod) / 2.)
 
         # Set output
         self.output.set_value(env * samples)
