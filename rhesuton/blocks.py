@@ -1,15 +1,22 @@
 import collections
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from rhesuton.errors import RhesutonError
 
 
-class NotConnected(RhesutonError):
+class NotConnectedError(RhesutonError):
+
+    """Connectable is not connected."""
+
     pass
 
 
-class AlreadyConnected(RhesutonError):
+class InputAlreadyConnectedError(RhesutonError):
+
+    """Connectable already connected."""
+
     pass
 
 
@@ -17,21 +24,30 @@ class Connectable:
 
     """Base class."""
 
-    def __init__(self):
+    def __init__(self, owner, value=0.):
+        self.owner = owner
+        self.value = value
         self.connections = set()
 
     def connect(self, other):
+        """Make a connection to another connectable."""
         self.connections.add(other)
         other.connections.add(self)
 
-    """
     def disconnect(self, other):
+        """Disconnect from another connectable."""
         self.connections.remove(other)
         other.connections.remove(self)
-    """
+
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
 
     @property
     def connected(self):
+        """Is connected?"""
         return bool(self.connections)
 
     def __str__(self):
@@ -45,30 +61,20 @@ class Input(Connectable):
     Can be connected to only one output.
     """
 
-    def __init__(self, value=0.):
-        """Kwargs:
-            value (?): Initial placeholder value.
-        """
-        super().__init__()
-        self._value = value
-
     def connect(self, output):
         assert isinstance(output, Output)
         if self.connected:
-            msg = 'Only one connection possible for Input block!'
-            raise AlreadyConnected(msg)
+            msg = 'Only one connection possible for Input owner!'
+            raise InputAlreadyConnectedError(msg)
 
         super().connect(output)
 
-    def set_value(self, value):
-        self._value = value
-
     def get_value(self):
         if not self.connected:
-            return self._value
+            return self.value
 
         output, = self.connections
-        return output.get_value()
+        return output.value
 
 
 class Output(Connectable):
@@ -78,30 +84,17 @@ class Output(Connectable):
     Holds the value. Can be connected to multiple inputs.
     """
 
-    def __init__(self, value=0.):
-        """Kwargs:
-            value (?): Initial value.
-        """
-        super().__init__()
-        self._value = value
-
     def connect(self, input):
         assert isinstance(input, Input)
         super().connect(input)
 
-    def get_value(self):
-        return self._value
 
-    def set_value(self, value):
-        self._value = value
-
-
-class Block(object):
+class Block:
 
     """Block base class.
 
     Attributes:
-        name (str): Custom name of the block (if any).
+        name (str): Custom name of the owner (if any).
         inputs (list of Input): Input connection.
         outputs (list of Output): Output connection.
     """
@@ -111,11 +104,11 @@ class Block(object):
         Kwargs:
             nInputs (int): Number of inputs.
             nOutputs (int): Number of outputs.
-            name (str): Custom name of the block.
+            name (str): Custom name of the owner.
         """
         self.name = name
-        self.inputs = [Input() for _ in range(nInputs)]
-        self.outputs = [Output() for _ in range(nOutputs)]
+        self.inputs = [Input(owner=self) for _ in range(nInputs)]
+        self.outputs = [Output(owner=self) for _ in range(nOutputs)]
 
     @property
     def nInputs(self):
@@ -159,13 +152,12 @@ class Plotter(Block):
         self.buffers = collections.defaultdict(list)
 
     def register(self, output):
-        self.inputs.append(Input())
-        output.connect.self.inputs[-1]
+        self.inputs.append(Input(self))
+        output.connect(self.inputs[-1])
 
     def update(self):
         for input in self.inputs:
-            value = input.get_value()
-            self.buffers[input].append(value)
+            self.buffers[input].append(input.get_value())
 
     def plot(self):
         for input, chunks in self.buffers.items():

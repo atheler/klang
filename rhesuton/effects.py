@@ -11,13 +11,12 @@ class Tremolo(Block):
 
     def __init__(self, rate=5., intensity=1.):
         super().__init__(nInputs=3, nOutputs=1)
-
         _, self.rate, self.intensity = self.inputs
         self.rate.set_value(rate)
         self.intensity.set_value(intensity)
 
         self.lfo = Oscillator(frequency=rate)
-        self.lfo.currentPhase = TAU / 4.
+        self.lfo.currentPhase = TAU / 4.  # Start from zero
 
     def update(self):
         # Fetch inputs
@@ -36,4 +35,4 @@ class Tremolo(Block):
         env = 1. - clip(intensity, 0., 1.) * ((1. + mod) / 2.)
 
         # Set output
-        self.output.set_value(env * samples)
+        self.output.value = env * samples
