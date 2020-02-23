@@ -155,6 +155,7 @@ class Block(object):
 
 class Plotter(Block):
     def __init__(self):
+        super().__init__()
         self.buffers = collections.defaultdict(list)
 
     def register(self, output):

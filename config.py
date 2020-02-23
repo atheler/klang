@@ -12,3 +12,4 @@ ATTACK_RELEASE = 0.002
 
 TEMPERAMENT_NAME = 'Young'
 """str: Temperament name for synthesizer."""
+BUFFER_SIZE = 1024

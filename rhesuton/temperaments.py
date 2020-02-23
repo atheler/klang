@@ -31,6 +31,13 @@ class Temperament:
 
     """Tuning temperament. Given the tuning of the reference octave maps note
     numbers to frequencies.
+
+    TODO(atheler): Rework!
+      - Non dodo temperaments (e.g. 24-TET, Indian, Chinese).
+      - Frequency ratios vs. cents.
+      - Kammerton / reference pitch in constructor
+      - Helper methods: pitch_to_frequency(pitch) instead of __call__()
+      - Signal support? Inputs for Kammerton? Ratios?
     """
 
     def __init__(self, name, frequencies):
