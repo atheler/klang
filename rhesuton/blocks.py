@@ -1,9 +1,13 @@
 import collections
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pyaudio
 
+from config import SAMPLING_RATE, BUFFER_SIZE
 from rhesuton.errors import RhesutonError
+from rhesuton.util import write_wave
 
 
 class NotConnectedError(RhesutonError):
@@ -162,3 +166,76 @@ class Plotter(Block):
     def plot(self):
         for input, chunks in self.buffers.items():
             plt.plot(np.concatenate(chunks))
+
+
+class WavWriter(Block):
+
+    """Write WAV file from input."""
+
+    def __init__(self, filepath, samplingRate=SAMPLING_RATE):
+        super().__init__(nInputs=1)
+        self.filepath = filepath
+        self.samplingRate = samplingRate
+        self.buffer = []
+
+    def update(self):
+        samples = self.input.get_value()
+        self.buffer.append(samples)
+
+    def finalize(self):
+        write_wave(np.concatenate(self.buffer), self.filepath, self.samplingRate)
+
+
+class Dac(Block):
+
+    """Send audio to sound card. Register callback_func which gets called every
+    audio callback cycle.
+    """
+
+    def __init__(self):
+        super().__init__(nInputs=1)
+        self.callback_func = None
+        self.running = False
+
+    def update(self):
+        pass  # Dummy overwrite so that Dac.update() can also be called
+
+    def register_callback(self, func):
+        self.callback_func = func
+
+    def run(self):
+        def audio_callback(inData, frameCount, timeInfo, status):
+            """Audio stream callback for pyaudio."""
+            if self.callback_func:
+                self.callback_func()
+
+            data = np.asarray(self.input.get_value(), dtype=np.float32)
+            return data, pyaudio.paContinue
+
+        """Synthesizer main loop."""
+        # Example: Callback Mode Audio I/O from
+        # https://people.csail.mit.edu/hubert/pyaudio/docs/
+        pa = pyaudio.PyAudio()
+        stream = pa.open(
+            rate=SAMPLING_RATE,
+            channels=1,
+            format=pyaudio.paFloat32,
+            input=False,
+            output=True,
+            frames_per_buffer=BUFFER_SIZE,
+            stream_callback=audio_callback,
+        )
+        stream.start_stream()
+
+        try:
+            while self.running and stream.is_active():
+                time.sleep(0.1)
+
+        finally:
+            stream.stop_stream()
+            stream.close()
+            pa.terminate()
+
+    def start(self):
+        self.running = True
+        self.run()
