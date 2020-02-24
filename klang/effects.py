@@ -1,11 +1,15 @@
 """Audio effects."""
 import numpy as np
+import scipy.signal
 
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.blocks import Block
 from klang.constants import TAU
 from klang.math import clip
 from klang.oscillators import Oscillator
+
+
+NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 
 
 def blend(a, b, x):
@@ -47,6 +51,9 @@ class Tremolo(Block):
 
 
 class DelayBuffer:
+
+    """Ring buffer a-like for delaying sample blocks."""
+
     def __init__(self, shape):
         self.data = np.zeros(shape)
         self.index = 0
@@ -99,7 +106,6 @@ class Delay(Block):
         return int(duration * SAMPLING_RATE / BUFFER_SIZE)
 
     def update(self):
-        # Fetch inputs
         new = self.input.get_value()
         delay = self.delay.get_value()
         feedback = self.feedback.get_value()
@@ -110,5 +116,38 @@ class Delay(Block):
         old = self.buffer.peek()
         self.buffer.push(new + feedback * old)
 
-        # Set output
         self.output.set_value(blend(new, old, drywet))
+
+
+class Filter(Block):
+
+    """Second order Butterworth low pass filter.
+
+    Not tested.
+    """
+
+    def __init__(self, frequency=1243., order=2):
+        super().__init__(nInputs=2, nOutputs=1)
+        _, self.frequency = self.inputs
+        self.frequency.set_value(frequency)
+        self.order = order
+
+        self.coefficients = None, None
+
+        self.update_coefficients()
+
+    def update_coefficients(self):
+        freq = self.frequency.get_value()
+        self.coefficients = scipy.signal.butter(
+            N=self.order,
+            Wn=freq / NYQUIST_FREQUENCY,
+            btype='lowpass',
+        )
+        self.zi = np.zeros(self.order)
+
+    def update(self):
+        samples = self.input.get_value()
+
+        out, self.zi = scipy.signal.lfilter(*self.coefficients, x=samples, zi=self.zi)
+
+        self.output.set_value(out)
