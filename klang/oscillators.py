@@ -1,8 +1,8 @@
 import numpy as np
 
 from config import BUFFER_SIZE
-from rhesuton.blocks import Block
-from rhesuton.waves import sample_wave
+from klang.blocks import Block
+from klang.waves import sample_wave
 
 
 class Oscillator(Block):

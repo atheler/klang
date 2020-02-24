@@ -7,8 +7,8 @@ import string
 from pynput.keyboard import Listener, Key
 
 from config import TEMPERAMENT_NAME
-from rhesuton.synthesizer import CHAR_2_BASE_PITCH, Synthesizer
-from rhesuton.temperaments import TEMPERAMENTS, get_temperament_by_name
+from klang.synthesizer import CHAR_2_BASE_PITCH, Synthesizer
+from klang.temperaments import TEMPERAMENTS, get_temperament_by_name
 
 
 DIGITS = set(string.digits)

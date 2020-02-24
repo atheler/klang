@@ -1,4 +1,4 @@
-from rhesuton.constants import PI, TAU
+from klang.constants import PI, TAU
 
 
 def wrap(phase):

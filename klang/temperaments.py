@@ -7,8 +7,8 @@ Resources:
 """
 import numpy as np
 
-from rhesuton.constants import DODE, REF_OCTAVE
-from rhesuton.midi import pitch_2_frequency
+from klang.constants import DODE, REF_OCTAVE
+from klang.midi import pitch_2_frequency
 
 
 FREQUENCIES_RATIOS = {

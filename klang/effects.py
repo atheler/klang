@@ -2,10 +2,10 @@
 import numpy as np
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from rhesuton.blocks import Block
-from rhesuton.constants import TAU
-from rhesuton.math import clip
-from rhesuton.oscillators import Oscillator
+from klang.blocks import Block
+from klang.constants import TAU
+from klang.math import clip
+from klang.oscillators import Oscillator
 
 
 def blend(a, b, x):

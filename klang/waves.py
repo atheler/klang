@@ -4,8 +4,8 @@
 import numpy as np
 
 from config import SAMPLING_RATE
-from rhesuton.constants import TAU
-from rhesuton.math import wrap
+from klang.constants import TAU
+from klang.math import wrap
 
 
 DT = 1. / SAMPLING_RATE

@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import pyaudio
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from rhesuton.errors import RhesutonError
-from rhesuton.util import write_wave
+from klang.errors import RhesutonError
+from klang.util import write_wave
 
 
 class NotConnectedError(RhesutonError):

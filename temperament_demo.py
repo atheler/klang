@@ -17,11 +17,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from config import SAMPLING_RATE
-from rhesuton.constants import TAU
-from rhesuton.math import normalize_values
-from rhesuton.midi import pitch_2_frequency
-from rhesuton.temperaments import EQUAL_TEMPERAMENT, YOUNG_TEMPERAMENT
-from rhesuton.util import write_wave
+from klang.constants import TAU
+from klang.math import normalize_values
+from klang.midi import pitch_2_frequency
+from klang.temperaments import EQUAL_TEMPERAMENT, YOUNG_TEMPERAMENT
+from klang.util import write_wave
 
 """dict: Bit depth (int) -> numpy dtype."""
 

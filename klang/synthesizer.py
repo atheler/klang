@@ -4,9 +4,9 @@ import numpy as np
 import pyaudio
 
 from config import SAMPLING_RATE, ATTACK_RELEASE
-from rhesuton.constants import TAU, REF_OCTAVE, DODE
-from rhesuton.math import wrap
-from rhesuton.temperaments import get_temperament_by_name
+from klang.constants import TAU, REF_OCTAVE, DODE
+from klang.math import wrap
+from klang.temperaments import get_temperament_by_name
 
 
 DT = 1. / SAMPLING_RATE
