@@ -31,11 +31,17 @@ def triangle(phase):
     return 1. - np.abs((4 * wrap(phase) / TAU) % 4 - 2)
 
 
+def random(phase):
+    """Uniform random wave function."""
+    return 2. * np.random.random(size=phase.shape) - 1.
+
+
 WAVE_FUNCTIONS = {
     'sine': sine,
     'square': square,
     'sawtooth': sawtooth,
     'triangle': triangle,
+    'random': random,
 }
 
 
