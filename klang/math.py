@@ -8,11 +8,7 @@ def wrap(phase):
 
 def normalize_values(array):
     """Normalize array values to [-1., 1.]."""
-    maxAmplitude = max(
-        abs(array.max()),
-        abs(array.min()),
-    )
-
+    maxAmplitude = np.abs(array).max()
     if maxAmplitude == 0:
         raise ValueError('Zero amplitude! Can not normalize!')
 

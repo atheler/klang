@@ -6,18 +6,18 @@ import matplotlib.pyplot as plt
 import pyaudio
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.errors import RhesutonError
+from klang.errors import KlangError
 from klang.util import write_wave
 
 
-class NotConnectedError(RhesutonError):
+class NotConnectedError(KlangError):
 
     """Connectable is not connected."""
 
     pass
 
 
-class InputAlreadyConnectedError(RhesutonError):
+class InputAlreadyConnectedError(KlangError):
 
     """Connectable already connected."""
 
@@ -42,6 +42,11 @@ class Connectable:
         """Disconnect from another connectable."""
         self.connections.remove(other)
         other.connections.remove(self)
+
+    def unplug(self):
+        """Kill all connections."""
+        for con in set(self.connections):
+            self.disconnect(con)
 
     def get_value(self):
         return self.value

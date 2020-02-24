@@ -1,5 +1,5 @@
-class RhesutonError(Exception):
+class KlangError(Exception):
 
-    """Rhesuton base error."""
+    """Klang base error."""
 
     pass
