@@ -1,9 +1,47 @@
+"""All things related to tuning.
+
+Conversion functions, temperaments."""
+import re
+
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy as sp
 
 from config import KAMMERTON
 from klang.constants import DODE, REF_OCTAVE
+
+
+CENT_PER_OCTAVE = 1200
+"""int: Cents per octave. TODO(atheler): To be moved to klang.constants?"""
+
+OCTAVE = 2.
+"""float: Octave frequency ratio. TODO(atheler): To be moved to klang.constants?"""
+
+SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([cdefgab])([#b]*)([-0123456789]+)')
+"""re.pattern: Regex pattern for scientific note name."""
+
+PITCHES = {
+    'c': 0,
+    'd': 2,
+    'e': 4,
+    'f': 5,
+    'g': 7,
+    'a': 9,
+    'b': 11,
+}
+"""dict: Pitch char (str) -> Pitch number."""
+
+ACCIDENTAL_SHIFT = {
+    '': 0,
+    '♮': 0,
+    '#': 1,
+    '♯': 1,
+    '##': 2,
+    '♯♯': 2,
+    'b': -1,
+    '♭': -1,
+    'bb': -2,
+    '♭♭': -2,
+}
+"""dict: Accidental string (str) -> Pitch modifier value (int)."""
 
 
 def frequency_2_pitch(frequency, kammerton=KAMMERTON):
@@ -22,34 +60,81 @@ def pitch_2_frequency(noteNumber, kammerton=KAMMERTON):
 assert pitch_2_frequency(69) == KAMMERTON
 
 
+def ratio_2_cent(ratio):
+    """Convert frequency ratio to cent."""
+    return CENT_PER_OCTAVE * np.log2(ratio)
 
 
+assert ratio_2_cent(OCTAVE) == CENT_PER_OCTAVE
 
 
-def find_base_frequency():
-    # TODO(atheler): Find better approximation of base / reference frequency
-    pass
+def cent_2_ratio(cent):
+    """Convert cent to frequency ratio."""
+    return 2 ** (cent / CENT_PER_OCTAVE)
+
+
+assert cent_2_ratio(CENT_PER_OCTAVE) == OCTAVE
+
+
+def note_name_2_pitch(note, midi=False):
+    """Convert note name to pitch number. Uses scientific pitch notation by
+    default (one octave difference compared to MIDI).
+
+    Args:
+        note (str): Note name.
+
+    Kwargs:
+        midi (bool): Use scientific (false) or MIDI format (true).
+
+    Returns:
+        int: Pitch number.
+
+    Usage:
+        >>> note_name_2_pitch('G##4')
+        69
+
+        >>> note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
+        True
+    """
+    match = SCIENTIFIC_PITCH_NOTATION_RE.match(note.lower())
+    if match is None:
+        raise ValueError('Can not parse note %r' % note)
+
+    pitchChar, shiftStr, octaveStr = match.groups()
+    pitch = PITCHES[pitchChar]
+    shift = ACCIDENTAL_SHIFT[shiftStr]
+    octave = int(octaveStr) + 1 - int(midi)
+    return pitch + shift + octave * DODE
+
+
+assert note_name_2_pitch('c-1') == 0
+assert note_name_2_pitch('c#-1') == 1
+assert note_name_2_pitch('Cb0') == 11
+assert note_name_2_pitch('B0') == 23
+assert note_name_2_pitch('a4') == 69
 
 
 class Temperament:
 
     """Tuning temperament."""
 
-    refRatioIdx = 9  # Only for dode
-
     def __init__(self, name, ratios, kammerton=KAMMERTON):
+        """Args:
+            name (str): Name of the temperament.
+            ratios (array): Frequency ratios. At the moment only length-12 are
+                supported and first frequency ratio has to be 1.0!
+        Kwargs:
+            kammerton (frequency): Reference pitch for A4 (or A3 in MIDI).
+        """
         assert len(ratios) == DODE and ratios[0] == 1.
         self.name = name
         self.ratios = np.asarray(ratios, dtype=float)
         self.kammerton = kammerton
 
-    @property
-    def base_frequency(self):
-        return self.kammerton / self.ratios[self.refRatioIdx]
-
     def pitch_2_frequency(self, pitch):
-        octave, note = np.divmod(pitch, DODE)
-        return self.base_frequency * self.ratios[note] * (2 ** (octave - REF_OCTAVE))
+        kammertonOffset = -9
+        octave, note = np.divmod(pitch + kammertonOffset, DODE)
+        return self.kammerton * self.ratios[note] * (2 ** float(octave - REF_OCTAVE))
 
     def frequency_2_pitch(self, frequency):
         raise NotImplementedError
@@ -59,11 +144,10 @@ class Temperament:
         return '%s(%r)' % (self.__class__.__name__, self.name)
 
 
+if __name__ == '__main__':
+    ratios = 2. ** (np.arange(DODE) / DODE)
 
-
-ratios = 2. ** (np.arange(DODE) / DODE)
-
-EQUAL_TEMPERAMENT = Temperament('Equal', ratios)
-print(EQUAL_TEMPERAMENT)
-print(EQUAL_TEMPERAMENT.pitch_2_frequency(60))
-print(EQUAL_TEMPERAMENT.pitch_2_frequency(69))
+    EQUAL_TEMPERAMENT = Temperament('Equal', ratios)
+    print(EQUAL_TEMPERAMENT)
+    print('Pitch 60 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(60))
+    print('Pitch 69 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(69))
