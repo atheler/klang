@@ -24,6 +24,20 @@ class InputAlreadyConnectedError(KlangError):
     pass
 
 
+def output_neighbors(block):
+    """Get output neighbors of block."""
+    for output in block.outputs:
+        for input_ in output.connections:
+            yield input_.owner
+
+
+def input_neighbors(block):
+    """Get input neighbors of block."""
+    for input_ in block.inputs:
+        for output in input_.connections:
+            yield output.owner
+
+
 class Connectable:
 
     """Base class."""
@@ -150,7 +164,7 @@ class Block:
 
     def __str__(self):
         if self.name:
-            return '%s(%s)' % (self.__class__.__name__, self.name)
+            return '%s(%r)' % (self.__class__.__name__, self.name)
 
         return self.__class__.__name__
 
