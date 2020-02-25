@@ -1,6 +1,10 @@
 import numpy as np
 
-from oscillation import DT
+from config import SAMPLING_RATE
+from klang.blocks import Block
+
+
+DT = 1. / SAMPLING_RATE
 
 
 def sample_linear_envelope(nSamples, slope, start=0.):
@@ -22,3 +26,51 @@ def calculate_slope(duration):
         return np.inf
 
     return 1. / duration
+
+
+class EnvelopeGenerator(Block):
+
+    """Envelope base class.
+
+    Trigger -> Envelope samples. EnvelopeGenerator implements a rectangular envelope.
+    """
+
+    def __init__(self):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.trigger = self.input
+        self.currentLevel = 0.
+
+    def sample(self, nSamples):
+        triggered = self.trigger.get_value()
+        self.currentLevel = float(triggered)
+        return self.currentLevel * np.ones(nSamples)
+
+
+class AR(EnvelopeGenerator):
+
+    """Linear attack / release envelope."""
+
+    def __init__(self, attackTime, releaseTime):
+        super().__init__()
+        self.attackTime = attackTime
+        self.releaseTime = releaseTime
+
+        self.attackSlope = calculate_slope(attackTime)
+        self.releaseSlope = -calculate_slope(releaseTime)
+
+    def sample(self, nSamples):
+        triggered = self.trigger.get_value()
+        slope = self.attackSlope if triggered else self.releaseSlope
+        envelope, self.currentLevel = sample_linear_envelope(
+            nSamples,
+            slope,
+            self.currentLevel,
+        )
+        return envelope
+
+    def __str__(self):
+        return '%s(attack: %.3f sec, release: %.3f sec)' % (
+            self.__class__.__name__,
+            self.attackTime,
+            self.releaseTime,
+        )
