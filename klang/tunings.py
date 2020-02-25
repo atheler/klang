@@ -15,31 +15,30 @@ CENT_PER_OCTAVE = 1200
 OCTAVE = 2.
 """float: Octave frequency ratio. TODO(atheler): To be moved to klang.constants?"""
 
-SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([cdefgab])([#b]*)([-0123456789]+)')
+SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([CDEFGAB])([#b]*)([-0123456789]+)')
 """re.pattern: Regex pattern for scientific note name."""
 
 PITCHES = {
-    'c': 0,
-    'd': 2,
-    'e': 4,
-    'f': 5,
-    'g': 7,
-    'a': 9,
-    'b': 11,
+    'C': 0,
+    'D': 2,
+    'E': 4,
+    'F': 5,
+    'G': 7,
+    'A': 9,
+    'B': 11,
 }
 """dict: Pitch char (str) -> Pitch number."""
 
-ACCIDENTAL_SHIFT = {
+PITCHES_2 = np.array([
+    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+])
+
+ACCIDENTAL_SHIFTS = {
     '': 0,
-    '♮': 0,
     '#': 1,
-    '♯': 1,
     '##': 2,
-    '♯♯': 2,
     'b': -1,
-    '♭': -1,
     'bb': -2,
-    '♭♭': -2,
 }
 """dict: Accidental string (str) -> Pitch modifier value (int)."""
 
@@ -96,13 +95,14 @@ def note_name_2_pitch(note, midi=False):
         >>> note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
         True
     """
-    match = SCIENTIFIC_PITCH_NOTATION_RE.match(note.lower())
+    note = note.title()
+    match = SCIENTIFIC_PITCH_NOTATION_RE.match(note)
     if match is None:
         raise ValueError('Can not parse note %r' % note)
 
     pitchChar, shiftStr, octaveStr = match.groups()
     pitch = PITCHES[pitchChar]
-    shift = ACCIDENTAL_SHIFT[shiftStr]
+    shift = ACCIDENTAL_SHIFTS[shiftStr]
     octave = int(octaveStr) + 1 - int(midi)
     return pitch + shift + octave * DODE
 
@@ -112,6 +112,28 @@ assert note_name_2_pitch('c#-1') == 1
 assert note_name_2_pitch('Cb0') == 11
 assert note_name_2_pitch('B0') == 23
 assert note_name_2_pitch('a4') == 69
+assert note_name_2_pitch('G##4') == 69
+assert note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
+
+
+def pitch_2_note_name(pitch, midi=False):
+    """Convert pitch number(s) to note name(s)."""
+    """
+    octave, note = np.divmod(pitch, DODE)
+
+    # Element wise string concatenation
+    return np.core.defchararray.add(
+        PITCHES_2[note],
+        (octave - 1 + int(midi)).astype(str)
+    ).squeeze()
+    """
+    octave, note = divmod(pitch, DODE)
+    noteName = PITCHES_2[note] + str(octave - 1 + int(midi))
+    return noteName.upper()
+
+
+assert note_name_2_pitch(pitch_2_note_name(69)) == 69
+assert note_name_2_pitch(pitch_2_note_name(69, midi=True), midi=True) == 69
 
 
 class Temperament:
@@ -141,13 +163,22 @@ class Temperament:
         # Round to nearest pitch(es)
 
     def __str__(self):
-        return '%s(%r)' % (self.__class__.__name__, self.name)
+        return '%s(%r, %.1f Hz)' % (
+            self.__class__.__name__,
+            self.name,
+            self.kammerton,
+        )
 
 
 if __name__ == '__main__':
+    kammerton = 442.
     ratios = 2. ** (np.arange(DODE) / DODE)
 
-    EQUAL_TEMPERAMENT = Temperament('Equal', ratios)
+    EQUAL_TEMPERAMENT = Temperament('Equal', ratios, kammerton=kammerton)
     print(EQUAL_TEMPERAMENT)
     print('Pitch 60 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(60))
     print('Pitch 69 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(69))
+
+
+    for pitch in range(60, 72):
+        print(pitch, '->', pitch_2_note_name(pitch))
