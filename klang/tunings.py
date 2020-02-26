@@ -29,7 +29,7 @@ PITCHES = {
 }
 """dict: Pitch char (str) -> Pitch number."""
 
-PITCHES_2 = np.array([
+NOTES = PITCHES_2 = np.array([
     'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
 ])
 
@@ -41,6 +41,8 @@ ACCIDENTAL_SHIFTS = {
     'bb': -2,
 }
 """dict: Accidental string (str) -> Pitch modifier value (int)."""
+
+KAMMERTON_OFFSET = 9
 
 
 def frequency_2_pitch(frequency, kammerton=KAMMERTON):
@@ -154,13 +156,22 @@ class Temperament:
         self.kammerton = kammerton
 
     def pitch_2_frequency(self, pitch):
-        kammertonOffset = -9
-        octave, note = np.divmod(pitch + kammertonOffset, DODE)
-        return self.kammerton * self.ratios[note] * (2 ** float(octave - REF_OCTAVE))
+        octave, note = np.divmod(pitch - KAMMERTON_OFFSET, DODE)
+        return self.kammerton * self.ratios[note] * (2. ** (octave - REF_OCTAVE))
 
     def frequency_2_pitch(self, frequency):
         raise NotImplementedError
-        # Round to nearest pitch(es)
+        # TODO(atheler): Do we need this?
+        tmp = frequency / self.kammerton / self.ratios[:, None]
+        #tmp += KAMMERTON_OFFSET
+        bar = np.log2(tmp) + REF_OCTAVE
+        guess = np.round(bar)
+        err = np.abs(bar - guess)
+        idx = err.argmin(axis=0)
+        pitch = guess[idx] + KAMMERTON_OFFSET
+        print(pitch)
+        return pitch
+        return np.zeros_like(frequency)
 
     def __str__(self):
         return '%s(%r, %.1f Hz)' % (
@@ -170,11 +181,14 @@ class Temperament:
         )
 
 
+EQUAL_TEMPERAMENT = Temperament('Equal', 2. ** (np.arange(DODE) / DODE))
+
+
 if __name__ == '__main__':
     kammerton = 442.
     ratios = 2. ** (np.arange(DODE) / DODE)
-
     EQUAL_TEMPERAMENT = Temperament('Equal', ratios, kammerton=kammerton)
+
     print(EQUAL_TEMPERAMENT)
     print('Pitch 60 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(60))
     print('Pitch 69 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(69))

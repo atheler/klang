@@ -24,3 +24,28 @@ def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, bitDepth=BIT_DEPTH):
     samples = (audio * np.iinfo(dtype).max).astype(dtype)
 
     wavfile.write(filepath, samplingRate, samples)
+
+
+def cycle_pairs(iterable, circular=True):
+    """Cycle over pairs in `iterable` generator.
+
+    Args:
+        iterable (iterable): Some iterable.
+
+    Kwargs:
+        circular (bool): If true yields (end, start) for the last iteration.
+
+    Yields:
+        tuple: Pairs over `iterable`.
+    """
+    if len(iterable) < 2:
+        return
+
+    iterator = iter(iterable)
+    first = prev = next(iterator)
+    for item in iterator:
+        yield prev, item
+        prev = item
+
+    if circular:
+        yield item, first
