@@ -1,6 +1,6 @@
 import numpy as np
 
-from config import SAMPLING_RATE
+from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.blocks import Block
 
 
@@ -44,6 +44,10 @@ class EnvelopeGenerator(Block):
         triggered = self.trigger.get_value()
         self.currentLevel = float(triggered)
         return self.currentLevel * np.ones(nSamples)
+
+    def update(self):
+        env = self.sample(BUFFER_SIZE)
+        self.output.set_value(env)
 
     @property
     def active(self):

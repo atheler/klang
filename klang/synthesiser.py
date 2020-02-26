@@ -1,10 +1,13 @@
 import collections
+import itertools
 
 import numpy as np
 
 from klang.blocks import Block
 from klang.envelope import EnvelopeGenerator
 from klang.oscillators import Oscillator
+from klang.tunings import EQUAL_TEMPERAMENT
+from klang.math import clip
 from config import BUFFER_SIZE
 
 
@@ -28,44 +31,70 @@ class MessageConverter(Block):
 
 class Voice(Block):
     def __init__(self, oscillator=None, envelope=None):
-        super().__init__(nInputs=2, nOutputs=1)
+        super().__init__(nInputs=0, nOutputs=1)
+        self.amplitude = 0.
         self.oscillator = oscillator or Oscillator()
         self.envelope = envelope or EnvelopeGenerator()
 
-        self.input.set_value(collections.deque())
-
-    def note_on(self, note):
-        assert note.velocity > 0
-
-    def note_off(self, note):
-        assert note.velocity == 0
-    
-    def update(self):
-        self.oscillator.update()
-        self.envelope.update()
+    @property
+    def frequency(self):
+        return self.oscillator.frequency.get_value()
 
     @property
     def active(self):
-        pass
+        triggered = self.envelope.trigger.get_value()
+        env = self.envelope.output.get_value()
+
+        return not triggered and env[-1] == 0.
+
+    def process_note(self, frequency, velocity):
+        if velocity != 0.:
+            self.amplitude = clip(velocity, 0., 1.)
+            self.oscillator.frequency.set_value(frequency)
+            self.envelope.trigger.set_value(True)
+        else:
+            self.envelope.trigger.set_value(False)
+    
+    def update(self):
+        self.oscillator.update()
+        osc = self.oscillator.output.get_value()
+
+        self.envelope.update()
+        env = self.envelope.output.get_value()
+
+        signal = self.amplitude * env * osc
+        self.output.set_value(signal)
 
 
 class Synthesiser(Block):
 
     MAX_VOICES = 24
 
-    def __init__(self):
+    def __init__(self, temperament=EQUAL_TEMPERAMENT):
         super().__init__(nInputs=1, nOutputs=1)
-        self.voice
-        self.voices = collections.OrderedDict()
+        self.temperament = temperament
+
+        self.input.set_value(collections.deque())
+        self.output.set_value(np.zeros(BUFFER_SIZE))
+
+        self.voices = [Voice() for _  in range(self.MAX_VOICES)]
+        self.freeVoice = itertools.cycle(self.voices)
+
+    def play_note(self, note):
+        queue = self.input.get_value()
+        queue.append(note)
 
     def process_note(self, note):
-        if note.pitch not in self.voices:
-            # Create new note
-            while len(self.voices) > self.MAX_VOICES:
-                self.voices.popitem(last=False)
-
-        voice = self.voices.setdefault(note.pitch, Voice())
-        voice.envelope.trigger.set_value(note.velocity)
+        freq = self.temperament.pitch_2_frequency(note.pitch)
+        if note.velocity != 0:
+            print('Play new note')
+            voice = next(self.freeVoice)
+            voice.process_note(freq, note.velocity)
+        else:
+            print('Kill old note')
+            for voice in self.voices:
+                if voice.frequency == freq:
+                    voice.process_note(freq, note.velocity)
 
     def update(self):
         queue = self.input.get_value()
@@ -83,13 +112,34 @@ class Synthesiser(Block):
 
 
 if __name__ == '__main__':
-    #synthesiser = Synthesiser()
-    #pool = VoicePool(Voice)
-    pool = collections.OrderedDict()
-    pool[60] = Voice()
-    pool[64] = Voice()
-    pool[67] = Voice()
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import scipy as sp
 
-    print(pool.popitem(last=False))
+    from config import SAMPLING_RATE
+    from klang.chords import CHORDS
 
-    print(pool)
+
+
+    DT = 1. / SAMPLING_RATE
+    major = CHORDS['major']
+
+
+    synthesiser = Synthesiser()
+
+    for pitch in 60 + major:
+        note = Note(pitch, velocity=.5)
+        synthesiser.play_note(note)
+
+    chunks = []
+    for _ in range(10):
+        synthesiser.update()
+        samples = synthesiser.output.get_value()
+        print(len(samples))
+        chunks.append(samples)
+
+    signal = np.concatenate(chunks)
+
+    t = DT * np.arange(len(signal))
+    plt.plot(t, signal)
+    plt.show()
