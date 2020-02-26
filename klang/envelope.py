@@ -45,6 +45,11 @@ class EnvelopeGenerator(Block):
         self.currentLevel = float(triggered)
         return self.currentLevel * np.ones(nSamples)
 
+    @property
+    def active(self):
+        triggered = self.trigger.get_value()
+        return not triggered and self.currentLevel == 0
+
 
 class AR(EnvelopeGenerator):
 

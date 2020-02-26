@@ -7,7 +7,7 @@ import string
 from pynput.keyboard import Listener, Key
 
 from config import TEMPERAMENT_NAME
-from klang.synthesizer import CHAR_2_BASE_PITCH, Synthesizer
+from klang.old_synthesizer import CHAR_2_BASE_PITCH, Synthesizer
 from klang.temperaments import TEMPERAMENTS, get_temperament_by_name
 
 

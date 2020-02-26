@@ -44,7 +44,7 @@ class Connectable:
 
     def __init__(self, owner, value=0.):
         self.owner = owner
-        self.value = value
+        self.value = value  # Also paceholder value for unconnected Input
         self.connections = set()
 
     def connect(self, other):
