@@ -13,3 +13,5 @@ DODE = 12
 REF_OCTAVE = 5
 """int: Main octave number (MIDI notes 60-71)."""
 
+SEMITONES_PER_OCTAVE = 12
+"""int: Number of semitones in an octave."""
