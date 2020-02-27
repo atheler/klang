@@ -2,6 +2,7 @@
 import numpy as np
 
 from klang.constants import SEMITONES_PER_OCTAVE
+#from klang.scraping import chords
 
 
 CHORDS = {
@@ -133,57 +134,3 @@ np.testing.assert_equal(invert_chord(MAJOR, inversion=1), [4, 7, 12])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=2), [7, 12, 16])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=-1), [-5, 0, 4])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=-2), [-8, -5, 0])
-
-
-def load_chords_from_wikipedia():
-    import requests
-    from bs4 import BeautifulSoup
-
-    # Params
-    url = 'https://en.wikipedia.org/wiki/List_of_chords'
-
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, 'html.parser')
-    table = soup.find('table', attrs={'class': 'wikitable sortable'})
-    tableBody = table.find('tbody')
-    rows = tableBody.find_all('tr')
-    chords = {}
-    for row in rows:
-        cols = row.find_all('td')
-        if not cols:
-            continue
-
-        chordName, _, _, _, pitchClasses, _ = (e.text.strip() for e in cols)
-        chordName = chordName.lower()
-        chordName = chordName.replace(' chord', '')
-
-        if chordName == 'powerp5':
-            chordName = 'power chord'
-
-        for i in range(1, 8):
-            chordName = chordName.replace('[%d]' % i, '')
-
-        if (chordName == 'augmented sixth') or 'x' in pitchClasses:
-            print('Skipping chordName: %r, pitch classes: %r' % (chordName, pitchClasses))
-            continue
-
-        if 'or' in pitchClasses:
-            tmp = pitchClasses.split('or')
-        else:
-            tmp = [pitchClasses]
-
-        for i, pc in enumerate(tmp):
-            if i > 0:
-                name = chordName + '-' + str(i)
-            else:
-                name = chordName
-
-            chords[name] = pitch_classes_2_chord(pc)
-
-    return chords
-
-
-if __name__ == '__main__':
-    chords = load_chords_from_wikipedia()
-    for name, chord in sorted(chords.items()):
-        print('    %r: np.%r,' % (name, chord))
