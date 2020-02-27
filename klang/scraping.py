@@ -187,6 +187,13 @@ def get_them(url, caption, extractor_func):
     return extractor_func(table)
 
 
+def print_dict_2_csv(dct, sep=','):
+    """Print chords / scale dict as CSV string to stdout."""
+    for key, data in sorted(dct.items()):
+        print(key, end=sep)
+        print(sep.join(map(str, data)))
+
+
 if __name__ == '__main__':
     print('Chords in %r:' % LIST_OF_CHORDS_URL)
     chords = get_them(
@@ -194,9 +201,7 @@ if __name__ == '__main__':
         caption='List of musical chords',
         extractor_func=extract_chords,
     )
-    for name, chord in chords.items():
-        print('-', name, chord)
-        pass
+    print_dict_2_csv(chords)
 
     print('\nScales and modes in %r:' % LIST_OF_SCALES_URL)
     scales = get_them(
@@ -204,6 +209,4 @@ if __name__ == '__main__':
         caption='List of musical scales and modes',
         extractor_func=extract_scales,
     )
-    for name, scale in scales.items():
-        print('-', name, scale)
-        pass
+    print_dict_2_csv(scales)

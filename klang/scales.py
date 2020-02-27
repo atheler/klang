@@ -1,15 +1,16 @@
 """Musical scales.
 
+A scale is a list of semitone intervals.
+
 Resources:
   - https://ianring.com/musictheory/scales/
 """
-import collections
-
 import numpy as np
 from matplotlib import pyplot as plt
 
 from klang.constants import DODE, TAU
 from klang.tunings import NOTES
+from klang.util import load_music_data_from_csv
 
 
 PITCHES = np.arange(DODE)
@@ -30,20 +31,8 @@ _ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
 ALL_POSSIBLE_SCALES = []
 """list: All possible scales. Ordered by binary code."""
 
-
-KNOWN_SCALES = {
-    'major': 2741
-}
-
-
-def get_scale_by_name(name):
-    key = name.lower()
-    if key not in KNOWN_SCALES:
-        fmt = 'Do not recognize scale %r!'
-        raise ValueError(fmt % name)
-
-    code = KNOWN_SCALES[key]
-    return ALL_POSSIBLE_SCALES[code]
+KNOWN_SCALES = {}
+"""dict: Scale name (str) -> Scale code (int)."""
 
 
 def scale_2_pitches(scale):
@@ -63,11 +52,13 @@ assert np.all(
 
 
 def scale_2_code(scale):
+    """Get binary scale code for scale."""
     pitches = scale_2_pitches(scale)
     return MASK[pitches].sum()
 
 
 def code_2_scale(code):
+    """Build scale from binary scale code."""
     assert 0 <= code <= 2 ** DODE
     pitches = []
     for pitch in PITCHES:
@@ -75,56 +66,6 @@ def code_2_scale(code):
             pitches.append(pitch)
 
     return pitches_2_scale(pitches)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-SCALES = {
-    'aeolian': (2, 1, 2, 2, 1, 2, 2),
-    'augmented': (3, 1, 3, 1, 3, 1),
-    'augmentedfifth': (2, 2, 1, 2, 1, 1, 2, 1),
-    'bluesmajor': (3, 2, 1, 1, 2, 3),
-    'bluesminor': (3, 2, 1, 1, 3, 2),
-    'chromatic': (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    'diminished': (2, 1, 2, 1, 2, 1, 2, 1),
-    'dorian': (2, 1, 2, 2, 2, 1, 2),
-    'halfwhole': (1, 2, 1, 2, 1, 2, 1, 2),
-    'harmonicminor': (2, 1, 2, 2, 1, 3, 1),
-    'ionian': (2, 2, 1, 2, 2, 2, 1),
-    'japanese': (1, 4, 2, 1, 4),
-    'locrian': (1, 2, 2, 1, 2, 2, 2),
-    'lydian': (2, 2, 2, 1, 2, 2, 1),
-    'major': (2, 2, 1, 2, 2, 2, 1),
-    'melodicminor': (2, 1, 2, 2, 2, 2, 1),
-    'minor': (2, 1, 2, 2, 1, 2, 2),
-    'mixolydian': (2, 2, 1, 2, 2, 1, 2),
-    'oriental': (1, 3, 1, 1, 3, 1, 2),
-    'pentatonicmajor': (2, 2, 3, 2, 3),
-    'pentatonicminor': (3, 2, 2, 3, 2),
-    'phrygian': (1, 2, 2, 2, 1, 2, 2),
-    'wholehalf': (2, 1, 2, 1, 2, 1, 2, 1),
-    'wholetone': (2, 2, 2, 2, 2, 2),
-}
-"""dict: Scale name (str) -> Scale intervals (tuple). From the python-musical
-project (https://github.com/wybiral/python-musical).
-"""
-
-
-
-
 
 
 def all_possible_scales():
@@ -136,6 +77,44 @@ def all_possible_scales():
 
 ALL_POSSIBLE_SCALES = all_possible_scales()
 
+
+# Load scales from database
+KNOWN_SCALES = {
+    name: scale_2_code(scale)
+    for name, scale
+    in load_music_data_from_csv('resources/scales.csv').items()
+}
+
+
+def find_scale_by_name(name):
+    """Find scale by name in database."""
+    """
+    for word in name.split():
+        for key, code in KNOWN_SCALES.items():
+            if word in key:
+                return ALL_POSSIBLE_SCALES[code]
+
+    raise ValueError('Could not find %r' % name)
+    """
+    augments = ['', ' scale', 'mode']
+    for aug in augments:
+        key = name + aug
+        if key in KNOWN_SCALES:
+            code = KNOWN_SCALES[key]
+            return ALL_POSSIBLE_SCALES[code]
+
+    candidates = set()
+    for word in name.split():
+        for key in KNOWN_SCALES:
+            if word in key or key in word:
+                candidates.add(key)
+
+    msg = 'Could not find scale %r!' % name
+    if candidates:
+        alternatives = ', '.join(repr(can) for can in candidates)
+        msg += 'Did you mean: %s?' % alternatives 
+
+    raise ValueError(msg)
 
 
 def format_circle_of_fifth_polar_plot(ax):
@@ -172,11 +151,29 @@ def plot_scale_in_circle_of_fifth(scale, ax=None):
     return polygon
 
 
-if __name__ == '__main__':
+def main():
     import math
 
     # Scales demo plot. Params:
-    scales = SCALES
+    names = [
+        'major',
+        'minor',
+        'adonai malakh mode',
+        'aeolian mode',
+        'dorian mode',
+        'flamenco mode',
+        'ionian mode',
+        'locrian mode',
+        'lydian mode',
+        'mixolydian mode',
+        'phrygian mode',
+        #'blues',
+        #'minor pentatonic scale',
+        'chromatic',
+    ]
+    names = list(KNOWN_SCALES)
+
+    scales = [find_scale_by_name(n) for n in names]
 
 
     def plotting_shape(n):
@@ -189,13 +186,18 @@ if __name__ == '__main__':
         return nRows, nCols
 
 
-    shape = plotting_shape(len(SCALES))
+    shape = plotting_shape(len(scales))
 
     fig, axarr = plt.subplots(*shape, subplot_kw=dict(projection='polar'))
-    for (name, scale), ax in zip(SCALES.items(), axarr.ravel()):
+    for name, scale, ax in zip(names, scales, axarr.ravel()):
         plot_scale_in_circle_of_fifth(scale, ax=ax)
         ax.set_title(name.title(), y=1.2)
 
     margin = .1
     plt.subplots_adjust(left=margin, right=1. - margin, top=1-margin, bottom=margin, hspace=.9)
     plt.show()
+
+
+
+if __name__ == '__main__':
+    main()

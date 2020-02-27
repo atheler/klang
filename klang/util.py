@@ -49,3 +49,13 @@ def cycle_pairs(iterable, circular=True):
 
     if circular:
         yield item, first
+
+
+def load_music_data_from_csv(filepath, sep=','):
+    dct = {}
+    with open(filepath, 'r') as f:
+        for line in f.readlines():
+            key, *values = line.split(sep)
+            dct[key] = [int(v) for v in values]
+
+    return dct
