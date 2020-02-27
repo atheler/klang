@@ -1,4 +1,8 @@
-"""Musical scales."""
+"""Musical scales.
+
+Resources:
+  - https://ianring.com/musictheory/scales/
+"""
 import collections
 
 import numpy as np
@@ -8,14 +12,84 @@ from klang.constants import DODE, TAU
 from klang.tunings import NOTES
 
 
+PITCHES = np.arange(DODE)
+""""""
+
+MASK = 2 ** PITCHES
+"""array: Pitch number values for encoding."""
+
 QUINTE_SEMITONES = 7
 """int: Number of semitones in a perfect fifth."""
 
-CIRCLE_OF_FIFTHS_PITCHES = (QUINTE_SEMITONES * np.arange(DODE)) % DODE
+CIRCLE_OF_FIFTHS_PITCHES = (QUINTE_SEMITONES * PITCHES) % DODE
 """array: Pitches of the circle of fifths."""
 
 _ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
 """array: Chromatic angles."""
+
+ALL_POSSIBLE_SCALES = []
+"""list: All possible scales. Ordered by binary code."""
+
+
+KNOWN_SCALES = {
+    'major': 2741
+}
+
+
+def get_scale_by_name(name):
+    key = name.lower()
+    if key not in KNOWN_SCALES:
+        fmt = 'Do not recognize scale %r!'
+        raise ValueError(fmt % name)
+
+    code = KNOWN_SCALES[key]
+    return ALL_POSSIBLE_SCALES[code]
+
+
+def scale_2_pitches(scale):
+    """Get scale pitches."""
+    return np.roll(np.cumsum(scale), shift=1) % DODE
+
+
+def pitches_2_scale(pitches):
+    """Convert pitches to intervals scale representation."""
+    pitches = np.sort(np.mod(pitches, DODE))
+    return np.diff(pitches, append=DODE)
+
+
+assert np.all(
+    pitches_2_scale([0, 2, 4, 5, 7, 9, 11]) == (2, 2, 1, 2, 2, 2, 1)
+)
+
+
+def scale_2_code(scale):
+    pitches = scale_2_pitches(scale)
+    return MASK[pitches].sum()
+
+
+def code_2_scale(code):
+    assert 0 <= code <= 2 ** DODE
+    pitches = []
+    for pitch in PITCHES:
+        if code & (1 << pitch):
+            pitches.append(pitch)
+
+    return pitches_2_scale(pitches)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 SCALES = {
@@ -49,41 +123,19 @@ project (https://github.com/wybiral/python-musical).
 """
 
 
+
+
+
+
 def all_possible_scales():
-    """Find all 2048 possible music scales in an octave."""
-    emptyScale = tuple()
-    queue = collections.deque([emptyScale])
-    while queue:
-        parent = queue.popleft()
-        for interval in range(1, DODE + 1):
-            child = parent + (interval, )
-            semitones = sum(child)
-            if semitones < DODE:
-                queue.appendleft(child)
-            elif semitones == DODE:
-                yield child
+    """All 2048 possible music scales in an octave."""
+    return [
+        code_2_scale(code) for code in range(2 ** DODE)
+    ]
 
 
-ALL_POSSIBLE_SCALES = list(all_possible_scales())
-"""list: All possible scales."""
+ALL_POSSIBLE_SCALES = all_possible_scales()
 
-
-def scale_2_pitches(scale):
-    """Get scale pitches."""
-    return np.r_[0, np.cumsum(scale)][:-1]
-
-
-def pitches_2_scale(pitches):
-    """Convert pitches to intervals scale representation."""
-    pitches = np.sort(np.mod(pitches, DODE))
-    aug = np.r_[pitches, pitches[0] + DODE]
-    scale = np.diff(np.sort(aug))
-    return scale
-
-
-assert np.all(
-    pitches_2_scale([0, 2, 4, 5, 7, 9, 11]) == (2, 2, 1, 2, 2, 2, 1)
-)
 
 
 def format_circle_of_fifth_polar_plot(ax):
