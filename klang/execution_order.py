@@ -29,8 +29,8 @@ def execution_order(graph):
     sources = get_sources(graph)
     queue = collections.deque(sources)
 
-    # Prepare secondary waiting queue. Set to all nodes by default to cover the
-    # all-is-one-big-cycle case.
+    # Prepare secondary waiting queue. Set to all nodes by default. So to also
+    # cover the all-is-one-big-cycle case.
     nNodes, _ = graph.shape
     allNodes = range(nNodes)
     waiting = collections.deque(allNodes)
