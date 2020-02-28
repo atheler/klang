@@ -8,24 +8,10 @@ import matplotlib.pyplot as plt
 import pyaudio
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.errors import KlangError
+from klang.connections import Input, Output
 from klang.execution_order import execution_order
 from klang.graph import graph_matrix
 from klang.util import write_wave
-
-
-class NotConnectedError(KlangError):
-
-    """Connectable is not connected."""
-
-    pass
-
-
-class InputAlreadyConnectedError(KlangError):
-
-    """Connectable already connected."""
-
-    pass
 
 
 def output_neighbors(block):
@@ -82,88 +68,14 @@ def block_execution_order(*blocks):
     return [rev[node] for node in execOrder]
 
 
-class Connectable:
-
-    """Base class."""
-
-    def __init__(self, owner, value=0.):
-        self.owner = owner
-        self.value = value  # Also paceholder value for unconnected Input
-        self.connections = set()
-
-    def connect(self, other):
-        """Make a connection to another connectable."""
-        self.connections.add(other)
-        other.connections.add(self)
-
-    def disconnect(self, other):
-        """Disconnect from another connectable."""
-        self.connections.remove(other)
-        other.connections.remove(self)
-
-    def unplug(self):
-        """Kill all connections."""
-        for con in set(self.connections):
-            self.disconnect(con)
-
-    def get_value(self):
-        return self.value
-
-    def set_value(self, value):
-        self.value = value
-
-    @property
-    def connected(self):
-        """Is connected?"""
-        return bool(self.connections)
-
-    def __str__(self):
-        return '%s(connected: %s)' % (self.__class__.__name__, self.connected)
-
-
-class Input(Connectable):
-
-    """Input slot.
-
-    Can be connected to only one output.
-    """
-
-    def connect(self, output):
-        assert isinstance(output, Output)
-        if self.connected:
-            msg = 'Only one connection possible for Input owner!'
-            raise InputAlreadyConnectedError(msg)
-
-        super().connect(output)
-
-    def get_value(self):
-        if not self.connected:
-            return self.value
-
-        output, = self.connections
-        return output.value
-
-
-class Output(Connectable):
-
-    """Output slot.
-
-    Holds the value. Can be connected to multiple inputs.
-    """
-
-    def connect(self, input):
-        assert isinstance(input, Input)
-        super().connect(input)
-
-
 class Block:
 
     """Block base class.
 
     Attributes:
         name (str): Custom name of the owner (if any).
-        inputs (list of Input): Input connection.
-        outputs (list of Output): Output connection.
+        inputs (list of klang.connections.Input): Input connection.
+        outputs (list of klang.connections.Output): Output connection.
     """
 
     def __init__(self, name='', nInputs=0, nOutputs=0):
