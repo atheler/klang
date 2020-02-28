@@ -1,7 +1,7 @@
 """Execution order in directed graph."""
 import collections
 
-from klang.graph import get_sources, get_successors, get_predecessors
+from klang.graph import get_successors, get_predecessors, remove_back_edges
 
 
 def node_is_ready(graph, node, execOrder):
@@ -23,22 +23,14 @@ def execution_order(graph):
     Returns:
         list: Node execution order.
     """
-    graph = graph.copy()  # Backedge removal
-
-    # Prepare main queue
-    sources = get_sources(graph)
-    queue = collections.deque(sources)
-
-    # Prepare secondary waiting queue. Set to all nodes by default. So to also
-    # cover the all-is-one-big-cycle case.
+    graph = remove_back_edges(graph)
     nNodes, _ = graph.shape
     allNodes = range(nNodes)
-    waiting = collections.deque(allNodes)
-
+    queue = collections.deque(allNodes)
     visited = set()
     execOrder = []
-    while queue or waiting:
-        node = (queue or waiting).popleft()
+    while queue:
+        node = queue.popleft()
         if node in execOrder:
             continue
 
@@ -46,15 +38,8 @@ def execution_order(graph):
         successors = get_successors(graph, node)
         if node_is_ready(graph, node, execOrder):
             execOrder.append(node)
-            queue.extend(successors)
+            queue.extendleft(successors)
         else:
-            for suc in successors:
-                if suc in visited:
-                    # Remove backedge from graph
-                    graph[node, suc] = 0
-                    queue.append(suc)
-                    break
-            else:
-                waiting.extend(successors)
+            queue.extend(successors)
 
     return execOrder

@@ -75,6 +75,52 @@ def get_predecessors(graph, node):
     return active_edges(graph.T, node)
 
 
+def find_back_edges(graph):
+    """Find back edges in directed graph.
+
+    Resources:
+      - https://www.youtube.com/watch?v=rKQaZuoUR4M
+    """
+    nNodes, _ = graph.shape
+    allNodes = range(nNodes)
+    white = set(allNodes)
+    gray = set()
+    black = set()
+    backEdges = []
+
+    def move_node(vertex, src, dst):
+        src.remove(vertex)
+        dst.add(vertex)
+
+    def dfs(parent):
+        move_node(parent, white, gray)
+        for child in get_successors(graph, parent):
+            if child in black:
+                continue
+            if child in gray:
+                backEdges.append((parent, child))
+                continue
+
+            dfs(child)
+
+        move_node(parent, gray, black)
+
+    while white:
+        node = next(iter(white))
+        dfs(node)
+
+    return backEdges
+
+
+def remove_back_edges(graph):
+    """Remove back edges from directed graph."""
+    dag = graph.copy()
+    for start, end in find_back_edges(graph):
+        dag[start, end] = 0
+
+    return dag
+
+
 def plot_node(position, label='', radius=.1, fontsize=10, ax=None):
     """Plot graph node."""
     ax = ax or plt.gca()

@@ -3,10 +3,10 @@ import collections
 import matplotlib.pyplot as plt
 
 from klang.execution_order import execution_order
-from klang.graph import graph_matrix, plot_graph
+from klang.graph import graph_matrix, plot_graph, find_back_edges
+
 
 Scenario = collections.namedtuple('Scenario', 'edges positions')
-
 
 
 SCENARIOS = {
@@ -82,32 +82,54 @@ SCENARIOS = {
         ],
     ),
 
+    # Jump over one in chain
     10: Scenario(
         edges=[
             (0, 1), (1, 2), (2, 3), (0, 2)
         ],
         positions=[[0., 0.], [1., 0.], [2., 0.], [3., 0.]],
     ),
+
+
+    # Nico's fieser case
+    11: Scenario(
+        edges=[
+            (1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (4, 5),
+        ],
+        positions=[[0., 0.], [-1., 0.], [-2., 0.], [-3., 0.], [-4., 0.], [-4., -1.]],
+    ),
+
+    # From video https://www.youtube.com/watch?v=rKQaZuoUR4M
+    12: Scenario(
+        edges=[
+            (0, 1), (1, 2), (0, 2), (0, 3), (3, 4), (4, 5), (5, 3),
+        ],
+        positions=[[0., 0.], [1., 0.], [1., -1.], [-1., -1.], [0., -2.], [-1., -3.]],
+    ),
 }
 
 
-NUMBER = max(SCENARIOS)
-NUMBER = 6
+NUMBER = None
 
 
-def demo():
-    for nr, scenario in SCENARIOS.items():
+
+if __name__ == '__main__':
+    if NUMBER is None:
+        cases = SCENARIOS.items()
+    else:
+        cases = [
+            (NUMBER, SCENARIOS[NUMBER])
+        ]
+
+    for nr, scenario in cases:
         edges, positions = scenario
         graph = graph_matrix(edges).toarray()
 
+        backEdges = find_back_edges(graph)
         execOrder = execution_order(graph)
 
         fig, ax = plt.subplots(1)
         plot_graph(graph, positions, ax=ax)
-        title = 'Scenario {}, execOrder: {}'.format(nr, execOrder)
+        title = 'Scenario {},\nbackEdges: {}\nexecOrder: {}'.format(nr, backEdges, execOrder)
         fig.suptitle(title)
         plt.show()
-
-
-if __name__ == '__main__':
-    demo()
