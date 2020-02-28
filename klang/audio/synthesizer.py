@@ -2,12 +2,10 @@
 import collections
 import itertools
 
-import numpy as np
-
 from klang.blocks import Block
-from klang.envelope import EnvelopeGenerator
-from klang.oscillators import Oscillator
-from klang.tunings import EQUAL_TEMPERAMENT
+from klang.audio.envelope import EnvelopeGenerator
+from klang.audio.oscillators import Oscillator
+from klang.music.tunings import EQUAL_TEMPERAMENT
 from klang.math import clip
 from config import BUFFER_SIZE
 
@@ -115,10 +113,9 @@ class Synthesiser(Block):
 if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
-    import scipy as sp
 
     from config import SAMPLING_RATE
-    from klang.chords import CHORDS
+    from klang.music.chords import CHORDS
 
 
 

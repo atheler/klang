@@ -3,7 +3,7 @@ import numpy as np
 
 from config import BUFFER_SIZE
 from klang.blocks import Block
-from klang.waves import sample_wave
+from klang.audio.waves import sample_wave
 
 
 class Oscillator(Block):

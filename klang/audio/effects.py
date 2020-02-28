@@ -6,7 +6,7 @@ from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.blocks import Block
 from klang.constants import TAU
 from klang.math import clip
-from klang.oscillators import Oscillator
+from klang.audio.oscillators import Oscillator
 
 
 NYQUIST_FREQUENCY = SAMPLING_RATE // 2

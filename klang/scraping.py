@@ -4,8 +4,8 @@ import requests
 
 import bs4
 
-from klang.chords import pitch_classes_2_chord
-from klang.scales import pitches_2_scale
+from klang.music.chords import pitch_classes_2_chord
+from klang.music.scales import pitches_2_scale
 
 
 LIST_OF_CHORDS_URL = 'https://en.wikipedia.org/wiki/List_of_chords'

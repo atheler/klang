@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from klang.constants import DODE, TAU
-from klang.tunings import NOTES
+from klang.music.tunings import NOTES
 from klang.util import load_music_data_from_csv
 
 
