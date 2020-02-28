@@ -1,4 +1,5 @@
 import collections
+import itertools
 import time
 
 import numpy as np
@@ -7,6 +8,8 @@ import pyaudio
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.errors import KlangError
+from klang.execution_order import execution_order
+from klang.graph import graph_matrix
 from klang.util import write_wave
 
 
@@ -28,14 +31,54 @@ def output_neighbors(block):
     """Get output neighbors of block."""
     for output in block.outputs:
         for input_ in output.connections:
-            yield input_.owner
+            if input_.owner:
+                yield input_.owner
 
 
 def input_neighbors(block):
     """Get input neighbors of block."""
     for input_ in block.inputs:
         for output in input_.connections:
-            yield output.owner
+            if output.owner:
+                yield output.owner
+
+
+def block_network(*blocks):
+    """Convert block network to graph."""
+    queue = collections.deque(blocks)
+    visited = set()
+    edges = set()
+    mapping = collections.defaultdict(itertools.count().__next__)
+    """defaultdict: Block (Block) -> Graph node index (int)."""
+
+    while queue:
+        block = queue.popleft()
+        if block in visited:
+            continue
+
+        visited.add(block)
+        i = mapping[block]
+
+        for child in output_neighbors(block):
+            j = mapping[child]
+            edges.add((i, j))
+            queue.append(child)
+
+        for parent in input_neighbors(block):
+            h = mapping[child]
+            edges.add((h, i))
+            queue.append(parent)
+
+    graph = graph_matrix(list(edges))
+    return graph, mapping
+
+
+def block_execution_order(*blocks):
+    """Find block execution order."""
+    graph, mapping = block_network(*blocks)
+    execOrder = execution_order(graph)
+    rev = {v: k for k, v in mapping.items()}
+    return [rev[node] for node in execOrder]
 
 
 class Connectable:
