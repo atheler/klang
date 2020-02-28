@@ -1,3 +1,4 @@
+"""Envelop generator blocks."""
 import numpy as np
 
 from config import SAMPLING_RATE, BUFFER_SIZE

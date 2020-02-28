@@ -1,4 +1,6 @@
-"""Note:
+"""Audio wave functions.
+
+Note:
   - scipy.signal waveform functions are quite slow.
 """
 import numpy as np

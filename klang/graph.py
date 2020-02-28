@@ -1,4 +1,7 @@
-"""All things graph related. Graph helper functions."""
+"""All things graph related.
+
+Graph helper functions. Graph is defined as an sparse adjacency matrix and a node is an index.
+"""
 import matplotlib as mpl
 import numpy as np
 from matplotlib import pyplot as plt

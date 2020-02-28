@@ -1,4 +1,4 @@
-"""Find appropriate block execution order."""
+"""Execution order in directed graph."""
 import collections
 
 from klang.graph import get_sources, get_successors, get_predecessors

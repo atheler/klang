@@ -1,3 +1,4 @@
+"""Oscillator audio blocks."""
 import numpy as np
 
 from config import BUFFER_SIZE

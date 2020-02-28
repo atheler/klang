@@ -1,3 +1,4 @@
+"""Synthesizer audio blocks."""
 import collections
 import itertools
 

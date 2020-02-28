@@ -1,3 +1,4 @@
+"""Audio blocks."""
 import collections
 import itertools
 import time

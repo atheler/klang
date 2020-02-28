@@ -1,4 +1,4 @@
-"""Audio effects."""
+"""Audio effects blocks."""
 import numpy as np
 import scipy.signal
 

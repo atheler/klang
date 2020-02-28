@@ -112,9 +112,17 @@ def find_scale_by_name(name):
     msg = 'Could not find scale %r!' % name
     if candidates:
         alternatives = ', '.join(repr(can) for can in candidates)
-        msg += 'Did you mean: %s?' % alternatives 
+        msg += 'Did you mean: %s?' % alternatives
 
     raise ValueError(msg)
+
+
+def find_alternatives(key, dct):
+    pass
+
+
+def find_key(key, dct):
+    pass
 
 
 def format_circle_of_fifth_polar_plot(ax):
