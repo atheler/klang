@@ -115,8 +115,8 @@ def find_back_edges(graph):
 def remove_back_edges(graph):
     """Remove back edges from directed graph."""
     dag = graph.copy()
-    for start, end in find_back_edges(graph):
-        dag[start, end] = 0
+    for edge in find_back_edges(graph):
+        dag[edge] = 0
 
     return dag
 
