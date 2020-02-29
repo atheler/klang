@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.io
+import scipy.io.wavfile
 
 from config import SAMPLING_RATE, BIT_DEPTH
 

@@ -75,7 +75,7 @@ class AudioFile(Block):
 
         omega = self.playbackSpeed * np.arange(BUFFER_SIZE + 1)
         t = self.playingPosition + DT * omega
-        if t[-1] >= self.duration and self.loop:
+        if t[-1] >= self.duration and not self.loop:
             self.pause()
             return self.mute_outputs()
 
