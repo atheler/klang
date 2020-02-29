@@ -52,6 +52,22 @@ def cycle_pairs(iterable, circular=True):
 
 
 def load_music_data_from_csv(filepath, sep=','):
+    """Load music data from CSV.
+
+    Assumed format:
+        a,1,2
+        b,3,4,5
+        c,6,7,8,9
+
+    Args:
+        filepath (str): CSV filepath.
+
+    Kwargs:
+        sep (str): CSV separator.
+
+    Returns:
+        dict: Name (str) -> Data (list).
+    """
     dct = {}
     with open(filepath, 'r') as f:
         for line in f.readlines():
@@ -61,8 +77,14 @@ def load_music_data_from_csv(filepath, sep=','):
     return dct
 
 
-def find_alternative_names(dct,name):
-    """Find alternative key names for name."""
+def find_alternative_names(dct, name):
+    """Find alternative key names in dict.
+
+    Usage:
+        >>> dct = {'lorem ipsum': 0, 'lorem dolor': 1, 'sit amet': 2}
+        ... find_alternative_names(dct, 'lorem')
+         {'lorem dolor', 'lorem ipsum'}
+    """
     altNames = set()
     for word in name.split():
         for key in dct:
@@ -73,8 +95,8 @@ def find_alternative_names(dct,name):
 
 
 def find_item(dct, name, augments=None):
-    """Find item in dictionary. Also with augmented version of the name. Propose
-    alternatives.
+    """Find item in dictionary by name. Also try augmented versions of original
+    names. If item can not be located propose alternatives.
     """
     # Prepare name augments
     augments = augments or []

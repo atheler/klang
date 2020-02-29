@@ -90,11 +90,13 @@ def find_back_edges(graph):
     black = set()
     backEdges = []
 
-    def move_node(vertex, src, dst):
-        src.remove(vertex)
-        dst.add(vertex)
+    def move_node(node, src, dst):
+        """Move node from one set to another."""
+        src.remove(node)
+        dst.add(node)
 
     def dfs(parent):
+        """Depth first search graph traversal."""
         move_node(parent, white, gray)
         for child in get_successors(graph, parent):
             if child in black:
@@ -108,14 +110,14 @@ def find_back_edges(graph):
         move_node(parent, gray, black)
 
     while white:
-        node = next(iter(white))
+        node = next(iter(white))  # white.pop() would remove item from set!
         dfs(node)
 
     return backEdges
 
 
 def remove_back_edges(graph):
-    """Remove back edges from directed graph."""
+    """Remove back edges from directed graph and return DAG."""
     dag = graph.copy()
     for edge in find_back_edges(graph):
         dag[edge] = 0
@@ -124,7 +126,9 @@ def remove_back_edges(graph):
 
 
 def _node_is_ready(graph, node, order):
-    """Check if node is ready for topological sorting order."""
+    """Check if `node` is ready for topological sorting `order`, that is, all
+    predecessors of `node` have to be in `order` list.
+    """
     for predecessor in get_predecessors(graph, node):
         if predecessor not in order:
             return False
@@ -142,8 +146,8 @@ def topological_sorting(graph):
     Returns:
         list: Node execution order.
     """
-    graph = remove_back_edges(graph)
-    nNodes, _ = graph.shape
+    dag = remove_back_edges(graph)
+    nNodes, _ = dag.shape
     allNodes = range(nNodes)
     queue = collections.deque(allNodes)
     visited = set()
@@ -154,8 +158,8 @@ def topological_sorting(graph):
             continue
 
         visited.add(node)
-        successors = get_successors(graph, node)
-        if _node_is_ready(graph, node, order):
+        successors = get_successors(dag, node)
+        if _node_is_ready(dag, node, order):
             order.append(node)
             queue.extendleft(successors)
         else:
