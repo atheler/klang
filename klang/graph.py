@@ -66,6 +66,9 @@ def get_sources(graph):
     indices = (nIncoming == 0).nonzero()
     return indices[-1]
 
+def get_sinks(graph):
+    return get_sources(graph.T)
+
 
 def get_successors(graph, node):
     """Get successors of node in directed graph."""

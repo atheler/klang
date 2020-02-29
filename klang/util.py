@@ -1,5 +1,3 @@
-import collections
-
 import numpy as np
 from scipy.io import wavfile
 
@@ -138,16 +136,11 @@ def find_item(dct, name):
     distances = {
         key: levenshtein(name, key, insertionCost=0) for key in dct
     }
-    hist = collections.Counter(distances.values())
-    minDist = min(hist)
+    minDist = min(distances.values())
     if minDist > 0.0:
-        msg = 'Could not find %r!' % name
         alternatives = _filter_values(distances, value=minDist)
-        if alternatives:
-            msg += ' Did you mean: %s?' % _listify(alternatives)
-
+        msg = 'Could not find %r! Did you mean: %s?' % (name, _listify(alternatives))
         raise ValueError(msg)
-
 
     candidates = _filter_values(distances, value=0.0)
     if len(candidates) > 1:
