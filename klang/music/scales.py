@@ -8,21 +8,19 @@ Resources:
 import numpy as np
 from matplotlib import pyplot as plt
 
+from config import SCALES_FILEPATH
 from klang.constants import DODE, TAU
 from klang.music.tunings import NOTES
-from klang.util import load_music_data_from_csv
+from klang.util import find_item, load_music_data_from_csv
 
 
 PITCHES = np.arange(DODE)
-""""""
+"""array:"""
 
 MASK = 2 ** PITCHES
 """array: Pitch number values for encoding."""
 
-QUINTE_SEMITONES = 7
-"""int: Number of semitones in a perfect fifth."""
-
-CIRCLE_OF_FIFTHS_PITCHES = (QUINTE_SEMITONES * PITCHES) % DODE
+CIRCLE_OF_FIFTHS = np.array([(7 * i) % 12 for i in range(DODE)])
 """array: Pitches of the circle of fifths."""
 
 _ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
@@ -33,6 +31,12 @@ ALL_POSSIBLE_SCALES = []
 
 KNOWN_SCALES = {}
 """dict: Scale name (str) -> Scale code (int)."""
+
+
+def find_scale(name):
+    """Find scale by name in database."""
+    code = find_item(KNOWN_SCALES, name, augments=[' scale', ' mode'])
+    return ALL_POSSIBLE_SCALES[code]
 
 
 def scale_2_pitches(scale):
@@ -75,56 +79,6 @@ def all_possible_scales():
     ]
 
 
-ALL_POSSIBLE_SCALES = all_possible_scales()
-
-
-# Load scales from database
-KNOWN_SCALES = {
-    name: scale_2_code(scale)
-    for name, scale
-    in load_music_data_from_csv('resources/scales.csv').items()
-}
-
-
-def find_scale_by_name(name):
-    """Find scale by name in database."""
-    """
-    for word in name.split():
-        for key, code in KNOWN_SCALES.items():
-            if word in key:
-                return ALL_POSSIBLE_SCALES[code]
-
-    raise ValueError('Could not find %r' % name)
-    """
-    augments = ['', ' scale', 'mode']
-    for aug in augments:
-        key = name + aug
-        if key in KNOWN_SCALES:
-            code = KNOWN_SCALES[key]
-            return ALL_POSSIBLE_SCALES[code]
-
-    candidates = set()
-    for word in name.split():
-        for key in KNOWN_SCALES:
-            if word in key or key in word:
-                candidates.add(key)
-
-    msg = 'Could not find scale %r!' % name
-    if candidates:
-        alternatives = ', '.join(repr(can) for can in candidates)
-        msg += 'Did you mean: %s?' % alternatives
-
-    raise ValueError(msg)
-
-
-def find_alternatives(key, dct):
-    pass
-
-
-def find_key(key, dct):
-    pass
-
-
 def format_circle_of_fifth_polar_plot(ax):
     """Format a polar subplot so that it fits a circle of fifths plot."""
     north = 'N'
@@ -135,7 +89,7 @@ def format_circle_of_fifth_polar_plot(ax):
 
     ax.set_xticks(_ANGLES)
 
-    labels = NOTES[CIRCLE_OF_FIFTHS_PITCHES]
+    labels = NOTES[CIRCLE_OF_FIFTHS]
     ax.set_xticklabels(labels)
 
     ax.set_yticks([])
@@ -148,7 +102,7 @@ def plot_scale_in_circle_of_fifth(scale, ax=None):
     pitches = scale_2_pitches(scale)
     ax = ax or plt.gca()
     xy = np.array([
-        _ANGLES[CIRCLE_OF_FIFTHS_PITCHES[pitches]],
+        _ANGLES[CIRCLE_OF_FIFTHS[pitches]],
         np.ones_like(pitches),
     ]).T
     polygon = plt.Polygon(xy, closed=True)
@@ -159,7 +113,19 @@ def plot_scale_in_circle_of_fifth(scale, ax=None):
     return polygon
 
 
+ALL_POSSIBLE_SCALES = all_possible_scales()
+
+
+# Load scales from database
+KNOWN_SCALES = {
+    name: scale_2_code(scale)
+    for name, scale
+    in load_music_data_from_csv(SCALES_FILEPATH).items()
+}
+
+
 def main():
+    """Scales circle of fifths plot demo."""
     import math
 
     # Scales demo plot. Params:
@@ -181,8 +147,7 @@ def main():
     ]
     names = list(KNOWN_SCALES)
 
-    scales = [find_scale_by_name(n) for n in names]
-
+    scales = [find_scale(n) for n in names]
 
     def plotting_shape(n):
         """Get a nice subplot layout from number of subplots."""
@@ -204,7 +169,6 @@ def main():
     margin = .1
     plt.subplots_adjust(left=margin, right=1. - margin, top=1-margin, bottom=margin, hspace=.9)
     plt.show()
-
 
 
 if __name__ == '__main__':

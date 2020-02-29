@@ -59,3 +59,52 @@ def load_music_data_from_csv(filepath, sep=','):
             dct[key] = [int(v) for v in values]
 
     return dct
+
+
+def find_alternative_names(dct,name):
+    """Find alternative key names for name."""
+    altNames = set()
+    for word in name.split():
+        for key in dct:
+            if word in key or key in word:
+                altNames.add(key)
+
+    return altNames
+
+
+def find_item(dct, name, augments=None):
+    """Find item in dictionary. Also with augmented version of the name. Propose
+    alternatives.
+    """
+    # Prepare name augments
+    augments = augments or []
+    if '' not in augments:
+        augments = [''] + augments
+
+    # Try to find item
+    candidates = []
+    for aug in augments:
+        key = name + aug
+        if key in dct:
+            candidates.append(key)
+
+    nCandidates = len(candidates)
+    if nCandidates == 0:
+        msg = 'Could not find item %r!' % name
+
+        # Propose alternatives
+        alternatives = find_alternative_names(dct, name)
+        if alternatives:
+            aStr = ', '.join(map(repr, alternatives))
+            msg += (' Did you mean: %s?' % aStr)
+
+        raise ValueError(msg)
+
+    if nCandidates > 1:
+        msg = 'Found to many candidates! %s'
+        raise ValueError(msg % ' ,'.join(
+            candidates
+        ))
+
+    key = candidates[0]
+    return dct[key]

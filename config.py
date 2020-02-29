@@ -15,3 +15,9 @@ SAMPLING_RATE = 44100
 
 TEMPERAMENT_NAME = 'Young'
 """str: Temperament name for synthesizer."""
+
+CHORDS_FILEPATH = 'resources/chords.csv'
+"""str: Filepath to chords CSV file."""
+
+SCALES_FILEPATH = 'resources/scales.csv'
+"""str: Filepath to scales CSV file."""
