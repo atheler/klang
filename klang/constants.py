@@ -15,3 +15,9 @@ REF_OCTAVE = 5
 
 SEMITONES_PER_OCTAVE = 12
 """int: Number of semitones in an octave."""
+
+MONO = 1
+"""int: Mono."""
+
+STEREO = 2
+"""int: Stereo."""
