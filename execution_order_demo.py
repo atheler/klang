@@ -2,9 +2,7 @@ import collections
 
 import matplotlib.pyplot as plt
 
-from klang.execution_order import execution_order
-from klang.graph import graph_matrix, plot_graph, find_back_edges
-
+from klang.graph import graph_matrix, plot_graph, find_back_edges, topological_sorting
 
 Scenario = collections.namedtuple('Scenario', 'edges positions')
 
@@ -126,7 +124,7 @@ if __name__ == '__main__':
         graph = graph_matrix(edges).toarray()
 
         backEdges = find_back_edges(graph)
-        execOrder = execution_order(graph)
+        execOrder = topological_sorting(graph)
 
         fig, ax = plt.subplots(1)
         plot_graph(graph, positions, ax=ax)

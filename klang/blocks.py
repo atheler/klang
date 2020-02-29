@@ -9,8 +9,7 @@ import pyaudio
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.connections import Input, Output
-from klang.execution_order import execution_order
-from klang.graph import graph_matrix
+from klang.graph import graph_matrix, topological_sorting
 from klang.util import write_wave
 
 
@@ -63,7 +62,7 @@ def block_network(*blocks):
 def block_execution_order(*blocks):
     """Find block execution order."""
     graph, mapping = block_network(*blocks)
-    execOrder = execution_order(graph)
+    execOrder = topological_sorting(graph)
     rev = {v: k for k, v in mapping.items()}
     return [rev[node] for node in execOrder]
 

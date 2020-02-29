@@ -2,6 +2,8 @@
 
 Graph helper functions. Graph is defined as an sparse adjacency matrix and a node is an index.
 """
+import collections
+
 import matplotlib as mpl
 import numpy as np
 from matplotlib import pyplot as plt
@@ -119,6 +121,47 @@ def remove_back_edges(graph):
         dag[edge] = 0
 
     return dag
+
+
+def _node_is_ready(graph, node, order):
+    """Check if node is ready for topological sorting order."""
+    for predecessor in get_predecessors(graph, node):
+        if predecessor not in order:
+            return False
+
+    return True
+
+
+def topological_sorting(graph):
+    """Find appropriate execution order in directed graph with cycles. Based on
+    original algorithm from Nico Neureiter.
+
+    Args:
+        graph (array): Graph adjacency matrix.
+
+    Returns:
+        list: Node execution order.
+    """
+    graph = remove_back_edges(graph)
+    nNodes, _ = graph.shape
+    allNodes = range(nNodes)
+    queue = collections.deque(allNodes)
+    visited = set()
+    order = []
+    while queue:
+        node = queue.popleft()
+        if node in order:
+            continue
+
+        visited.add(node)
+        successors = get_successors(graph, node)
+        if _node_is_ready(graph, node, order):
+            order.append(node)
+            queue.extendleft(successors)
+        else:
+            queue.extend(successors)
+
+    return order
 
 
 def plot_node(position, label='', radius=.1, fontsize=10, ax=None):
