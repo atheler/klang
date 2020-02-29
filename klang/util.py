@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.io import wavfile
+import scipy.io
 
 from config import SAMPLING_RATE, BIT_DEPTH
 
@@ -10,6 +10,23 @@ _WAVE_DTYPES = {
     #24: ???
     #32: np.int32,
 }
+
+
+def convert_samples(samples):
+    """Convert audio samples to float [-1.0, 1.0]."""
+    samples = np.asarray(samples)
+    if not np.issubdtype(samples.dtype, np.integer):
+        return samples
+
+    iinfo = np.iinfo(samples.dtype)
+    maxValue = max(abs(iinfo.min), abs(iinfo.max))
+    return samples / maxValue
+
+
+def load_wave(filepath):
+    """Load WAV file."""
+    rate, data = scipy.io.wavfile.read(filepath)
+    return rate, convert_samples(data)
 
 
 def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, bitDepth=BIT_DEPTH):
@@ -24,7 +41,7 @@ def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, bitDepth=BIT_DEPTH):
     audio = audio / maxVal
     samples = (audio * np.iinfo(dtype).max).astype(dtype)
 
-    wavfile.write(filepath, samplingRate, samples)
+    scipy.io.wavfile.write(filepath, samplingRate, samples)
 
 
 def cycle_pairs(iterable, circular=True):

@@ -1,3 +1,5 @@
+import numpy as np
+
 from klang.constants import PI, TAU
 
 
