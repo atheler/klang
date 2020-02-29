@@ -1,7 +1,10 @@
+import collections
+
 import numpy as np
 from scipy.io import wavfile
 
 from config import SAMPLING_RATE, BIT_DEPTH
+
 
 _WAVE_DTYPES = {
     #8: np.uint8,
@@ -77,56 +80,79 @@ def load_music_data_from_csv(filepath, sep=','):
     return dct
 
 
-def find_alternative_names(dct, name):
-    """Find alternative key names in dict.
+def levenshtein(first, second, deletionCost=1, insertionCost=1, substitutionCost=1):
+    """Levenshtein editing distance.
+
+    Args:
+        first (str): First string.
+        second (str): Second string.
+
+    Kwargs:
+        deletionCost ()
+    """
+    nRows = len(first) + 1
+    nCols = len(second) + 1
+    assert nRows > 1 and nCols > 1
+    H = np.zeros((nRows, nCols), dtype=int)
+    H[:, 0] = np.arange(nRows)
+    H[0, :] = np.arange(nCols)
+    for row, a in enumerate(first, start=1):
+        for col, b in enumerate(second, start=1):
+            H[row, col] = min(
+                H[row-1][col] + deletionCost,                      # Cost of deletions
+                H[row][col-1] + insertionCost,                     # Cost of insertions
+                H[row-1][col-1] + substitutionCost * int(a != b),  # Cost of substitutions
+            )
+
+    return H[row, col]
+
+
+def _filter_values(dct, value):
+    """Get keys for a certain value."""
+    return [key for key, val in dct.items() if val == value]
+
+
+def _listify(sequence):
+    """String list representation of sequence.
 
     Usage:
-        >>> dct = {'lorem ipsum': 0, 'lorem dolor': 1, 'sit amet': 2}
-        ... find_alternative_names(dct, 'lorem')
-         {'lorem dolor', 'lorem ipsum'}
+        >>> _listify([1, 2, 3])
+        '1, 2 or 3'
     """
-    altNames = set()
-    for word in name.split():
-        for key in dct:
-            if word in key or key in word:
-                altNames.add(key)
+    if len(sequence) > 1:
+        ret = ', '.join(map(repr, sequence[:-1]))
+        ret += ' or %r' % sequence[-1]
+    else:
+        ret = ', '.join(map(repr, sequence))
 
-    return altNames
+    return ret
 
 
-def find_item(dct, name, augments=None):
-    """Find item in dictionary by name. Also try augmented versions of original
-    names. If item can not be located propose alternatives.
+def find_item(dct, name):
+    """Try to find item in dictionary by name (key has to be a string). In case
+    of ambiguity present alternatives (lowest Levenshtein distance).
     """
-    # Prepare name augments
-    augments = augments or []
-    if '' not in augments:
-        augments = [''] + augments
+    if name in dct:
+        return dct[name]
 
-    # Try to find item
-    candidates = []
-    for aug in augments:
-        key = name + aug
-        if key in dct:
-            candidates.append(key)
-
-    nCandidates = len(candidates)
-    if nCandidates == 0:
-        msg = 'Could not find item %r!' % name
-
-        # Propose alternatives
-        alternatives = find_alternative_names(dct, name)
+    distances = {
+        key: levenshtein(name, key, insertionCost=0) for key in dct
+    }
+    hist = collections.Counter(distances.values())
+    minDist = min(hist)
+    if minDist > 0.0:
+        msg = 'Could not find %r!' % name
+        alternatives = _filter_values(distances, value=minDist)
         if alternatives:
-            aStr = ', '.join(map(repr, alternatives))
-            msg += (' Did you mean: %s?' % aStr)
+            msg += ' Did you mean: %s?' % _listify(alternatives)
 
         raise ValueError(msg)
 
-    if nCandidates > 1:
-        msg = 'Found to many candidates! %s'
-        raise ValueError(msg % ' ,'.join(
-            candidates
-        ))
 
-    key = candidates[0]
+    candidates = _filter_values(distances, value=0.0)
+    if len(candidates) > 1:
+        msg = 'Ambiguous name %r! Did you mean: %s?' % (name, _listify(candidates))
+        raise ValueError(msg)
+
+    key, = candidates
     return dct[key]

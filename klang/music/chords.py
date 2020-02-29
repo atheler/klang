@@ -12,7 +12,7 @@ CHORDS = {}
 
 def find_chord(name):
     """Find chord in database."""
-    return find_item(CHORDS, name, augments=[' chord'])
+    return find_item(CHORDS, name)
 
 
 def pitch_classes_2_chord(pitchClasses):

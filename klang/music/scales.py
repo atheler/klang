@@ -35,7 +35,7 @@ KNOWN_SCALES = {}
 
 def find_scale(name):
     """Find scale by name in database."""
-    code = find_item(KNOWN_SCALES, name, augments=[' scale', ' mode'])
+    code = find_item(KNOWN_SCALES, name)
     return ALL_POSSIBLE_SCALES[code]
 
 
