@@ -151,3 +151,30 @@ class Filter(Block):
         out, self.zi = scipy.signal.lfilter(*self.coefficients, x=samples, zi=self.zi)
 
         self.output.set_value(out)
+
+
+def sub_sample(array, skip):
+    """Sub sample array.
+
+    Usage:
+        >>> samples = np.arange(6)
+        ... sub_sample(samples, 2)
+        array([0, 0, 2, 2, 4, 4])
+    """
+    return np.repeat(array[::skip], skip)
+
+
+class Subsampler(Block):
+
+    """Sub sample audio buffer. Soft bit crusher effect."""
+
+    def __init__(self, factor):
+        assert factor in {2, 4, 8, 16, 32, 64, 128}
+        assert factor > 1
+        super().__init__(nInputs=1, nOutputs=1)
+        self.factor = factor
+
+    def update(self):
+        samples = self.input.get_value()
+        subSamples = sub_sample(samples, self.factor)
+        self.output.set_value(subSamples)
