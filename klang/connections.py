@@ -7,6 +7,10 @@ import collections
 from klang.errors import KlangError
 
 
+MAX_MESSAGES = 50
+"""int: Maximum number of messages on a queue."""
+
+
 class NotConnectedError(KlangError):
 
     """Connectable is not connected."""
@@ -14,7 +18,7 @@ class NotConnectedError(KlangError):
     pass
 
 
-class InputAlreadyConnectedError(KlangError):
+class AlreadyConnectedError(KlangError):
 
     """Connectable already connected."""
 
@@ -25,9 +29,10 @@ class Connectable:
 
     """Base class for connectable objects."""
 
-    def __init__(self, owner, value=0.):
+    def __init__(self, owner, value=0., singleConnection=False):
         self.owner = owner
         self.value = value  # Also paceholder value for unconnected Input
+        self.singleConnection = singleConnection
         self.connections = set()
 
     @property
@@ -37,6 +42,9 @@ class Connectable:
 
     def connect(self, other):
         """Make a connection to another connectable."""
+        if self.singleConnection and self.connected:
+            raise AlreadyConnectedError
+
         self.connections.add(other)
         other.connections.add(self)
 
@@ -71,13 +79,8 @@ class Input(Connectable):
     Can be connected to only one output.
     """
 
-    def connect(self, output):
-        assert isinstance(output, Output)
-        if self.connected:
-            msg = 'Only one connection possible for Input owner!'
-            raise InputAlreadyConnectedError(msg)
-
-        super().connect(output)
+    def __init__(self, owner, value=0.):
+        super().__init__(owner, value, singleConnection=True)
 
     def get_value(self):
         if not self.connected:
@@ -104,7 +107,10 @@ class MessageInput(Input):
     """Input for messages (Input where value attribute is a queue)."""
 
     def __init__(self, owner):
-        super().__init__(owner, value=collections.deque())
+        super().__init__(
+            owner,
+            value=collections.deque(maxlen=MAX_MESSAGES),
+        )
 
     def receive(self):
         """Iterate over received messages."""
@@ -118,9 +124,19 @@ class MessageOutput(Output):
     """Output for messages (Input where value attribute is a queue)."""
 
     def __init__(self, owner):
-        super().__init__(owner, value=collections.deque())
+        super().__init__(
+            owner,
+            value=collections.deque(maxlen=MAX_MESSAGES),
+            singleConnection=True,
+        )
 
     def send(self, message):
         """Send message. No notificaiton."""
         queue = self.value
         queue.append(message)
+
+    def receive(self):
+        """Iterate over received messages."""
+        queue = self.get_value()
+        while queue:
+            yield queue.popleft()
