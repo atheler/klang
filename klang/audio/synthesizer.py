@@ -4,12 +4,12 @@ import itertools
 import numpy as np
 
 from config import BUFFER_SIZE
-from klang.audio.envelope import EnvelopeGenerator
+from klang.audio.envelope import EnvelopeGenerator, AR
 from klang.audio.oscillators import Oscillator
 from klang.blocks import Block
 from klang.connections import MessageInput
 from klang.math import clip
-from klang.music.tunings import EQUAL_TEMPERAMENT
+from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
 from klang.connections import AlreadyConnectedError
 
 
@@ -62,7 +62,10 @@ class Synthesizer(Block):
 
         self.inputs = [MessageInput(self)]
         self.output.set_value(MONO_SILENCE)
-        self.voices = [Voice() for _  in range(self.MAX_VOICES)]
+
+        self.voices = [
+            Voice(envelope=AR(attackTime=.002, releaseTime=.1)) for _  in range(self.MAX_VOICES)
+        ]
         self.freeVoice = itertools.cycle(self.voices)
 
     def play_notes(self, *notes):
@@ -103,3 +106,26 @@ class Synthesizer(Block):
 
         samples /= self.MAX_VOICES
         self.output.set_value(samples)
+
+
+_temperaments = list(TEMPERAMENTS.values())
+
+
+class TemperamentSynthesizer(Synthesizer):
+    def __init__(self):
+        super().__init__()
+        self.inputs.append(MessageInput(self))
+
+    def update(self):
+        for key in self.inputs[1].receive():
+            try:
+                char = key.char
+                idx = int(char)
+            except (AttributeError, ValueError):
+                continue
+
+            if 0 <= idx < len(_temperaments):
+                self.temperament = _temperaments[idx]
+                print('Switched to %s' % self.temperament)
+
+        super().update()

@@ -1,13 +1,13 @@
+"""Keyboard input."""
 import collections
 
-from pynput.keyboard import Listener, Key, KeyCode
+from pynput.keyboard import Listener
 
 from klang.blocks import Block
 from klang.connections import MessageOutput
 from klang.constants import REF_OCTAVE, DODE
 from klang.math import clip
 from klang.messages import Note
-from klang.music.tunings import EQUAL_TEMPERAMENT
 
 
 KEYS = []
@@ -18,6 +18,9 @@ QUIETER = -.1
 
 
 class Keyboard(Block):
+
+    """Base version of keyboard input."""
+
     def __init__(self, suppress=False):
         super().__init__()
         self.outputs = [MessageOutput(self)]

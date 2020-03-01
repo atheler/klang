@@ -44,6 +44,12 @@ ACCIDENTAL_SHIFTS = {
 
 KAMMERTON_OFFSET = 9
 
+EQUAL_TEMPERAMENT = None
+"""Temperament: Default equal temperament."""
+
+TEMPERAMENTS = {}
+"""dict: Name (str) -> Temperament (Temperament)."""
+
 
 def frequency_2_pitch(frequency, kammerton=KAMMERTON):
     """Frequency to MIDI note number (equal temperament)."""
@@ -182,6 +188,21 @@ class Temperament:
 
 
 EQUAL_TEMPERAMENT = Temperament('Equal', 2. ** (np.arange(DODE) / DODE))
+_rndRatios = 1. + np.sort(np.random.random(DODE))
+_rndRatios[0] = 1.
+TEMPERAMENTS = {
+    'Equal': EQUAL_TEMPERAMENT,
+    'Young': Temperament('Young', [
+        1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
+        1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
+        1.878842233,
+    ]),
+    'Pythagorean': Temperament('Pythagorean', [
+        1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
+        7./4., 11./6.,
+    ]),
+    'Random': Temperament('Random', _rndRatios),
+}
 
 
 if __name__ == '__main__':
