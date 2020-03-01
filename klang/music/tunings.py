@@ -160,24 +160,15 @@ class Temperament:
         self.name = name
         self.ratios = np.asarray(ratios, dtype=float)
         self.kammerton = kammerton
+        self.refFrequency = pitch_2_frequency(60, kammerton)
 
     def pitch_2_frequency(self, pitch):
-        octave, note = np.divmod(pitch - KAMMERTON_OFFSET, DODE)
-        return self.kammerton * self.ratios[note] * (2. ** (octave - REF_OCTAVE))
+        octave, note = np.divmod(pitch, DODE)
+        return self.refFrequency * self.ratios[note] * (2. ** (octave - REF_OCTAVE))
 
     def frequency_2_pitch(self, frequency):
         raise NotImplementedError
         # TODO(atheler): Do we need this?
-        tmp = frequency / self.kammerton / self.ratios[:, None]
-        #tmp += KAMMERTON_OFFSET
-        bar = np.log2(tmp) + REF_OCTAVE
-        guess = np.round(bar)
-        err = np.abs(bar - guess)
-        idx = err.argmin(axis=0)
-        pitch = guess[idx] + KAMMERTON_OFFSET
-        print(pitch)
-        return pitch
-        return np.zeros_like(frequency)
 
     def __str__(self):
         return '%s(%r, %.1f Hz)' % (
@@ -188,21 +179,28 @@ class Temperament:
 
 
 EQUAL_TEMPERAMENT = Temperament('Equal', 2. ** (np.arange(DODE) / DODE))
-_rndRatios = 1. + np.sort(np.random.random(DODE))
-_rndRatios[0] = 1.
-TEMPERAMENTS = {
-    'Equal': EQUAL_TEMPERAMENT,
-    'Young': Temperament('Young', [
-        1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
-        1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
-        1.878842233,
-    ]),
-    'Pythagorean': Temperament('Pythagorean', [
-        1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
-        7./4., 11./6.,
-    ]),
-    'Random': Temperament('Random', _rndRatios),
-}
+
+
+def _init_temperaments():
+    global TEMPERAMENTS
+    rndRatios = 1. + np.sort(np.random.random(DODE))
+    rndRatios[0] = 1.
+    TEMPERAMENTS = {
+        'Equal': EQUAL_TEMPERAMENT,
+        'Young': Temperament('Young', [
+            1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
+            1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
+            1.878842233,
+        ]),
+        'Pythagorean': Temperament('Pythagorean', [
+            1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
+            7./4., 11./6.,
+        ]),
+        'Random': Temperament('Random', rndRatios),
+    }
+
+
+_init_temperaments()
 
 
 if __name__ == '__main__':
@@ -213,7 +211,6 @@ if __name__ == '__main__':
     print(EQUAL_TEMPERAMENT)
     print('Pitch 60 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(60))
     print('Pitch 69 ->', EQUAL_TEMPERAMENT.pitch_2_frequency(69))
-
 
     for pitch in range(60, 72):
         print(pitch, '->', pitch_2_note_name(pitch))
