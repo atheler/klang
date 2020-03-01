@@ -57,7 +57,11 @@ class Connectable:
         self.value = value
 
     def __str__(self):
-        return '%s(connected: %s)' % (self.__class__.__name__, self.connected)
+        return '%s(%s, %s)' % (
+            self.__class__.__name__,
+            self.owner,
+            'connected' if self.connected else 'not connected',
+        )
 
 
 class Input(Connectable):

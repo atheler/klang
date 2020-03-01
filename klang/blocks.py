@@ -1,15 +1,11 @@
 """Audio blocks."""
 import collections
-import itertools
-import time
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pyaudio
 
-from config import SAMPLING_RATE, BUFFER_SIZE
+from config import SAMPLING_RATE
 from klang.connections import Input, Output
-from klang.graph import graph_matrix, topological_sorting
 from klang.util import write_wave
 
 
@@ -27,44 +23,6 @@ def input_neighbors(block):
         for output in input_.connections:
             if output.owner:
                 yield output.owner
-
-
-def block_network(*blocks):
-    """Convert block network to graph."""
-    queue = collections.deque(blocks)
-    visited = set()
-    edges = set()
-    mapping = collections.defaultdict(itertools.count().__next__)
-    """defaultdict: Block (Block) -> Graph node index (int)."""
-
-    while queue:
-        block = queue.popleft()
-        if block in visited:
-            continue
-
-        visited.add(block)
-        i = mapping[block]
-
-        for child in output_neighbors(block):
-            j = mapping[child]
-            edges.add((i, j))
-            queue.append(child)
-
-        for parent in input_neighbors(block):
-            h = mapping[child]
-            edges.add((h, i))
-            queue.append(parent)
-
-    graph = graph_matrix(list(edges))
-    return graph, mapping
-
-
-def block_execution_order(*blocks):
-    """Find block execution order."""
-    graph, mapping = block_network(*blocks)
-    execOrder = topological_sorting(graph)
-    rev = {v: k for k, v in mapping.items()}
-    return [rev[node] for node in execOrder]
 
 
 class Block:
@@ -158,58 +116,3 @@ class WavWriter(Block):
 
     def finalize(self):
         write_wave(np.concatenate(self.buffer), self.filepath, self.samplingRate)
-
-
-class Dac(Block):
-
-    """Send audio to sound card. Register callback_func which gets called every
-    audio callback cycle.
-    """
-
-    def __init__(self):
-        super().__init__(nInputs=1)
-        self.callback_func = None
-        self.running = False
-
-    def update(self):
-        pass  # Dummy overwrite so that Dac.update() can also be called
-
-    def register_callback(self, func):
-        self.callback_func = func
-
-    def run(self):
-        def audio_callback(inData, frameCount, timeInfo, status):
-            """Audio stream callback for pyaudio."""
-            if self.callback_func:
-                self.callback_func()
-
-            data = np.asarray(self.input.get_value(), dtype=np.float32)
-            return data, pyaudio.paContinue
-
-        """Synthesizer main loop."""
-        # Example: Callback Mode Audio I/O from
-        # https://people.csail.mit.edu/hubert/pyaudio/docs/
-        pa = pyaudio.PyAudio()
-        stream = pa.open(
-            rate=SAMPLING_RATE,
-            channels=1,
-            format=pyaudio.paFloat32,
-            input=False,
-            output=True,
-            frames_per_buffer=BUFFER_SIZE,
-            stream_callback=audio_callback,
-        )
-        stream.start_stream()
-
-        try:
-            while self.running and stream.is_active():
-                time.sleep(0.1)
-
-        finally:
-            stream.stop_stream()
-            stream.close()
-            pa.terminate()
-
-    def start(self):
-        self.running = True
-        self.run()
