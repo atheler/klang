@@ -1,11 +1,20 @@
+"""Audio sampling.
+
+TODO:
+  - Better sample interpolation (no more jitter).
+  - Audio trimming
+  - class Sampler
+  - class Looper
+"""
 import math
 
 import numpy as np
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.blocks import Block
+from klang.connections import MessageInput
+from klang.constants import MONO, TWO_D
 from klang.util import load_wave
-from klang.constants import MONO
 
 
 DT = 1. / SAMPLING_RATE
@@ -13,7 +22,7 @@ DT = 1. / SAMPLING_RATE
 
 
 INDICES = np.arange(BUFFER_SIZE)
-TWO_D = 2
+"""array: Buffer base indices."""
 
 
 def sum_to_mono(samples):
@@ -155,3 +164,19 @@ class AudioFile(Block):
             self.__class__.__name__,
             ', '.join(infos)
         )
+
+
+class Sampler(Block):
+
+    """Audio samlper.
+
+    TODO: Make me!
+    """
+
+    def __init__(self, data):
+        super().__init__(nOutputs=1)
+        self.inputs = [MessageInput(self)]
+
+    @classmethod
+    def from_wave(self, filepath):
+        pass
