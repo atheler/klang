@@ -1,15 +1,71 @@
+import math
+
 import numpy as np
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.blocks import Block
 from klang.util import load_wave
+from klang.constants import MONO
 
 
 DT = 1. / SAMPLING_RATE
 """float: Sampling interval."""
 
-SILENCE = np.zeros(BUFFER_SIZE)
-"""array: A piece of silence."""
+
+INDICES = np.arange(BUFFER_SIZE)
+TWO_D = 2
+
+
+def sum_to_mono(samples):
+    """Sum samples to mono."""
+    samples = np.asarray(samples)
+    if samples.ndim != MONO:
+        samples = np.mean(samples, axis=1)
+
+    return samples.reshape((-1, 1))
+
+
+def interp_2d(x, xp, fp, *args, **kwargs):
+    """Multi-dimensional linear interpolation."""
+    return np.array([
+        np.interp(x, xp, col, *args, **kwargs) for col in fp.T
+    ]).T
+
+
+class SampleInterpolator:
+    """Linear sample interpolation.
+
+    Because of practically / performance we do not periodically interpolate but
+    instead allow for an overflow segment which will be added at the end. That
+    is `overflow` many samples will be continued at the end (no circular array
+    issue). This overflow should be at least maxPlaybackSpeed * BUFFER_SIZE.
+    This way we can assume that the sample time points are always ascending and
+    to not wrap around % duration (we do not have to interpolate over all data
+    points, only a sub-section).
+
+    TODO:
+      - Improove. Kill float jitter!
+    """
+
+    def __init__(self, rate, samples, overflow=BUFFER_SIZE):
+        samples = np.asarray(samples)
+        assert samples.ndim == TWO_D
+        self.rate = rate
+        self.length, self.nChannels = samples.shape
+        self.duration = self.length / self.rate
+        self.xp = np.arange(self.length + overflow) / rate
+        self.fp = np.concatenate([samples, samples[:overflow]])
+
+    def get_interval(self, x):
+        """Get sub section interval."""
+        start = int(x[0] * self.rate)
+        stop = max(start + 1, int(math.ceil(x[-1] * self.rate)))
+        return start, stop
+
+    def __call__(self, x):
+        x = np.atleast_1d(x)
+        start, stop = self.get_interval(x)
+        return interp_2d(x, self.xp[start:stop], self.fp[start:stop])
 
 
 class AudioFile(Block):
@@ -19,33 +75,31 @@ class AudioFile(Block):
     Single sample playback with varying playback speed.
     """
 
-    def __init__(self, filepath, loop=True):
-        self.rate, self.data = load_wave(filepath)
-        super().__init__(nOutputs=self.n_channels)
-        self.filepath = filepath
-        self.loop = loop
+    MAX_PLAYBACK_SPEED = 10.
 
-        self.playing = True
+    def __init__(self, samples, rate, loop=True, mono=False):
+        super().__init__(nOutputs=1)
+        if mono and samples.shape[1] > 1:
+            samples = sum_to_mono(samples)
+
+        overflow = int(self.MAX_PLAYBACK_SPEED * BUFFER_SIZE)
+        self.samples = SampleInterpolator(rate, samples, overflow)
+        self.loop = loop
+        self.filepath = ''
+
+        self.playing = False
         self.playingPosition = 0.
         self.playbackSpeed = 1.
-        self.xp = np.arange(self.length) / self.rate
+        self.silence = np.zeros((self.samples.nChannels, BUFFER_SIZE))
 
         self.mute_outputs()
 
-    @property
-    def length(self):
-        """Number of samples."""
-        return self.data.shape[0]
-
-    @property
-    def n_channels(self):
-        """Number of audio channels."""
-        return self.data.shape[1]
-
-    @property
-    def duration(self):
-        """Duration of audio file in seconds."""
-        return self.length / float(self.rate)
+    @classmethod
+    def from_wave(cls, filepath, loop=True):
+        rate, data = load_wave(filepath)
+        self = cls(data, rate, loop)
+        self.filepath = filepath
+        return self
 
     def play(self):
         """Start playback."""
@@ -66,30 +120,38 @@ class AudioFile(Block):
 
     def mute_outputs(self):
         """Set outputs to zero signal."""
-        for channel in self.outputs:
-            channel.set_value(SILENCE)
+        self.output.set_value(self.silence)
+
+    def get_stop(self):
+        return self.playingPosition + self.playbackSpeed * DT * BUFFER_SIZE
 
     def update(self):
         if not self.playing:
             return self.mute_outputs()
 
-        omega = self.playbackSpeed * np.arange(BUFFER_SIZE + 1)
-        t = self.playingPosition + DT * omega
-        if t[-1] >= self.duration and not self.loop:
+        stop = self.get_stop()
+        atEnd = stop >= self.samples.duration
+        if atEnd and self.loop:
             self.pause()
             return self.mute_outputs()
 
-        t %= self.duration
-        self.playingPosition = t[-1]
-        for chunk, channel in zip(self.data.T, self.outputs):
-            samples = np.interp(t[:-1], self.xp, chunk)
-            channel.set_value(samples)
+        t = self.playingPosition + DT * self.playbackSpeed * INDICES
+        self.playingPosition = stop % self.samples.duration
+
+        chunk = self.samples(t)
+        self.output.set_value(chunk.T)
 
     def __str__(self):
-        state = 'Playing' if self.playing else 'Paused'
-        return '%s(%s, %.3f / %.3f sec)' % (
+        if self.filepath:
+            infos = [repr(self.filepath)]
+        else:
+            infos = []
+
+        infos.extend([
+            'Playing' if self.playing else 'Paused',
+            '%.3f / %.3f sec' % (self.playingPosition, self.samples.duration),
+        ])
+        return '%s(%s)' % (
             self.__class__.__name__,
-            state,
-            self.playingPosition,
-            self.duration,
+            ', '.join(infos)
         )
