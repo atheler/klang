@@ -40,6 +40,7 @@ class EnvelopeGenerator(Block):
         super().__init__(nInputs=1, nOutputs=1)
         self.trigger = self.input
         self.currentLevel = 0.
+        self.output.set_value(np.zeros(BUFFER_SIZE))
 
     def sample(self, nSamples):
         triggered = self.trigger.get_value()
@@ -53,7 +54,10 @@ class EnvelopeGenerator(Block):
     @property
     def active(self):
         triggered = self.trigger.get_value()
-        return not triggered and self.currentLevel == 0
+        if triggered:
+            return True
+
+        return self.currentLevel == 0
 
 
 class AR(EnvelopeGenerator):

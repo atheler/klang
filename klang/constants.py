@@ -21,3 +21,4 @@ MONO = 1
 
 STEREO = 2
 """int: Stereo."""
+TWO_D = 2

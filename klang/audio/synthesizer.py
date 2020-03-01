@@ -1,31 +1,19 @@
 """Synthesizer audio blocks."""
-import collections
 import itertools
 
-from klang.blocks import Block
+import numpy as np
+
+from config import BUFFER_SIZE
 from klang.audio.envelope import EnvelopeGenerator
 from klang.audio.oscillators import Oscillator
-from klang.music.tunings import EQUAL_TEMPERAMENT
+from klang.blocks import Block
+from klang.connections import MessageInput
 from klang.math import clip
-from config import BUFFER_SIZE
+from klang.music.tunings import EQUAL_TEMPERAMENT
+from klang.connections import AlreadyConnectedError
 
 
-Note = collections.namedtuple('Note', 'pitch velocity')
-
-
-class MessageConverter(Block):
-    def __init__(self, func):
-        super().__init__(nInputs=1, nOutputs=1)
-        self.func = func
-
-        self.output.set_value(collections.deque)
-
-    def update(self):
-        qIn = self.input.get_value()
-        qOut = self.output.get_value()
-        while qIn:
-            msg = qIn.popleft()
-            qOut.append(self.func(msg))
+MONO_SILENCE = np.zeros(BUFFER_SIZE)
 
 
 class Voice(Block):
@@ -41,19 +29,16 @@ class Voice(Block):
 
     @property
     def active(self):
-        triggered = self.envelope.trigger.get_value()
-        env = self.envelope.output.get_value()
-
-        return not triggered and env[-1] == 0.
+        return self.envelope.active
 
     def process_note(self, frequency, velocity):
-        if velocity != 0.:
+        if velocity > 0.:
             self.amplitude = clip(velocity, 0., 1.)
             self.oscillator.frequency.set_value(frequency)
             self.envelope.trigger.set_value(True)
         else:
             self.envelope.trigger.set_value(False)
-    
+
     def update(self):
         self.oscillator.update()
         osc = self.oscillator.output.get_value()
@@ -65,79 +50,56 @@ class Voice(Block):
         self.output.set_value(signal)
 
 
-class Synthesiser(Block):
+class Synthesizer(Block):
+
+    """Simple polyphonic synthesizer."""
 
     MAX_VOICES = 24
 
     def __init__(self, temperament=EQUAL_TEMPERAMENT):
-        super().__init__(nInputs=1, nOutputs=1)
+        super().__init__(nInputs=0, nOutputs=1)
         self.temperament = temperament
 
-        self.input.set_value(collections.deque())
-        self.output.set_value(np.zeros(BUFFER_SIZE))
-
+        self.inputs = [MessageInput(self)]
+        self.output.set_value(MONO_SILENCE)
         self.voices = [Voice() for _  in range(self.MAX_VOICES)]
         self.freeVoice = itertools.cycle(self.voices)
 
-    def play_note(self, note):
-        queue = self.input.get_value()
-        queue.append(note)
+    def play_notes(self, *notes):
+        """Play notes."""
+        if self.input.connected:
+            fmt = 'Synthesizer input is already connected with %s!'
+            other, = self.input.connections
+            msg = fmt % other.owner
+            raise AlreadyConnectedError(msg)
+
+        queue = self.input.value()
+        queue.extend(notes)
 
     def process_note(self, note):
+        """Process note."""
         freq = self.temperament.pitch_2_frequency(note.pitch)
-        if note.velocity != 0:
-            print('Play new note')
+        if note.velocity > 0:
+            #print('Play new note')
             voice = next(self.freeVoice)
             voice.process_note(freq, note.velocity)
         else:
-            print('Kill old note')
+            #print('Kill old note')
             for voice in self.voices:
                 if voice.frequency == freq:
                     voice.process_note(freq, note.velocity)
 
     def update(self):
-        queue = self.input.get_value()
-        while queue:
-            note = queue.popleft()
+        for note in self.input.receive():
             self.process_note(note)
 
         samples = np.zeros(BUFFER_SIZE)
         for voice in self.voices:
+            if not voice.active:
+                continue
+
             voice.update()
             samples += voice.output.get_value()
 
         samples /= self.MAX_VOICES
         self.output.set_value(samples)
-
-
-if __name__ == '__main__':
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    from config import SAMPLING_RATE
-    from klang.music.chords import CHORDS
-
-
-
-    DT = 1. / SAMPLING_RATE
-    major = CHORDS['major']
-
-
-    synthesiser = Synthesiser()
-
-    for pitch in 60 + major:
-        note = Note(pitch, velocity=.5)
-        synthesiser.play_note(note)
-
-    chunks = []
-    for _ in range(10):
-        synthesiser.update()
-        samples = synthesiser.output.get_value()
-        print(len(samples))
-        chunks.append(samples)
-
-    signal = np.concatenate(chunks)
-
-    t = DT * np.arange(len(signal))
-    plt.plot(t, signal)
-    plt.show()

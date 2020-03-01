@@ -82,6 +82,11 @@ class Input(Connectable):
     def __init__(self, owner, value=0.):
         super().__init__(owner, value, singleConnection=True)
 
+    def connect(self, output):
+        """Connect with an output."""
+        assert isinstance(output, Output)
+        super().connect(output)
+
     def get_value(self):
         if not self.connected:
             return self.value
@@ -98,6 +103,7 @@ class Output(Connectable):
     """
 
     def connect(self, input):
+        """Connect with an input."""
         assert isinstance(input, Input)
         super().connect(input)
 
@@ -111,6 +117,11 @@ class MessageInput(Input):
             owner,
             value=collections.deque(maxlen=MAX_MESSAGES),
         )
+
+    def connect(self, msgOutput):
+        """Connect with an message output."""
+        assert isinstance(msgOutput, MessageOutput)
+        super().connect(msgOutput)
 
     def receive(self):
         """Iterate over received messages."""
@@ -129,6 +140,11 @@ class MessageOutput(Output):
             value=collections.deque(maxlen=MAX_MESSAGES),
             singleConnection=True,
         )
+
+    def connect(self, msgInput):
+        """Connect with an message input."""
+        assert isinstance(msgInput, MessageInput)
+        super().connect(msgInput)
 
     def send(self, message):
         """Send message. No notificaiton."""
