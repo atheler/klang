@@ -2,6 +2,7 @@ import numpy as np
 import scipy.io.wavfile
 
 from config import SAMPLING_RATE, BIT_DEPTH
+from klang.math import normalize_values
 
 
 _WAVE_DTYPES = {
@@ -37,10 +38,9 @@ def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, bitDepth=BIT_DEPTH):
     audio = np.asarray(audio)
 
     # Scale to full Wertebereich of target bit depth.
-    maxVal = np.abs(audio).max()
-    audio = audio / maxVal
-    samples = (audio * np.iinfo(dtype).max).astype(dtype)
-
+    samples = (normalize_values(audio) * np.iinfo(dtype).max).astype(dtype)
+    m, n = samples.shape
+    assert m > n
     scipy.io.wavfile.write(filepath, samplingRate, samples)
 
 
