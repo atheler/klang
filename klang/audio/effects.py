@@ -4,7 +4,7 @@ import scipy.signal
 
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.blocks import Block
-from klang.constants import TAU
+from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
 from klang.audio.oscillators import Oscillator
 
@@ -98,7 +98,8 @@ class Delay(Block):
         self.drywet.set_value(drywet)
 
         maxlen = self.delay_2_buffer_index(delay)
-        self.buffer = DelayBuffer((maxlen, BUFFER_SIZE))
+        self.monoBuffer = DelayBuffer((maxlen, BUFFER_SIZE))
+        self.stereoBuffer = DelayBuffer((maxlen, STEREO, BUFFER_SIZE))
 
     @staticmethod
     def delay_2_buffer_index(duration):
@@ -112,9 +113,15 @@ class Delay(Block):
         drywet = self.drywet.get_value()
 
         length = self.delay_2_buffer_index(delay)
-        self.buffer.cycleLength = length
-        old = self.buffer.peek()
-        self.buffer.push(new + feedback * old)
+
+        if new.ndim == MONO:
+            buf = self.monoBuffer
+        else:
+            buf = self.stereoBuffer
+
+        buf.cycleLength = length
+        old = buf.peek()
+        buf.push(new + feedback * old)
 
         self.output.set_value(blend(new, old, drywet))
 
