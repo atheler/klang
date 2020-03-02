@@ -1,28 +1,19 @@
 """Audio sampling.
 
 TODO:
-  - Better sample interpolation (no more jitter).
   - Audio trimming
   - class Sampler
   - class Looper
+  - Some incorporate old, lo-fi linear sample interpolation.
 """
-import math
-
 import numpy as np
+import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.blocks import Block
 from klang.connections import MessageInput
-from klang.constants import MONO, TWO_D
+from klang.constants import MONO
 from klang.util import load_wave
-
-
-DT = 1. / SAMPLING_RATE
-"""float: Sampling interval."""
-
-
-INDICES = np.arange(BUFFER_SIZE)
-"""array: Buffer base indices."""
 
 
 def sum_to_mono(samples):
@@ -41,40 +32,97 @@ def interp_2d(x, xp, fp, *args, **kwargs):
     ]).T
 
 
-class SampleInterpolator:
-    """Linear sample interpolation.
+class Resampler:
 
-    Because of practically / performance we do not periodically interpolate but
-    instead allow for an overflow segment which will be added at the end. That
-    is `overflow` many samples will be continued at the end (no circular array
-    issue). This overflow should be at least maxPlaybackSpeed * BUFFER_SIZE.
-    This way we can assume that the sample time points are always ascending and
-    to not wrap around % duration (we do not have to interpolate over all data
-    points, only a sub-section).
+    """Resample with varying playing speed."""
 
-    TODO:
-      - Improove. Kill float jitter!
-    """
-
-    def __init__(self, rate, samples, overflow=BUFFER_SIZE):
-        samples = np.asarray(samples)
-        assert samples.ndim == TWO_D
+    def __init__(self, rate, data, converter_type='linear', playbackSpeed=1.,
+                 loop=False):
+        """Kwargs:
+            converter_type (str): See samplerate. Possebilites are: 'linear',
+                'sinc_best', 'sinc_fastest', 'sinc_medium' and
+                'zero_order_hold'.
+        """
         self.rate = rate
-        self.length, self.nChannels = samples.shape
-        self.duration = self.length / self.rate
-        self.xp = np.arange(self.length + overflow) / rate
-        self.fp = np.concatenate([samples, samples[:overflow]])
+        self.data = np.asarray(data)
+        self.playbackSpeed = playbackSpeed
+        self.loop = loop
 
-    def get_interval(self, x):
-        """Get sub section interval."""
-        start = int(x[0] * self.rate)
-        stop = max(start + 1, int(math.ceil(x[-1] * self.rate)))
-        return start, stop
+        self.resampler = samplerate.CallbackResampler(
+            self.callback,
+            ratio=SAMPLING_RATE / self.rate / self.playbackSpeed,
+            converter_type=converter_type,
+            channels=self.nChannels,
+        )
+        self.index = 0
+        self.playing = True
 
-    def __call__(self, x):
-        x = np.atleast_1d(x)
-        start, stop = self.get_interval(x)
-        return interp_2d(x, self.xp[start:stop], self.fp[start:stop])
+    @property
+    def length(self):
+        return self.data.shape[0]
+
+    @property
+    def nChannels(self):
+        if self.data.ndim == MONO:
+            return MONO
+
+        return self.data.shape[1]
+
+    def callback(self):
+        if not self.playing:
+            return
+
+        start = self.index
+        stop = (start + BUFFER_SIZE) % self.length
+
+        if start < stop:
+            #print('Here', stop-start)
+            self.index = stop
+            return self.data[start:stop]
+
+        if self.loop:
+            self.index = stop
+            return np.concatenate([
+                self.data[start:],
+                self.data[:stop],
+            ])
+
+        self.playing = False
+        return self.data[start:]
+
+    def rewind(self):
+        self.index = 0
+        self.resampler.reset()
+
+    def read(self, nFrames):
+        """Read next nFrames."""
+        frames = self.resampler.read(nFrames)
+        n = frames.shape[0]
+        if n == nFrames:
+            return frames
+
+        if self.nChannels == MONO:
+            ret = np.zeros(nFrames)
+        else:
+            ret = np.zeros((nFrames, self.nChannels))
+
+        if n == 0:
+            return ret
+
+        ret[:n] = frames
+        return ret
+
+    def set_playback_speed(self, playbackSpeed):
+        ratio = SAMPLING_RATE / self.rate / playbackSpeed
+        self.resampler.set_starting_ratio(ratio)
+
+    def __str__(self):
+        return '%s(%d / %d, %s)' % (
+            self.__class__.__name__,
+            self.index,
+            self.length,
+            'playing' if self.playing else 'stopped'
+        )
 
 
 class AudioFile(Block):
@@ -84,43 +132,43 @@ class AudioFile(Block):
     Single sample playback with varying playback speed.
     """
 
-    MAX_PLAYBACK_SPEED = 10.
-
-    def __init__(self, samples, rate, loop=True, mono=False):
+    def __init__(self, data, rate=SAMPLING_RATE, mono=False, *args, **kwargs):
         super().__init__(nOutputs=1)
-        if mono and samples.shape[1] > 1:
-            samples = sum_to_mono(samples)
+        data = np.asarray(data)
+        if mono and data.shape[1] > 1:
+            data = sum_to_mono(data)
 
-        overflow = int(self.MAX_PLAYBACK_SPEED * BUFFER_SIZE)
-        self.samples = SampleInterpolator(rate, samples, overflow)
-        self.loop = loop
+        self.resampler = Resampler(rate, data, *args, **kwargs)
         self.filepath = ''
-
-        self.playing = False
-        self.playingPosition = 0.
-        self.playbackSpeed = 1.
-        self.silence = np.zeros((self.samples.nChannels, BUFFER_SIZE))
-
+        self.silence = np.zeros((self.resampler.nChannels, BUFFER_SIZE))
         self.mute_outputs()
 
     @classmethod
-    def from_wave(cls, filepath, loop=True):
+    def from_wave(cls, filepath, *args, **kwargs):
         rate, data = load_wave(filepath)
-        self = cls(data, rate, loop)
+        self = cls(data, rate, *args, **kwargs)
         self.filepath = filepath
         return self
 
+    @property
+    def playingPosition(self):
+        return self.resampler.index / self.resampler.rate
+
+    @property
+    def duration(self):
+        return self.resampler.length / self.resampler.rate
+
     def play(self):
         """Start playback."""
-        self.playing = True
+        self.resampler.playing = True
 
     def pause(self):
         """Pause playback."""
-        self.playing = False
+        self.resampler.playing = False
 
     def rewind(self):
         """Rewind to beginning."""
-        self.playingPosition = 0.
+        self.resampler.rewind()
 
     def stop(self):
         """Stop playback."""
@@ -131,24 +179,12 @@ class AudioFile(Block):
         """Set outputs to zero signal."""
         self.output.set_value(self.silence)
 
-    def get_stop(self):
-        return self.playingPosition + self.playbackSpeed * DT * BUFFER_SIZE
-
     def update(self):
-        if not self.playing:
+        if not self.resampler.playing:
             return self.mute_outputs()
 
-        stop = self.get_stop()
-        atEnd = stop >= self.samples.duration
-        if atEnd and self.loop:
-            self.pause()
-            return self.mute_outputs()
-
-        t = self.playingPosition + DT * self.playbackSpeed * INDICES
-        self.playingPosition = stop % self.samples.duration
-
-        chunk = self.samples(t)
-        self.output.set_value(chunk.T)
+        frames = self.resampler.read(BUFFER_SIZE)
+        self.output.set_value(frames.T)
 
     def __str__(self):
         if self.filepath:
@@ -157,8 +193,8 @@ class AudioFile(Block):
             infos = []
 
         infos.extend([
-            'Playing' if self.playing else 'Paused',
-            '%.3f / %.3f sec' % (self.playingPosition, self.samples.duration),
+            'Playing' if self.resampler.playing else 'Paused',
+            '%.3f / %.3f sec' % (self.playingPosition, self.duration),
         ])
         return '%s(%s)' % (
             self.__class__.__name__,
