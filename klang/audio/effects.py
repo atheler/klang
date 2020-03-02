@@ -1,4 +1,6 @@
 """Audio effects blocks."""
+import math
+
 import numpy as np
 import scipy.signal
 
@@ -139,11 +141,12 @@ class Filter(Block):
         self.frequency.set_value(frequency)
         self.order = order
 
-        self.coefficients = None, None
-
+        self.coefficients = [1.], [1.]
+        self.zi = np.zeros(1)
         self.update_coefficients()
 
     def update_coefficients(self):
+        """Update filter coefficients."""
         freq = self.frequency.get_value()
         self.coefficients = scipy.signal.butter(
             N=self.order,
@@ -154,30 +157,33 @@ class Filter(Block):
 
     def update(self):
         samples = self.input.get_value()
-
-        out, self.zi = scipy.signal.lfilter(*self.coefficients, x=samples, zi=self.zi)
-
+        out, self.zi = scipy.signal.lfilter(
+            *self.coefficients,
+            x=samples,
+            zi=self.zi,
+        )
         self.output.set_value(out)
 
 
 def sub_sample(array, skip):
-    """Sub sample array.
+    """Sub / downsample sample array.
 
     Usage:
         >>> samples = np.arange(6)
         ... sub_sample(samples, 2)
         array([0, 0, 2, 2, 4, 4])
     """
-    return np.repeat(array[::skip], skip)
+    return np.repeat(array[..., ::skip], skip, axis=-1)
 
 
 class Subsampler(Block):
 
     """Sub sample audio buffer. Soft bit crusher effect."""
 
+    VALID_FACTORS = set(2**i for i in range(1, int(math.log2(BUFFER_SIZE))))
+
     def __init__(self, factor):
-        assert factor in {2, 4, 8, 16, 32, 64, 128}
-        assert factor > 1
+        assert factor in self.VALID_FACTORS
         super().__init__(nInputs=1, nOutputs=1)
         self.factor = factor
 
@@ -185,3 +191,8 @@ class Subsampler(Block):
         samples = self.input.get_value()
         subSamples = sub_sample(samples, self.factor)
         self.output.set_value(subSamples)
+
+
+class Bitcrusher(Block):
+    # TODO(atheler): Make me!
+    pass
