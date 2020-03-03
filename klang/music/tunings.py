@@ -1,12 +1,17 @@
 """All things related to tuning.
 
-Conversion functions, temperaments."""
+Conversion functions, temperaments.
+
+Resources:
+  - http://www.wolfgang-wiese.de/Historische%20Stimmungen-Schwebungen.pdf.
+"""
 import re
 
 import numpy as np
 
 from config import KAMMERTON
 from klang.constants import DODE, REF_OCTAVE
+from klang.util import load_music_data_from_csv
 
 
 CENT_PER_OCTAVE = 1200
@@ -49,6 +54,28 @@ EQUAL_TEMPERAMENT = None
 
 TEMPERAMENTS = {}
 """dict: Name (str) -> Temperament (Temperament)."""
+
+
+def random_temperament_ratios():
+    """Create random tuning frequency ratios."""
+    return = 1. + np.sort(np.random.random(DODE))
+
+
+RATIOS = {
+    'Equal': 2. ** (np.arange(DODE) / DODE),
+    'Young': [
+        1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
+        1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
+        1.878842233
+    ],
+    'Pythagorean': [
+        1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
+        7./4., 11./6.
+    ],
+    'Random': random_temperament_ratios(),
+}
+RATIOS.update(load_music_data_from_csv('resources/tunings.csv'))
+"""dict: Temperament name (str) -> Frequency ratios."""
 
 
 def frequency_2_pitch(frequency, kammerton=KAMMERTON):
@@ -156,7 +183,7 @@ class Temperament:
         Kwargs:
             kammerton (frequency): Reference pitch for A4 (or A3 in MIDI).
         """
-        assert len(ratios) == DODE and ratios[0] == 1.
+        assert len(ratios) == DODE
         self.name = name
         self.ratios = np.asarray(ratios, dtype=float)
         self.kammerton = kammerton
@@ -183,21 +210,8 @@ EQUAL_TEMPERAMENT = Temperament('Equal', 2. ** (np.arange(DODE) / DODE))
 
 def _init_temperaments():
     global TEMPERAMENTS
-    rndRatios = 1. + np.sort(np.random.random(DODE))
-    rndRatios[0] = 1.
-    TEMPERAMENTS = {
-        'Equal': EQUAL_TEMPERAMENT,
-        'Young': Temperament('Young', [
-            1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
-            1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
-            1.878842233,
-        ]),
-        'Pythagorean': Temperament('Pythagorean', [
-            1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
-            7./4., 11./6.,
-        ]),
-        'Random': Temperament('Random', rndRatios),
-    }
+    for name, ratios in RATIOS.items():
+        TEMPERAMENTS[name] = Temperament(name, ratios)
 
 
 _init_temperaments()
