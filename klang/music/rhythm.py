@@ -1,4 +1,9 @@
-"""Rhyhtm related stuff."""
+"""Rhyhtm related stuff.
+
+Euclidian rhyhtm resources:
+  - https://github.com/WilCrofter/Euclidean_Rhythms/blob/master/euclidean_rhythms.py
+  - https://pdfs.semanticscholar.org/c652/d0a32895afc5d50b6527447824c31a553659.pdf
+"""
 
 
 def _compute_bitmap(num_slots, num_pulses):
@@ -34,7 +39,6 @@ def _compute_bitmap(num_slots, num_pulses):
     print('remainder:', remainder)
     print('count    :', count)
     print('level    :', level)
-
 
     def build_string(level, bitmap=None):
         if bitmap is None:
