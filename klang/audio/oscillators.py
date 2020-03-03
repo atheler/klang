@@ -14,10 +14,27 @@ class Oscillator(Block):
         self.output.set_value(np.zeros(BUFFER_SIZE))
         self.currentPhase = 0.
 
-    def update(self):
+    def sample(self, nFrames):
         freq = self.frequency.get_value()
-        samples, self.currentPhase = sample_wave(BUFFER_SIZE, freq, self.currentPhase)
+        samples, self.currentPhase = sample_wave(
+            BUFFER_SIZE,
+            freq,
+            self.currentPhase,
+        )
+        return samples
+
+    def update(self):
+        samples = self.sample(BUFFER_SIZE)
         self.output.set_value(samples)
+
+
+class Lfo(Oscillator):
+    def __init__(self, frequency=1.):
+        super().__init__(frequency)
+
+    def update(self):
+        samples = self.sample(BUFFER_SIZE)
+        self.output.set_value((samples + 1.) / 2.)
 
 
 class FmOscillator(Oscillator):

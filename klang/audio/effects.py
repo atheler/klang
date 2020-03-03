@@ -8,7 +8,8 @@ from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.blocks import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
-from klang.audio.oscillators import Oscillator
+from klang.audio.oscillators import Oscillator, Lfo
+from klang.util import convert_samples_to_int, convert_samples_to_float
 
 
 NYQUIST_FREQUENCY = SAMPLING_RATE // 2
@@ -17,6 +18,27 @@ NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 def blend(a, b, x):
     """Dry / wet blend two signals together."""
     return (1. - x) * a + x * b
+
+
+def sub_sample(array, skip):
+    """Sub / downsample sample array.
+
+    Usage:
+        >>> samples = np.arange(6)
+        ... sub_sample(samples, 2)
+        array([0, 0, 2, 2, 4, 4])
+    """
+    return np.repeat(array[..., ::skip], skip, axis=-1)
+
+
+def bit_crush(samples, nBits):
+    """But crush samples.
+
+    Usage:
+        >>> bit_crush(np.arange(-4, 4), nBits=1)
+        array([-4, -4, -2, -2,  0,  0,  2,  2])
+    """
+    return (samples >> nBits) << nBits
 
 
 class Tremolo(Block):
@@ -29,7 +51,7 @@ class Tremolo(Block):
         self.rate.set_value(rate)
         self.intensity.set_value(intensity)
 
-        self.lfo = Oscillator(frequency=rate)
+        self.lfo = Lfo(frequency=rate)
         self.lfo.currentPhase = TAU / 4.  # Start from zero
 
     def update(self):
@@ -37,16 +59,15 @@ class Tremolo(Block):
         samples = self.input.get_value()
         rate = self.rate.get_value()
         intensity = self.intensity.get_value()
+        print('rate:', rate, ', intensity:', intensity)
 
         # Update LFO
         self.lfo.frequency.set_value(rate)
         self.lfo.update()
 
-        # Calculate tremolo envelope. [-1, +1] mod signal gets mapped onto
-        # [0., 1.] and then used to subtract from unity. Depending on intensity
-        # level.
+        # Calculate tremolo envelope in [0., 1.].
         mod = self.lfo.output.get_value()
-        env = 1. - clip(intensity, 0., 1.) * ((1. + mod) / 2.)
+        env = 1. - clip(intensity, 0., 1.) * mod
 
         # Set output
         self.output.value = env * samples
@@ -165,16 +186,6 @@ class Filter(Block):
         self.output.set_value(out)
 
 
-def sub_sample(array, skip):
-    """Sub / downsample sample array.
-
-    Usage:
-        >>> samples = np.arange(6)
-        ... sub_sample(samples, 2)
-        array([0, 0, 2, 2, 4, 4])
-    """
-    return np.repeat(array[..., ::skip], skip, axis=-1)
-
 
 class Subsampler(Block):
 
@@ -194,5 +205,20 @@ class Subsampler(Block):
 
 
 class Bitcrusher(Block):
-    # TODO(atheler): Make me!
-    pass
+
+    """Bit crusher effect.
+
+    Reduce bit depth resolution.
+    """
+
+    def __init__(self, nBits=16):
+        assert  0 <= nBits < 16
+        super().__init__(nInputs=1, nOutputs=1)
+        self.nBits = nBits
+
+    def update(self):
+        samples = self.input.get_value()
+        samples = convert_samples_to_int(samples)
+        samples = bit_crush(samples, self.nBits)
+        samples = convert_samples_to_float(samples)
+        self.output.set_value(samples)
