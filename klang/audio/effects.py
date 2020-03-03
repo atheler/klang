@@ -8,8 +8,9 @@ from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.blocks import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
-from klang.audio.oscillators import Oscillator, Lfo
+from klang.audio.oscillators import Lfo
 from klang.util import convert_samples_to_int, convert_samples_to_float
+from klang.ring_buffer import RingBuffer
 
 
 NYQUIST_FREQUENCY = SAMPLING_RATE // 2
@@ -102,51 +103,31 @@ class DelayBuffer:
 
 class Delay(Block):
 
-    """Simple 2 second delay.
-
-    Untested.
-
-    Todo:
-      - Very small delay times
-    """
+    """Simple digital delay."""
 
     MAX_DELAY = 2.
 
     def __init__(self, delay=1., feedback=.1, drywet=.5):
         assert delay <= self.MAX_DELAY
-        super().__init__(nInputs=4, nOutputs=1)
-        _, self.delay, self.feedback, self.drywet = self.inputs
-        self.delay.set_value(delay)
-        self.feedback.set_value(feedback)
-        self.drywet.set_value(drywet)
+        super().__init__(nInputs=1, nOutputs=1)
+        #self.delay = delay
+        self.feedback = feedback
+        self.drywet = drywet
 
-        maxlen = self.delay_2_buffer_index(delay)
-        self.monoBuffer = DelayBuffer((maxlen, BUFFER_SIZE))
-        self.stereoBuffer = DelayBuffer((maxlen, STEREO, BUFFER_SIZE))
-
-    @staticmethod
-    def delay_2_buffer_index(duration):
-        """Time duration -> buffer index."""
-        return int(duration * SAMPLING_RATE / BUFFER_SIZE)
+        maxlen = int(self.MAX_DELAY * SAMPLING_RATE)
+        self.buffers = {
+            MONO: RingBuffer(maxlen),
+            STEREO: RingBuffer((maxlen, STEREO)),
+        }
+        for buf in self.buffers.values():
+            buf.writeIdx = int(delay * SAMPLING_RATE)
 
     def update(self):
         new = self.input.get_value()
-        delay = self.delay.get_value()
-        feedback = self.feedback.get_value()
-        drywet = self.drywet.get_value()
-
-        length = self.delay_2_buffer_index(delay)
-
-        if new.ndim == MONO:
-            buf = self.monoBuffer
-        else:
-            buf = self.stereoBuffer
-
-        buf.cycleLength = length
-        old = buf.peek()
-        buf.push(new + feedback * old)
-
-        self.output.set_value(blend(new, old, drywet))
+        buf = self.buffers[new.ndim]
+        old = buf.read(BUFFER_SIZE).T
+        buf.write((new + self.feedback * old).T)
+        self.output.set_value(blend(new, old, self.drywet))
 
 
 class Filter(Block):

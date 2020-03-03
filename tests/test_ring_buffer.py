@@ -40,6 +40,13 @@ class TestRingBuffer(unittest.TestCase):
         np.testing.assert_equal(ring.read(1), [[2, 2]])
         np.testing.assert_equal(ring.read(2), [[2, 2], [3, 3]])
 
+    def test_stereo_delay_buffer(self):
+        buf = RingBuffer((88200, 2))
+        buf.writeIdx = 44100  # One second delay
+        old = buf.read(512)
+
+        self.assertEqual(old.shape, (512, 2))
+
 
 if __name__ == '__main__':
     unittest.main()
