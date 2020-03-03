@@ -5,10 +5,10 @@ class RingBuffer:
 
     """Numpy ring buffer."""
 
-    def __init__(self, shape):
-        self.data = np.zeros(shape)
-        self.writeIdx = 0
+    def __init__(self, shape, offset=0, *args, **kwargs):
+        self.data = np.zeros(shape, *args, **kwargs)
         self.readIdx = 0
+        self.writeIdx = offset % self.length
 
     @property
     def length(self):
@@ -17,7 +17,6 @@ class RingBuffer:
     def write(self, frames):
         """Write some data to ring buffer."""
         start = self.writeIdx
-        length = self.data.shape[0]
         stop = (start + len(frames)) % self.length
         self.writeIdx = stop
         self[start:stop] = frames
@@ -25,7 +24,7 @@ class RingBuffer:
     def read(self, nFrames):
         """Read `nFrames` from ring buffer."""
         start = self.readIdx
-        stop = (start + nFrames) % self.data.shape[0]
+        stop = (start + nFrames) % self.length
         self.readIdx = stop
         return self[start:stop]
 

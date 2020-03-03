@@ -74,33 +74,6 @@ class Tremolo(Block):
         self.output.value = env * samples
 
 
-class DelayBuffer:
-
-    """Ring buffer a-like for delaying sample blocks."""
-
-    def __init__(self, shape):
-        self.data = np.zeros(shape)
-        self.index = 0
-        self._cycleLength = shape[0]
-
-    @property
-    def cycleLength(self):
-        return self._cycleLength
-
-    @cycleLength.setter
-    def cycleLength(self, length):
-        assert 0 < length <= self.data.shape[0]
-        self._cycleLength = length
-        self.index %= length
-
-    def peek(self):
-        return self.data[self.index].copy()
-
-    def push(self, value):
-        self.data[self.index] = value
-        self.index = (self.index + 1) % self.cycleLength
-
-
 class Delay(Block):
 
     """Simple digital delay."""
@@ -115,12 +88,11 @@ class Delay(Block):
         self.drywet = drywet
 
         maxlen = int(self.MAX_DELAY * SAMPLING_RATE)
+        delayOffset = int(delay * SAMPLING_RATE)
         self.buffers = {
-            MONO: RingBuffer(maxlen),
-            STEREO: RingBuffer((maxlen, STEREO)),
+            MONO: RingBuffer(maxlen, delayOffset),
+            STEREO: RingBuffer((maxlen, STEREO), delayOffset),
         }
-        for buf in self.buffers.values():
-            buf.writeIdx = int(delay * SAMPLING_RATE)
 
     def update(self):
         new = self.input.get_value()
