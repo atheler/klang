@@ -1,4 +1,8 @@
-"""Audio left / right panning."""
+"""Audio left / right panning.
+
+Resources:
+  - http://www.cs.cmu.edu/~music/icm-online/readings/panlaws/
+"""
 import math
 
 import numpy as np
