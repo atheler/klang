@@ -5,13 +5,12 @@ Conversion functions, temperaments.
 Resources:
   - http://www.wolfgang-wiese.de/Historische%20Stimmungen-Schwebungen.pdf.
 """
-import re
-
 import numpy as np
 
 from config import KAMMERTON
 from klang.constants import DODE, REF_OCTAVE
-from klang.util import load_music_data_from_csv
+from klang.music.pitch import pitch_2_frequency, pitch_2_note_name
+from klang.util import load_music_data_from_csv, find_item
 
 
 CENT_PER_OCTAVE = 1200
@@ -20,34 +19,8 @@ CENT_PER_OCTAVE = 1200
 OCTAVE = 2.
 """float: Octave frequency ratio. TODO(atheler): To be moved to klang.constants?"""
 
-SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([CDEFGAB])([#b]*)([-0123456789]+)')
-"""re.pattern: Regex pattern for scientific note name."""
-
-PITCHES = {
-    'C': 0,
-    'D': 2,
-    'E': 4,
-    'F': 5,
-    'G': 7,
-    'A': 9,
-    'B': 11,
-}
-"""dict: Pitch char (str) -> Pitch number."""
-
-NOTES = PITCHES_2 = np.array([
-    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-])
-
-ACCIDENTAL_SHIFTS = {
-    '': 0,
-    '#': 1,
-    '##': 2,
-    'b': -1,
-    'bb': -2,
-}
-"""dict: Accidental string (str) -> Pitch modifier value (int)."""
-
 KAMMERTON_OFFSET = 9
+"""int: Kammerton pitch offset (not in use at the moment?)."""
 
 EQUAL_TEMPERAMENT = None
 """Temperament: Default equal temperament."""
@@ -55,11 +28,8 @@ EQUAL_TEMPERAMENT = None
 TEMPERAMENTS = {}
 """dict: Name (str) -> Temperament (Temperament)."""
 
-
-def random_temperament_ratios():
-    """Create random tuning frequency ratios."""
-    return = 1. + np.sort(np.random.random(DODE))
-
+TUNINGS_FILEPATH = 'resources/tunings.csv'
+"""str: CSV filepath for additional tunings."""
 
 RATIOS = {
     'Equal': 2. ** (np.arange(DODE) / DODE),
@@ -72,26 +42,16 @@ RATIOS = {
         1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
         7./4., 11./6.
     ],
-    'Random': random_temperament_ratios(),
+    'Random': 1. + np.sort(np.random.random(DODE)),
 }
-RATIOS.update(load_music_data_from_csv('resources/tunings.csv'))
+
+RATIOS.update(load_music_data_from_csv(TUNINGS_FILEPATH))
 """dict: Temperament name (str) -> Frequency ratios."""
 
 
-def frequency_2_pitch(frequency, kammerton=KAMMERTON):
-    """Frequency to MIDI note number (equal temperament)."""
-    return 69 + 12 * np.log2(frequency / kammerton)
-
-
-assert frequency_2_pitch(KAMMERTON) == 69
-
-
-def pitch_2_frequency(noteNumber, kammerton=KAMMERTON):
-    """MIDI note number to frequency (equal temperament)."""
-    return (2 ** ((noteNumber - 69) / 12)) * kammerton
-
-
-assert pitch_2_frequency(69) == KAMMERTON
+def find_temperament(name):
+    """Look for temperament."""
+    return find_item(TEMPERAMENTS, name)
 
 
 def ratio_2_cent(ratio):
@@ -108,67 +68,6 @@ def cent_2_ratio(cent):
 
 
 assert cent_2_ratio(CENT_PER_OCTAVE) == OCTAVE
-
-
-def note_name_2_pitch(note, midi=False):
-    """Convert note name to pitch number. Uses scientific pitch notation by
-    default (one octave difference compared to MIDI).
-
-    Args:
-        note (str): Note name.
-
-    Kwargs:
-        midi (bool): Use scientific (false) or MIDI format (true).
-
-    Returns:
-        int: Pitch number.
-
-    Usage:
-        >>> note_name_2_pitch('G##4')
-        69
-
-        >>> note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
-        True
-    """
-    note = note.title()
-    match = SCIENTIFIC_PITCH_NOTATION_RE.match(note)
-    if match is None:
-        raise ValueError('Can not parse note %r' % note)
-
-    pitchChar, shiftStr, octaveStr = match.groups()
-    pitch = PITCHES[pitchChar]
-    shift = ACCIDENTAL_SHIFTS[shiftStr]
-    octave = int(octaveStr) + 1 - int(midi)
-    return pitch + shift + octave * DODE
-
-
-assert note_name_2_pitch('c-1') == 0
-assert note_name_2_pitch('c#-1') == 1
-assert note_name_2_pitch('Cb0') == 11
-assert note_name_2_pitch('B0') == 23
-assert note_name_2_pitch('a4') == 69
-assert note_name_2_pitch('G##4') == 69
-assert note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
-
-
-def pitch_2_note_name(pitch, midi=False):
-    """Convert pitch number(s) to note name(s)."""
-    """
-    octave, note = np.divmod(pitch, DODE)
-
-    # Element wise string concatenation
-    return np.core.defchararray.add(
-        PITCHES_2[note],
-        (octave - 1 + int(midi)).astype(str)
-    ).squeeze()
-    """
-    octave, note = divmod(pitch, DODE)
-    noteName = PITCHES_2[note] + str(octave - 1 + int(midi))
-    return noteName.upper()
-
-
-assert note_name_2_pitch(pitch_2_note_name(69)) == 69
-assert note_name_2_pitch(pitch_2_note_name(69, midi=True), midi=True) == 69
 
 
 class Temperament:

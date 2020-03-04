@@ -10,27 +10,21 @@ from matplotlib import pyplot as plt
 
 from config import SCALES_FILEPATH
 from klang.constants import DODE, TAU
-from klang.music.tunings import NOTES
+from klang.music.pitch import PITCH_NAMES, PITCH_CLASSES, CIRCLE_OF_FIFTHS
 from klang.util import find_item, load_music_data_from_csv
 
 
-PITCHES = np.arange(DODE)
-"""array:"""
-
-MASK = 2 ** PITCHES
+MASK = 2 ** PITCH_CLASSES
 """array: Pitch number values for encoding."""
-
-CIRCLE_OF_FIFTHS = np.array([(7 * i) % 12 for i in range(DODE)])
-"""array: Pitches of the circle of fifths."""
-
-_ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
-"""array: Chromatic angles."""
 
 ALL_POSSIBLE_SCALES = []
 """list: All possible scales. Ordered by binary code."""
 
 KNOWN_SCALES = {}
 """dict: Scale name (str) -> Scale code (int)."""
+
+_ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
+"""array: Chromatic angles."""
 
 
 def find_scale(name):
@@ -65,7 +59,7 @@ def code_2_scale(code):
     """Build scale from binary scale code."""
     assert 0 <= code <= 2 ** DODE
     pitches = []
-    for pitch in PITCHES:
+    for pitch in PITCH_CLASSES:
         if code & (1 << pitch):
             pitches.append(pitch)
 
@@ -89,7 +83,8 @@ def format_circle_of_fifth_polar_plot(ax):
 
     ax.set_xticks(_ANGLES)
 
-    labels = NOTES[CIRCLE_OF_FIFTHS]
+    pitchNames = np.array(PITCH_NAMES)
+    labels = pitchNames[CIRCLE_OF_FIFTHS]
     ax.set_xticklabels(labels)
 
     ax.set_yticks([])

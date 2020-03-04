@@ -1,7 +1,5 @@
 import fractions
 
-import numpy as np
-
 from klang.music.metre import FOUR_FOUR, is_compound, create_metre
 
 

@@ -21,6 +21,11 @@ def create_metre(numerator, denominator):
     return fractions.Fraction(numerator, denominator, _normalize=False)
 
 
+FOUR_FOUR = create_metre(4, 4)
+THREE_FOUR = WALTZ = create_metre(3, 4)
+TWO_TWO = create_metre(2, 2)
+
+
 def is_irrational(metre):
     """Check if irrational metre."""
     return not is_power_of_two(metre.denominator)

@@ -17,6 +17,7 @@ NOTE_NAMES = {
     fractions.Fraction(1, 128): 'Hundred-Twenty Note',
     fractions.Fraction(1, 256): 'Two Hundred Fifty-Sixth Note',
 }
+"""dict: Note value (Fraction) -> Note name (str)."""
 
 
 def dot_note(note, n=1):
