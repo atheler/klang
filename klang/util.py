@@ -1,40 +1,56 @@
+"""This and that."""
+import json
+
 import numpy as np
 import scipy.io.wavfile
 
-from config import SAMPLING_RATE, BIT_DEPTH
+from config import SAMPLING_RATE
 from klang.math import normalize_values
 
 
-_WAVE_DTYPES = {
-    #8: np.uint8,
-    16: np.int16,
-    #24: ???
-    #32: np.int32,
-}
-
-
-def convert_samples(samples):
-    """Convert audio samples to float [-1.0, 1.0]."""
+def convert_samples_to_float(samples):
+    """Convert PCM audio samples to float [-1.0, ~1.0]."""
     samples = np.asarray(samples)
     if not np.issubdtype(samples.dtype, np.integer):
-        return samples
+        raise ValueError('Already float samples!')
 
     iinfo = np.iinfo(samples.dtype)
     maxValue = max(abs(iinfo.min), abs(iinfo.max))
     return samples / maxValue
 
 
+np.testing.assert_equal(
+    convert_samples_to_float(np.array([-32768, 0], dtype=np.int16)),
+    np.array([-1., 0.]),
+)
+
+
+def convert_samples_to_int(samples, dtype=np.int16):
+    """Convert float audio samples [-1.0, 1.0] to PCM / int."""
+    samples = np.asarray(samples)
+    if np.issubdtype(samples.dtype, np.integer):
+        raise ValueError('Already int samples!')
+
+    iinfo = np.iinfo(dtype)
+    maxValue = max(abs(iinfo.min), abs(iinfo.max))
+    return (maxValue * samples).astype(dtype)
+
+
+np.testing.assert_equal(
+    convert_samples_to_int(np.array([-1., 0.])),
+    np.array([-32768, 0], dtype=np.int16),
+)
+
+
 def load_wave(filepath):
     """Load WAV file."""
     rate, data = scipy.io.wavfile.read(filepath)
-    return rate, convert_samples(data)
+    return rate, convert_samples_to_float(data)
 
 
-def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, bitDepth=BIT_DEPTH):
+def write_wave(audio, filepath, samplingRate=SAMPLING_RATE, dtype=np.int16):
     """Write mono / stereo audio to WAV file."""
     # TODO: 8 bit -> uint8, 24 bit -> ???, 32 bit -> int32
-    assert bitDepth in _WAVE_DTYPES
-    dtype = _WAVE_DTYPES[bitDepth]
     audio = np.asarray(audio)
 
     # Scale to full Wertebereich of target bit depth.
@@ -69,6 +85,14 @@ def cycle_pairs(iterable, circular=True):
         yield item, first
 
 
+def parse_value(string):
+    """Try to parse string as number."""
+    try:
+        return json.loads(string)
+    except json.JSONDecodeError:
+        return string
+
+
 def load_music_data_from_csv(filepath, sep=','):
     """Load music data from CSV.
 
@@ -90,7 +114,7 @@ def load_music_data_from_csv(filepath, sep=','):
     with open(filepath, 'r') as f:
         for line in f.readlines():
             key, *values = line.split(sep)
-            dct[key] = [int(v) for v in values]
+            dct[key] = [parse_value(v) for v in values]
 
     return dct
 
