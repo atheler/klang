@@ -1,9 +1,48 @@
 """Rhyhtm related stuff.
 
-Euclidian rhyhtm resources:
+
+Micro rhythms as tempo deviations.
+
+omega(phi) = 1. + omega^~(phi)
+
+Euclidian Rhyhtm
+----------------
+
   - https://github.com/WilCrofter/Euclidean_Rhythms/blob/master/euclidean_rhythms.py
   - https://pdfs.semanticscholar.org/c652/d0a32895afc5d50b6527447824c31a553659.pdf
 """
+import numpy as np
+
+from klang.constants import TAU
+from klang.music.metre import FOUR_FOUR
+
+
+def swing(ratio, metre=FOUR_FOUR):
+    """Create swing function. For now only swing ratios between [.5, 2] supported.
+
+    TODO:
+      - Different velocity deviation function for more swing?
+
+    Swing function derivation:
+        t is in radian (\phi already taken...)
+
+        Basic swing curve:
+            \omega(t) = 1 + a\sin(n t)
+            \phi(t) = \int_{0}^{t} \omega(k) \mathrm{d}k = t + \frac{a-a\cos(nt))}{n}
+
+        Amplitude a can be computed from the ratio r in the following way:
+            t_{r} = \frac{r \tau}{1 + r}
+
+        Then solve for a
+            \phi(t_{r})
+    """
+    # Determine swing amplitude
+    firstOffBeat = TAU * ratio / (1. + ratio)
+    amp = (TAU / 2 - firstOffBeat) / (1. - np.cos(firstOffBeat))
+    assert abs(amp) < 1., 'To much swing!'
+
+    n = metre.denominator
+    return lambda phi: phi + amp * (1. - np.cos(n * phi)) / n
 
 
 def _compute_bitmap(num_slots, num_pulses):
