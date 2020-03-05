@@ -3,7 +3,7 @@ import itertools
 
 import numpy as np
 
-from config import BUFFER_SIZE
+from klang.audio import MONO_SILENCE
 from klang.audio.envelope import EnvelopeGenerator, AR
 from klang.audio.oscillators import Oscillator
 from klang.blocks import Block
@@ -13,31 +13,34 @@ from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
 from klang.connections import AlreadyConnectedError
 
 
-MONO_SILENCE = np.zeros(BUFFER_SIZE)
-
-
 class Voice(Block):
-    def __init__(self, oscillator=None, envelope=None):
-        super().__init__(nInputs=0, nOutputs=1)
+    def __init__(self, envelope):
+        super().__init__(nOutputs=1)
         self.amplitude = 0.
-        self.oscillator = oscillator or Oscillator()
-        self.envelope = envelope or EnvelopeGenerator()
-
-    @property
-    def frequency(self):
-        return self.oscillator.frequency.get_value()
+        self.envelope = envelope
 
     @property
     def active(self):
         return self.envelope.active
 
+    def process_note(self, velocity):
+        self.amplitude = clip(velocity, 0., 1.)
+        self.envelope.trigger.set_value(velocity > 0.)
+
+
+class OscillatorVoice(Voice):
+    def __init__(self, oscillator=None, envelope=None):
+        super().__init__(envelope or EnvelopeGenerator())
+        self.oscillator = oscillator or Oscillator()
+
+    @property
+    def frequency(self):
+        return self.oscillator.frequency.get_value()
+
     def process_note(self, frequency, velocity):
+        super().process_note(velocity)
         if velocity > 0.:
-            self.amplitude = clip(velocity, 0., 1.)
             self.oscillator.frequency.set_value(frequency)
-            self.envelope.trigger.set_value(True)
-        else:
-            self.envelope.trigger.set_value(False)
 
     def update(self):
         self.oscillator.update()
@@ -64,7 +67,7 @@ class Synthesizer(Block):
         self.output.set_value(MONO_SILENCE)
 
         self.voices = [
-            Voice(envelope=AR(attackTime=.002, releaseTime=.1)) for _  in range(self.MAX_VOICES)
+            OscillatorVoice(envelope=AR(attackTime=.002, releaseTime=.1)) for _  in range(self.MAX_VOICES)
         ]
         self.freeVoice = itertools.cycle(self.voices)
 
@@ -96,7 +99,7 @@ class Synthesizer(Block):
         for note in self.input.receive():
             self.process_note(note)
 
-        samples = np.zeros(BUFFER_SIZE)
+        samples = MONO_SILENCE.copy()
         for voice in self.voices:
             if not voice.active:
                 continue
