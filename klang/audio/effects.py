@@ -173,3 +173,20 @@ class Bitcrusher(Block):
         samples = bit_crush(samples, self.nBits)
         samples = convert_samples_to_float(samples)
         self.output.set_value(samples)
+
+
+def octave_distortion(samples):
+    """Non-linear octaver distortion."""
+    return 2. * samples ** 2 - 1.
+
+
+class OctaveDistortion(Block):
+
+    """Non-linear octaver like distortion."""
+
+    def __init__(self):
+        super().__init__(nInputs=1, nOutputs=1)
+
+    def update(self):
+        samples = self.input.get_value()
+        self.output.set_value(octave_distortion(samples))
