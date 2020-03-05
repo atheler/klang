@@ -1,0 +1,7 @@
+numpy
+scipy
+matplotlib
+PyAudio
+pynput
+samplerate
+beautifulsoup4
