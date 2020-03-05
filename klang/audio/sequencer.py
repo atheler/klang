@@ -19,8 +19,11 @@ SKIP = -1
 
 
 def angular_velocity(tempo, metre=FOUR_FOUR):
-    """Calculate angular bar velocity for given tempo in BPM."""
+    """Calculaee angular bar velocity for given tempo in BPM."""
     return TAU / bar_period(tempo, metre)
+
+
+PASS_THROUGH = lambda phase: phase
 
 
 class Sequencer(Block):
@@ -34,19 +37,20 @@ class Sequencer(Block):
     """
 
     def __init__(self, pattern=DEFAULT_PATTERN, tempo=120., noteDuration=.5,
-                 microRhythm=None):
-        self.pattern = np.atleast_2d(pattern)
+                 microRhythm=PASS_THROUGH):
+        #assert 0 <= noteDuration <= 1
         super().__init__()
         self.outputs = [
-            MessageOutput(owner=self) for _ in range(self.nChannels)
+            MessageOutput(owner=self) for _ in range(len(pattern))
         ]
+        self.pattern = np.atleast_2d(pattern)
         self.tempo = tempo
         self.noteDuration = noteDuration
         self.microRhythm = microRhythm
 
         self.currentPhase = 0.
-        self.activeNotes = collections.deque()
         self.prevIndex = None
+        self.activeNotes = collections.deque()
 
     @property
     def nChannels(self):
@@ -55,11 +59,6 @@ class Sequencer(Block):
     @property
     def nSteps(self):
         return self.pattern.shape[1]
-
-    def phase_2_index(self, phase):
-        """Get buffer index given bar phase."""
-        idx = int(phase / TAU * self.nSteps)
-        return idx % self.nSteps
 
     def turn_off_outdated_notes(self):
         """Send note-off messages for outdated notes."""
@@ -72,19 +71,22 @@ class Sequencer(Block):
             self.outputs[channel].send(noteOff)
             self.activeNotes.popleft()
 
+    def calculate_index(self, phase):
+        """Calculate pattern index."""
+        return int((phase % TAU) / TAU * self.nSteps)
+
     def update(self):
         self.turn_off_outdated_notes()
-        idx = int(self.currentPhase % TAU * self.nSteps) % self.nSteps
-
+        phase = self.microRhythm(self.currentPhase)
+        idx = self.calculate_index(phase)
         if idx != self.prevIndex:
             dt = TAU / self.nSteps
             for channel, value in enumerate(self.pattern.T[idx]):
-                if value:
-                    note = Note(pitch=value, velocity=1.)
-                    self.outputs[channel].send(note)
-                    self.activeNotes.append(
-                        (self.currentPhase + dt, channel, note)
-                    )
+                note = Note(pitch=value, velocity=1.)
+                self.outputs[channel].send(note)
+                self.activeNotes.append(
+                    (self.currentPhase + self.noteDuration * dt, channel, note)
+                )
 
             self.prevIndex = idx
 

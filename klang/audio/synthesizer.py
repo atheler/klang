@@ -67,7 +67,7 @@ class Synthesizer(Block):
         self.output.set_value(MONO_SILENCE)
 
         self.voices = [
-            OscillatorVoice(envelope=AR(attackTime=.002, releaseTime=.1)) for _  in range(self.MAX_VOICES)
+            OscillatorVoice(envelope=AR(attackTime=0.02, releaseTime=.1)) for _  in range(self.MAX_VOICES)
         ]
         self.freeVoice = itertools.cycle(self.voices)
 
