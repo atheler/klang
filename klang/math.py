@@ -35,3 +35,23 @@ def is_power_of_two(number):
 
 def is_divisible(number, denominator):
     return number % denominator == 0
+
+
+def integrate(x, dt, y0=0.):
+    """Numerical integration. Output is:
+
+    y = integrate x with dt
+
+    Args:
+        x (array): Input array.
+        dt (float): Time interval.
+
+    Kwargs:
+        y0 (float or array): Initial value of integrator.
+
+    Returns:
+        array: Integrated output array.
+    """
+    tmp = np.roll(x, 1, axis=0)
+    tmp[0] = y0 / dt
+    return dt * np.cumsum(tmp, axis=0)
