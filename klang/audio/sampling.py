@@ -32,14 +32,54 @@ def interp_2d(x, xp, fp, *args, **kwargs):
     ]).T
 
 
+class CrudeResampler:
+
+    """Lo-fi resampler. Resampling via sample interpolation which introduces
+    jitter. Mode 'very_crude' additionally floors interpolation indices /
+    introduces even more jitter / distortion.
+
+    Should work as a replacement of samplerate.CallbackResampler (no guarantee).
+    """
+
+    def __init__(self, callback, ratio, mode='crude'):
+        self.callback = callback
+        self.ratio = ratio
+        self.mode = mode
+
+    def set_starting_ratio(self, ratio):
+        self.ratio = ratio
+
+    def read(self, nFrames):
+        reqLength = int(nFrames / self.ratio)
+        fp = self.callback(reqLength)
+        n = len(fp)
+        xp = np.arange(n)
+
+        x = np.linspace(0, n, nFrames, endpoint=False)
+        if self.mode == 'very_crude':
+            x = x.astype(int)
+
+        return interp_2d(x, xp, fp)
+
+
 class Resampler:
 
-    """Resample with varying playing speed."""
+    """Resample audio samples with different sampling rates and with varying
+    playback speed.
 
-    def __init__(self, rate, data, converter_type='linear', playbackSpeed=1.,
+    TODO:
+      - Use RingBuffer for circular case?
+    """
+
+    SAMPLERATE_MODES = {
+        'linear', 'sinc_best', 'sinc_fastest', 'sinc_medium', 'zero_order_hold',
+    }
+    """set: Valid resampler modes / algorithms (for samplerate package)."""
+
+    def __init__(self, rate, data, mode='linear', playbackSpeed=1.,
                  loop=False):
         """Kwargs:
-            converter_type (str): See samplerate. Possebilites are: 'linear',
+            mode (str): See samplerate. Possebilites are: 'linear',
                 'sinc_best', 'sinc_fastest', 'sinc_medium' and
                 'zero_order_hold'.
         """
@@ -48,35 +88,48 @@ class Resampler:
         self.playbackSpeed = playbackSpeed
         self.loop = loop
 
-        self.resampler = samplerate.CallbackResampler(
-            self.callback,
-            ratio=SAMPLING_RATE / self.rate / self.playbackSpeed,
-            converter_type=converter_type,
-            channels=self.nChannels,
-        )
+        ratio = SAMPLING_RATE / self.rate / self.playbackSpeed
+        if mode in self.SAMPLERATE_MODES:
+            self.resampler = samplerate.CallbackResampler(
+                self.callback,
+                ratio=SAMPLING_RATE / self.rate / self.playbackSpeed,
+                converter_type=mode,
+                channels=self.nChannels,
+            )
+        elif mode in {'crude', 'very_crude'}:
+            self.resampler = CrudeResampler(
+                self.callback,
+                ratio,
+                mode=mode,
+            )
+
         self.index = 0
         self.playing = True
 
     @property
     def length(self):
+        """Length of buffer."""
         return self.data.shape[0]
 
     @property
     def nChannels(self):
+        """Number of channels."""
         if self.data.ndim == MONO:
             return MONO
 
         return self.data.shape[1]
 
-    def callback(self):
+    def callback(self, nFrames=BUFFER_SIZE):
+        """Callback function for samplerate.CallbackResampler. Returns some
+        frames of data.
+        """
         if not self.playing:
             return
 
         start = self.index
-        stop = (start + BUFFER_SIZE) % self.length
+        stop = (start + nFrames) % self.length
 
         if start < stop:
-            #print('Here', stop-start)
             self.index = stop
             return self.data[start:stop]
 
@@ -91,6 +144,7 @@ class Resampler:
         return self.data[start:]
 
     def rewind(self):
+        """Rewind to start position."""
         self.index = 0
         self.resampler.reset()
 
@@ -113,6 +167,7 @@ class Resampler:
         return ret
 
     def set_playback_speed(self, playbackSpeed):
+        """Change playback speed."""
         ratio = SAMPLING_RATE / self.rate / playbackSpeed
         self.resampler.set_starting_ratio(ratio)
 
@@ -209,7 +264,7 @@ class Sampler(Block):
     TODO: Make me!
     """
 
-    def __init__(self, data):
+    def __init__(self, data, rate=SAMPLING_RATE):
         super().__init__(nOutputs=1)
         self.inputs = [MessageInput(self)]
 
