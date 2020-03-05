@@ -11,7 +11,10 @@ from klang.math import is_power_of_two, is_divisible
 
 
 DUPLE = 2
+"""int: A duplet."""
+
 TRIPLE = 3
+"""int: A triplet."""
 
 
 def create_metre(numerator, denominator):
@@ -24,6 +27,7 @@ def create_metre(numerator, denominator):
 FOUR_FOUR = create_metre(4, 4)
 THREE_FOUR = WALTZ = create_metre(3, 4)
 TWO_TWO = create_metre(2, 2)
+SIX_EIGHT = create_metre(6, 8)
 
 
 def is_irrational(metre):
@@ -31,13 +35,13 @@ def is_irrational(metre):
     return not is_power_of_two(metre.denominator)
 
 
-assert not is_irrational(fractions.Fraction(3, 4, _normalize=False))
-assert is_irrational(fractions.Fraction(3, 5, _normalize=False))
+assert not is_irrational(create_metre(3, 4))
+assert is_irrational(create_metre(3, 5))
 
 
 def is_fractional(metre):
     """Check if fractional metre."""
-    return metre.numerator % 1 != 0
+    return metre.numerator % 1 != 0  # TODO(atheler): Kind of redundant in this fraction based setting.
 
 
 def is_complex(metre):

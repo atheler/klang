@@ -1,3 +1,4 @@
+"""Klang sound engine object."""
 import collections
 import time
 

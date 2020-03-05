@@ -10,11 +10,14 @@ from klang.math import clip
 from klang.messages import Note
 
 
-KEYS = []
-
 SILENT = 0.
+"""float: TODO."""
+
 LOUDER = .1
+"""float: Louder increment."""
+
 QUIETER = -.1
+"""float: Quieter decrement."""
 
 
 class Keyboard(Block):
@@ -98,7 +101,6 @@ class MusicalKeyboard(Keyboard):
         self.velocity = 1.
 
     def on_event(self, key):
-        KEYS.append(key)
         try:
             char = key.char
         except AttributeError:
