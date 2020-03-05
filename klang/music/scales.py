@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 
 from config import SCALES_FILEPATH
 from klang.constants import DODE, TAU
-from klang.music.pitch import PITCH_NAMES, PITCH_CLASSES, CIRCLE_OF_FIFTHS
+from klang.music.pitch import PITCH_CLASSES
 from klang.util import find_item, load_music_data_from_csv
 
 
@@ -73,41 +73,6 @@ def all_possible_scales():
     ]
 
 
-def format_circle_of_fifth_polar_plot(ax):
-    """Format a polar subplot so that it fits a circle of fifths plot."""
-    north = 'N'
-    ax.set_theta_zero_location(north)
-
-    clockwise = -1
-    ax.set_theta_direction(clockwise)
-
-    ax.set_xticks(_ANGLES)
-
-    pitchNames = np.array(PITCH_NAMES)
-    labels = pitchNames[CIRCLE_OF_FIFTHS]
-    ax.set_xticklabels(labels)
-
-    ax.set_yticks([])
-
-    ax.grid(False)
-
-
-def plot_scale_in_circle_of_fifth(scale, ax=None):
-    """Plot a music scale in a circle of fifth plot."""
-    pitches = scale_2_pitches(scale)
-    ax = ax or plt.gca()
-    xy = np.array([
-        _ANGLES[CIRCLE_OF_FIFTHS[pitches]],
-        np.ones_like(pitches),
-    ]).T
-    polygon = plt.Polygon(xy, closed=True)
-    ax.add_artist(polygon)
-
-    format_circle_of_fifth_polar_plot(ax)
-
-    return polygon
-
-
 ALL_POSSIBLE_SCALES = all_possible_scales()
 
 
@@ -121,7 +86,7 @@ KNOWN_SCALES = {
 
 def main():
     """Scales circle of fifths plot demo."""
-    import math
+    from klang.plotting import nice_plotting_shape, plot_scale_in_circle_of_fifth
 
     # Scales demo plot. Params:
     names = [
@@ -144,17 +109,7 @@ def main():
 
     scales = [find_scale(n) for n in names]
 
-    def plotting_shape(n):
-        """Get a nice subplot layout from number of subplots."""
-        nRows = math.floor(n ** .5)
-        nCols = math.ceil(n ** .5)
-        while nRows * nCols < n:
-            nCols += 1
-
-        return nRows, nCols
-
-
-    shape = plotting_shape(len(scales))
+    shape = nice_plotting_shape(len(scales))
 
     fig, axarr = plt.subplots(*shape, subplot_kw=dict(projection='polar'))
     for name, scale, ax in zip(names, scales, axarr.ravel()):
