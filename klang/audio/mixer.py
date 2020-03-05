@@ -1,6 +1,7 @@
+"""Mixer"""
 import numpy as np
 
-from config import BUFFER_SIZE
+from klang.audio import MONO_SILENCE
 from klang.blocks import Block
 from klang.constants import MONO, STEREO
 
@@ -24,7 +25,7 @@ class Mixer(Block):
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)
 
     def update(self):
-        signalSum = np.zeros(BUFFER_SIZE)
+        signalSum = MONO_SILENCE.copy()
         for channel in self.inputs:
             signalSum += channel.get_value()
 
@@ -33,3 +34,7 @@ class Mixer(Block):
 
         for output in self.outputs:
             output.set_value(signalSum)
+
+
+class StereoMixer:
+    pass

@@ -1,11 +1,9 @@
 """Envelop generator blocks."""
 import numpy as np
 
-from config import SAMPLING_RATE, BUFFER_SIZE
+from config import BUFFER_SIZE
+from klang.audio import DT
 from klang.blocks import Block
-
-
-DT = 1. / SAMPLING_RATE
 
 
 def sample_linear_envelope(nSamples, slope, start=0.):

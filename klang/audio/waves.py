@@ -6,11 +6,9 @@ Note:
 import numpy as np
 
 from config import SAMPLING_RATE
+from klang.audio import DT
 from klang.constants import TAU
 from klang.math import wrap
-
-
-DT = 1. / SAMPLING_RATE
 
 
 def sine(phase):

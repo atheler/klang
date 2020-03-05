@@ -5,15 +5,13 @@ import numpy as np
 import scipy.signal
 
 from config import BUFFER_SIZE, SAMPLING_RATE
+from klang.audio import NYQUIST_FREQUENCY
 from klang.blocks import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
 from klang.audio.oscillators import Lfo
 from klang.util import convert_samples_to_int, convert_samples_to_float
 from klang.ring_buffer import RingBuffer
-
-
-NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 
 
 def blend(a, b, x):
