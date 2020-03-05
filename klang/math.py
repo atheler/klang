@@ -33,6 +33,11 @@ def is_power_of_two(number):
         return False
 
 
+def is_dyadic(fraction):
+    """Check if dyadic rational."""
+    return is_power_of_two(fraction.denominator)
+
+
 def is_divisible(number, denominator):
     return number % denominator == 0
 

@@ -7,7 +7,7 @@ Resources:
 """
 import fractions
 
-from klang.math import is_power_of_two, is_divisible
+from klang.math import is_dyadic, is_divisible
 
 
 DUPLE = 2
@@ -32,7 +32,7 @@ SIX_EIGHT = create_metre(6, 8)
 
 def is_irrational(metre):
     """Check if irrational metre."""
-    return not is_power_of_two(metre.denominator)
+    return not is_dyadic(metre)
 
 
 assert not is_irrational(create_metre(3, 4))
