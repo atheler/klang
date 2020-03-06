@@ -1,4 +1,57 @@
-"""Musical note values."""
+"""Musical note values.
+
+
+TODO:
+  - How to format more complex note formations? Like:
+
+
+ ┌──┐
+ │  │
+●  ●
+
+    3
+ ┌──┬──┐
+ │  │  │
+●  ●  ●
+
+
+ ╒══╤══╤══╕
+ │  │  │  │
+●  ●  ●  ● 
+
+
+ ┌──╤══╕
+ │  │  │
+●  ●  ● 
+
+
+ ╒═─┬─═╕    ╒──┬──╕
+ │  │  │ OR │  │  │
+●  ●  ●    ●  ●  ● 
+
+
+ ┌─═╤──┐
+ │  │  │
+●  ●  ● 
+
+
+ ┌──╤══╤──┐
+ │  │  │  │
+●  ●  ●  ● 
+
+
+ ┌──╤══╤──┬─═╕
+ │  │  │  │  │
+●  ●  ●  ●  ● 
+
+
+Frame elements:
+ ┌──┬──┐  ╔══╦══╗  ╒══╤══╕
+ │  │  │  ║  ║  ║  │  │  │
+●  ●  ●  ●  ●  ●  ●  ●  ● 
+
+
+"""
 import sys
 import fractions
 
@@ -18,6 +71,26 @@ NOTE_NAMES = {
     fractions.Fraction(1, 256): 'Two Hundred Fifty-Sixth Note',
 }
 """dict: Note value (Fraction) -> Note name (str)."""
+
+
+NOTE_SYMBOLS = {
+    fractions.Fraction(1, 1): ('  \n'
+                               '  \n'
+                               '○ '),
+    fractions.Fraction(1, 2): (' │\n'
+                               ' │\n'
+                               '○ '),
+    fractions.Fraction(1, 4): (' │\n'
+                               ' │\n'
+                               '● '),
+    fractions.Fraction(1, 8): (' ┌\n'
+                               ' │\n'
+                               '● '),
+    fractions.Fraction(1, 16): (' ╒\n'
+                                ' │\n'
+                                '● '),
+}
+"""dict: Note value (Fraction) -> String note representation (str)."""
 
 
 def dot_note(note, n=1):
@@ -68,3 +141,32 @@ def _add_notes_to_module():
 
 _add_doted_note_values()
 _add_notes_to_module()
+
+
+def format_note(note):
+    """Format single note."""
+    if not note in NOTE_SYMBOLS:
+        raise ValueError
+
+    return NOTE_SYMBOLS[note]
+
+
+def format_notes(notes, sep=' '):
+    """Format multiple notes."""
+    rows = [[], [], []]
+    for note in notes:
+        for line, row in zip(format_note(note).split('\n'), rows):
+            row.append(line)
+
+    return '\n'.join(sep.join(row) for row in rows)
+
+
+if __name__ == '__main__':
+    notes = [
+            WHOLE_NOTE,
+            HALF_NOTE,
+            QUARTER_NOTE,
+            EIGHT_NOTE,
+            SIXTEENTH_NOTE
+    ]
+    print(format_notes(notes))
