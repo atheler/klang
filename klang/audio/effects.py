@@ -88,8 +88,8 @@ class Delay(Block):
         maxlen = int(self.MAX_DELAY * SAMPLING_RATE)
         delayOffset = int(delay * SAMPLING_RATE)
         self.buffers = {
-            MONO: RingBuffer(maxlen, delayOffset),
-            STEREO: RingBuffer((maxlen, STEREO), delayOffset),
+            MONO: RingBuffer.from_shape(maxlen, offset=delayOffset),
+            STEREO: RingBuffer.from_shape((maxlen, STEREO), offset=delayOffset),
         }
 
     def update(self):

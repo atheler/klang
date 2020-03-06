@@ -1,17 +1,30 @@
+"""The missing ring buffer."""
 import numpy as np
 
 
 class RingBuffer:
 
-    """Numpy ring buffer."""
+    """Numpy ring buffer.
 
-    def __init__(self, shape, offset=0, *args, **kwargs):
-        self.data = np.zeros(shape, *args, **kwargs)
+    Accessing the buffer over the turnaround point will result in a copy.
+    """
+
+    def __init__(self, data, offset=0, copy=True):
+        self.data = np.array(data, copy=copy)
+        self.offset = offset
+
         self.readIdx = 0
         self.writeIdx = offset % self.length
 
+    @classmethod
+    def from_shape(cls, shape, offset=0):
+        """Initialize empty ring buffer from shape."""
+        data = np.zeros(shape)
+        return cls(data, offset, copy=False)
+
     @property
     def length(self):
+        """Length of ring buffer."""
         return self.data.shape[0]
 
     def write(self, frames):

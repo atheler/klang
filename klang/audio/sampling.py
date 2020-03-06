@@ -26,7 +26,7 @@ def sum_to_mono(samples):
 
 
 def interp_2d(x, xp, fp, *args, **kwargs):
-    """Multi-dimensional linear interpolation."""
+    """Multi-dimensional linear interpolation. Using np.interp."""
     return np.array([
         np.interp(x, xp, col, *args, **kwargs) for col in fp.T
     ]).T
