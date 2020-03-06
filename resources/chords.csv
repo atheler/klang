@@ -1,0 +1,72 @@
+augmented chord,0,4,8
+augmented eleventh chord,0,4,7,10,14,30
+augmented major seventh chord,0,4,8,11
+augmented seventh chord,0,4,8,10
+augmented sixth chord,0,6,100,16,30,124,40,55,58
+diminished chord,0,3,6
+diminished major seventh chord,0,3,6,11
+diminished seventh chord,0,3,6,9
+dominant,0,4,7
+dominant eleventh chord,0,4,7,10,14,29
+dominant minor ninth,0,4,7,10,13
+dominant ninth,0,4,7,10,14
+dominant parallel,0,3,7
+dominant seventh chord,0,4,7,10
+dominant seventh flat five chord,0,4,6,10
+dominant seventh sharp nine,0,4,7,10,15
+dominant thirteenth chord,0,4,7,10,14,29,33
+dream chord,0,5,6,7
+elektra chord,0,7,9,13,28
+farben chord,0,8,11,16,33
+half-diminished seventh chord,0,3,6,10
+harmonic seventh chord,0,4,7,10
+hendrix chord,0,4,7,10,15
+leading-tone triad,0,3,6
+lydian chord,0,4,7,11,18
+magic chord,0,1,5,6,10,12,27,29
+major chord,0,4,7
+major eleventh chord,0,4,7,11,14,29
+major ninth chord,0,4,7,11,14
+major seventh chord,0,4,7,11
+major seventh sharp eleventh chord,0,4,8,11,18
+major sixth chord,0,4,7,9
+major sixth ninth chord,0,4,7,9,14
+major thirteenth chord,0,4,7,11,14,30,33
+mediant,0,3,7
+minor chord,0,3,7
+minor eleventh chord,0,3,7,10,14,29
+minor major seventh chord,0,3,7,11
+minor ninth chord,0,3,7,10,14
+minor seventh chord,0,3,7,10
+minor sixth chord,0,3,7,9
+minor sixth ninth chord,0,3,7,9,14
+minor thirteenth chord,0,3,7,10,14,29,33
+mu chord,0,2,4,7
+mystic chord,0,6,10,16,33,38
+neapolitan chord,1,5,8
+ninth augmented fifth chord,0,4,8,10,14
+ninth flat fifth chord,0,4,6,10,14
+northern lights chord,1,2,8,12,27,30,31,34,35,40,55
+ode-to-napoleon hexachord,0,1,4,5,8,9
+p5,0,7
+petrushka chord,0,1,4,6,7,10
+power chord,0,7
+psalms chord,0,3,7
+secondary dominant,0,4,7
+secondary leading-tone chord,0,3,6
+secondary supertonic chord,0,3,7
+seven six chord,0,4,7,9,10
+seventh suspension four chord,0,5,7,10
+so what chord,0,5,10,15,31
+subdominant,0,4,7
+subdominant parallel,0,3,7
+submediant,0,3,7
+subtonic,0,4,7
+supertonic,0,3,7
+suspended chord,0,5,7
+tonic,0,4,7
+tonic counter parallel,0,3,7
+tonic parallel,0,3,7
+tristan chord,0,3,6,10
+viennese trichord,0,1,6
+viennese trichord 1,0,6,7
