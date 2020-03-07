@@ -29,6 +29,7 @@ THREE_FOUR_METRE = WALTZ_METRE = create_metre(3, 4)
 TWO_FOUR_METRE = create_metre(2, 4)
 TWO_TWO_METRE = create_metre(2, 2)
 SIX_EIGHT_METRE = create_metre(6, 8)
+NINE_EIGHT_METRE = create_metre(9, 8)
 
 
 def is_irrational(metre):
