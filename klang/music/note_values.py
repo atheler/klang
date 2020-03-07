@@ -1,14 +1,14 @@
 """Musical note values.
 
-
 TODO:
-  - How to format more complex note formations? Like:
+  - Note formatting -> in its own module (?).
 """
 import collections
 import fractions
 
 from klang.music.metre import (
-    FOUR_FOUR_METRE, THREE_FOUR_METRE, TWO_FOUR_METRE, SIX_EIGHT_METRE, is_complex
+    FOUR_FOUR_METRE, THREE_FOUR_METRE, TWO_FOUR_METRE, SIX_EIGHT_METRE,
+    is_complex
 )
 
 
@@ -77,7 +77,6 @@ DEFAULT_GROUPINGS = {
 }
 """dict: Metre (Fraction) -> Common note grouping (list)."""
 
-
 BEAM_CHARACTERS = [
     '     ',
     '┌─┬─┐',
@@ -102,7 +101,6 @@ BLACK_CIRCLE = '●'
 
 WHITE_CIRCLE = '○'
 """str: Empty note head character."""
-
 
 BEAM_NUMBER = collections.defaultdict(int, {
     EIGHT_NOTE: 1,
@@ -388,19 +386,29 @@ def format_time_signature(grouping):
     ]), ' ')
 
 
-def format_notes(notes, grouping=None, metre=FOUR_FOUR_METRE, strech=False,
-                 timeSignature=True, beautify=True):
+def _empty_space(nBeams=0):
+    chars = BEAM_CHARACTERS[nBeams]
+    return '\n'.join([
+        chars[1],
+        ' ',
+        ' ',
+    ])
+
+
+def format_notes(notes, grouping=None, metre=FOUR_FOUR_METRE, strech=True,
+                 timeSignature=True):
     """Format notes.
 
     Args:
         notes (list): Notes to format.
 
     Kwargs:
-        grouping (list): Note grouping for beam formatting. Overrides metre. If non given, default will be taken via metre.
+        grouping (list): Note grouping for beam formatting. Overrides metre. If
+            non given, default will be taken via metre.
         metre (Fraction): Time signature.
-        strech (bool): Stretch whitespace between notes according to their playing time. (Not implemented yet).
+        strech (bool): Stretch whitespace between notes according to their
+            playing time. (Not implemented yet).
         timeSignature (bool): Prepend time signature to output.
-        beautify (bool): Beautify output beams a little.
 
     Returns:
         str: Formatted notes.
@@ -417,6 +425,8 @@ def format_notes(notes, grouping=None, metre=FOUR_FOUR_METRE, strech=False,
     """list: Points inside a bar where notes cross over to another group. Beams
     need to be resetted.
     """
+
+    raster = min(notes)
 
     segments = []
     if timeSignature:
@@ -446,17 +456,22 @@ def format_notes(notes, grouping=None, metre=FOUR_FOUR_METRE, strech=False,
         txt = format_note(note, beamDirection=beamDir)
         segments.append(txt)
 
+        # Widen Notenbild
+        if beamDir == BEAM_END:
+            nBeams = 0
+        else:
+            nBeams = BEAM_NUMBER[note]
+
+        emptySpace = _empty_space(nBeams)
+        segments.append(emptySpace)
+
+        if strech:
+            for _  in range(int(note / raster) - 1):
+                segments.append(emptySpace)
+
         pos += note
 
-    text = hstack(*segments)
-
-    # Beautify
-    if beautify:
-        text = text.replace('┌═╤═╕', '┌─╤═╕')
-        text = text.replace('┌═╕', '┌─╕')
-        text = text.replace('┬═╕', '┬─╕')
-
-    return text
+    return hstack(*segments)
 
 
 if __name__ == '__main__':
