@@ -1,6 +1,7 @@
 """Musical scales.
 
-A scale is a list of semitone intervals.
+A scale is a list of semitone intervals. E.g. (2, 2, 1, 2, 2, 2, 1) for a major
+scale. A scale can be converted to pitches with cumsum. [0, 2, 4, 5, 7, 9, 11].
 
 Resources:
   - https://ianring.com/musictheory/scales/

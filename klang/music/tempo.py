@@ -1,6 +1,6 @@
 import fractions
 
-from klang.music.metre import FOUR_FOUR, is_compound, create_metre
+from klang.music.metre import FOUR_FOUR_METRE, is_compound, create_metre
 
 
 def tempo_2_frequency(tempo):
@@ -22,7 +22,7 @@ def estimate_beat_value(metre):
     return fractions.Fraction(1, metre.denominator)
 
 
-def bar_period(tempo, metre=FOUR_FOUR):
+def bar_period(tempo, metre=FOUR_FOUR_METRE):
     """Duration of a single bar for a given tempo."""
     beatValue = estimate_beat_value(metre)
     return metre / tempo_2_frequency(tempo) / beatValue

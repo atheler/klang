@@ -24,10 +24,11 @@ def create_metre(numerator, denominator):
     return fractions.Fraction(numerator, denominator, _normalize=False)
 
 
-FOUR_FOUR = create_metre(4, 4)
-THREE_FOUR = WALTZ = create_metre(3, 4)
-TWO_TWO = create_metre(2, 2)
-SIX_EIGHT = create_metre(6, 8)
+FOUR_FOUR_METRE = create_metre(4, 4)
+THREE_FOUR_METRE = WALTZ_METRE = create_metre(3, 4)
+TWO_FOUR_METRE = create_metre(2, 4)
+TWO_TWO_METRE = create_metre(2, 2)
+SIX_EIGHT_METRE = create_metre(6, 8)
 
 
 def is_irrational(metre):

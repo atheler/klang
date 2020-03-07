@@ -10,7 +10,7 @@ from klang.blocks import Block
 from klang.connections import MessageOutput
 from klang.constants import TAU
 from klang.messages import Note
-from klang.music.metre import FOUR_FOUR
+from klang.music.metre import FOUR_FOUR_METRE
 from klang.music.tempo import bar_period
 
 
@@ -18,7 +18,7 @@ DEFAULT_PATTERN = np.zeros(16)
 SKIP = -1
 
 
-def angular_velocity(tempo, metre=FOUR_FOUR):
+def angular_velocity(tempo, metre=FOUR_FOUR_METRE):
     """Calculaee angular bar velocity for given tempo in BPM."""
     return TAU / bar_period(tempo, metre)
 

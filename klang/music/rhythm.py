@@ -14,10 +14,10 @@ Euclidian Rhyhtm
 import numpy as np
 
 from klang.constants import TAU
-from klang.music.metre import FOUR_FOUR
+from klang.music.metre import FOUR_FOUR_METRE
 
 
-def swing(ratio, metre=FOUR_FOUR):
+def swing(ratio, metre=FOUR_FOUR_METRE):
     """Create swing function. For now only swing ratios between [.5, 2] supported.
 
     TODO:
