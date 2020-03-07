@@ -1,9 +1,6 @@
-"""Musical note values.
-
-TODO:
-  - Note formatting -> in its own module (?).
-"""
+"""Musical note values."""
 import fractions
+
 
 """Note value definitions."""
 
@@ -59,8 +56,6 @@ TRIPLE_DOTTED_THIRTY_SECOND_NOTE = fractions.Fraction(15, 256)
 TRIPLE_DOTTED_SIXTY_FOURTH_NOTE = fractions.Fraction(15, 512)
 TRIPLE_DOTTED_HUNDRED_TWENTY_NOTE = fractions.Fraction(15, 1024)
 TRIPLE_DOTTED_TWO_HUNDRED_FIFTY_SIXTH_NOTE = fractions.Fraction(15, 2048)
-
-
 
 
 def dot_note(note, n=1):
@@ -120,14 +115,16 @@ class Tuplet(fractions.Fraction):
 
     """Tuplet note container."""
 
-    """
     NAMES = {
+        2: 'Duplet',
         3: 'Triplet',
+        4: 'Quadruplet',
         5: 'Quintuplet',
         6: 'Sextuplet',
         7: 'Septuplet',
+        8: 'Octuplet',
+        9: 'Nontuplet',
     }
-    """
 
     def __new__(cls, num, notes, den=None):
         if den is None:
@@ -145,7 +142,8 @@ class Tuplet(fractions.Fraction):
         self.den = den
 
     def __str__(self):
-        return 'Tuplet(%s:%s)' % (self.num, self.den)
+        name = self.NAMES.get(self.num, self.__class__.__name__)
+        return '%s(%s:%s)' % (name, self.num, self.den)
 
 
 if __name__ == '__main__':

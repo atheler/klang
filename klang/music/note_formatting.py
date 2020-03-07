@@ -1,3 +1,4 @@
+"""Sheet music ASCII art."""
 import collections
 import fractions
 
