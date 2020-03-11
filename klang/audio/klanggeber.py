@@ -12,11 +12,48 @@ from klang.errors import KlangError
 from klang.graph import graph_matrix, topological_sorting
 
 
-class ChannelMismatchError(KlangError):
+def network_graph(blocks):
+    """Get network graph and mapping."""
+    block2idx = {}
+    idx2block = {}
+    queue = collections.deque(blocks)
+    visited = set()
+    edges = set()
 
-    """Can not match received audio signals to output channels."""
+    def get_block_index(block):
+        """Get index for block."""
+        if block not in block2idx:
+            newId = len(block2idx)
+            block2idx[block] = newId
+            idx2block[newId] = block
 
-    pass
+        return block2idx[block]
+
+    while queue:
+        block = queue.popleft()
+        if block in visited:
+            continue
+
+        visited.add(block)
+        here = get_block_index(block)
+        for child in output_neighbors(block):
+            there = get_block_index(child)
+            edges.add((here, there))
+            queue.append(child)
+
+        for parent in input_neighbors(block):
+            back = get_block_index(parent)
+            edges.add((back, here))
+            queue.append(parent)
+
+    return idx2block, graph_matrix(list(edges))
+
+
+def determine_execution_order(blocks):
+    """Get appropriate execution order for block network."""
+    idx2block, graph = network_graph(blocks)
+    order = topological_sorting(graph)
+    return [idx2block[idx] for idx in order]
 
 
 def pack_signals(signals, bufferSize):
@@ -34,6 +71,13 @@ def pack_signals(signals, bufferSize):
         ret[:, i] = samples
 
     return ret
+
+
+class ChannelMismatchError(KlangError):
+
+    """Can not match received audio signals to output channels."""
+
+    pass
 
 
 class Adc(Block):
@@ -58,7 +102,7 @@ class Dac(Block):
         pass
 
     def get_channels(self, nChannels):
-        """Get signal for each active channel."""
+        """Get signal from each active channel."""
         counter = 0
         for input in self.inputs:
             signal = input.get_value()
@@ -87,72 +131,12 @@ class KlangGeber:
     def __init__(self, nInputs=0, nOutputs=STEREO):
         self.nInputs = nInputs
         self.nOutputs = nOutputs
-
         self.adc = Adc(nOutputs=nInputs)
         self.dac = Dac(nInputs=nOutputs)
 
-        self.block2idx = {}
-        self.idx2block = {}
-        self.executionOrder = []
-
-    def register_block(self, block):
-        """Register block to executor."""
-        if block in self.block2idx:
-            raise ValueError('Block %r already registered!' % block)
-
-        newIdx = len(self.block2idx)
-        self.block2idx[block] = newIdx
-        self.idx2block[newIdx] = block
-
-    def get_block_index(self, block):
-        """Get block index. If block not present in mapping it will be added."""
-        if block not in self.block2idx:
-            self.register_block(block)
-
-        return self.block2idx[block]
-
-    def update_execution_order(self):
-        """Update executor order."""
-        queue = collections.deque(self.block2idx)
-        visited = set()
-        edges = set()
-        while queue:
-            block = queue.popleft()
-            if block in visited:
-                continue
-
-            visited.add(block)
-
-            here = self.block2idx[block]
-
-            for child in output_neighbors(block):
-                there = self.get_block_index(child)
-                edges.add((here, there))
-                queue.append(child)
-
-            for parent in input_neighbors(block):
-                back = self.get_block_index(parent)
-                edges.add((back, here))
-                queue.append(parent)
-
-        graph = graph_matrix(list(edges))
-        order = topological_sorting(graph)
-        self.executionOrder = [
-            self.idx2block[idx] for idx in order
-        ]
-
-    def add_block(self, *blocks):
-        """Add block(s) to executor."""
-        size = len(self.block2idx)
-        for block in blocks:
-            self.register_block(block)
-
-        sizeChanged = (len(self.block2idx) != size)
-        if sizeChanged:
-            self.update_execution_order()
-
     def start(self):
         silence = np.zeros((BUFFER_SIZE, self.nOutputs), dtype=np.float32)
+        executionOrder = determine_execution_order(blocks=[self.dac, self.adc])
 
         def audio_callback(inData, frameCount, timeInfo, status):
             """Audio stream callback for pyaudio."""
@@ -161,12 +145,12 @@ class KlangGeber:
                 for samples, channel in zip(inData.T, self.adc.outputs):
                     channel.set_value(samples)
 
-            for block in self.executionOrder:
+            for block in executionOrder:
                 block.update()
 
             channels = list(self.dac.get_channels(self.nOutputs))
             if len(channels) < self.nOutputs:
-                msg = 'Not engough channels %d' % len(channels)
+                msg = 'Not enough channels %d' % len(channels)
                 error = ChannelMismatchError(msg)
                 print(error)
                 return silence, pyaudio.paAbort
@@ -208,11 +192,4 @@ class KlangGeber:
         return self.adc, self.dac
 
     def __exit__(self, exception_type, exception_value, traceback):
-        self.add_block(self.adc, self.dac)
         self.start()
-
-    def __str__(self):
-        return '%s(%d blocks)' % (
-            self.__class__.__name__,
-            len(self.block2idx),
-        )
