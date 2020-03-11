@@ -1,5 +1,6 @@
 import fractions
 
+from klang.constants import TAU
 from klang.music.metre import FOUR_FOUR_METRE, is_compound, create_metre
 
 
@@ -32,3 +33,8 @@ assert bar_period(120) == 2.0
 assert bar_period(100) == 2.4
 assert bar_period(120, create_metre(3, 4)) == 1.5
 assert bar_period(80, create_metre(6, 8)) == 1.5
+
+
+def angular_velocity(tempo, metre=FOUR_FOUR_METRE):
+    """Calculate angular bar velocity for given tempo in BPM."""
+    return TAU / bar_period(tempo, metre)
