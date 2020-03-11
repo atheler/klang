@@ -21,3 +21,6 @@ CHORDS_FILEPATH = 'resources/chords.csv'
 
 SCALES_FILEPATH = 'resources/scales.csv'
 """str: Filepath to scales CSV file."""
+
+INTERVALS_FILEPATH = 'resources/intervals.csv'
+"""str: Filepath to intervals CSV file."""
