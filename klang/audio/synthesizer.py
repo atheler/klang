@@ -5,8 +5,8 @@ import numpy as np
 
 from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE, DT
-from klang.audio.envelope import EnvelopeGenerator, AR, ExpDecay
-from klang.audio.oscillators import Oscillator
+from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, ExpDecay
+from klang.audio.oscillators import Oscillator, sample_wave
 from klang.blocks import Block
 from klang.connections import MessageInput
 from klang.math import clip
@@ -161,3 +161,38 @@ class HiHat(Block):
         env = self.envelope.output.get_value()
         noise = self.noise_generator()
         self.output.set_value(env * noise)
+
+
+def sample_pitch_decay(frequency, decay, intensity, t0=0.):
+    """Sample decaying pitch curve."""
+    env, t1 = sample_exponential_decay(decay, t0)
+    pitch = frequency * (1. + intensity * env)
+    return pitch, t1
+
+
+class Kick(Block):
+    def __init__(self, frequency=40., decay=.8, intensity=2, pitchDecay=.3):
+        super().__init__(nInputs=0, nOutputs=1)
+        self.frequency = frequency
+        self.decay = decay
+        self.intensity = intensity
+        self.pitchDecay = pitchDecay
+
+        self.inputs = [MessageInput(self)]
+        self.currentTime = 0.
+        self.currentPhase = 0.
+
+    def update(self):
+        triggered = False
+        for note in self.input.receive():
+            if note.pitch > 0 and note.velocity > 0:
+                triggered = True
+
+        if triggered:
+            self.currentTime = 0.
+            self.currentPhase = 0.
+
+        frequency, _ = sample_pitch_decay(self.frequency, self.pitchDecay, self.intensity, self.currentTime)
+        env, self.currentTime = sample_exponential_decay(self.decay, self.currentTime)
+        signal, self.currentPhase = sample_wave(None, frequency, startPhase=self.currentPhase)
+        self.output.set_value(env * signal)

@@ -16,7 +16,6 @@ DUPLE = 2
 TRIPLE = 3
 """int: A triplet."""
 
-
 QUAD = 4
 """int: ???"""
 

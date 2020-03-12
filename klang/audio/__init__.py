@@ -1,7 +1,7 @@
 """All things audio."""
 import numpy as np
 
-from config import SAMPLING_RATE, BUFFER_SIZE
+from config import BUFFER_SIZE, SAMPLING_RATE
 
 
 DT = 1. / SAMPLING_RATE
@@ -17,3 +17,11 @@ MONO_SILENCE.flags.writeable = False
 STEREO_SILENCE = np.zeros((2, BUFFER_SIZE))
 STEREO_SILENCE.flags.writeable = False
 """array: Default array for stereo silence."""
+
+T = DT * np.arange(BUFFER_SIZE)
+T.flags.writeable = False
+"""array: Buffer time points."""
+
+T1 = DT * np.arange(BUFFER_SIZE + 1)
+T1.flags.writeable = False
+"""array: Buffer time points plus one (continuation)."""

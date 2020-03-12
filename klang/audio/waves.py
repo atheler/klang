@@ -5,8 +5,7 @@ Note:
 """
 import numpy as np
 
-from config import SAMPLING_RATE
-from klang.audio import DT
+from klang.audio import DT, T
 from klang.constants import TAU
 from klang.math import wrap
 
@@ -47,7 +46,5 @@ WAVE_FUNCTIONS = {
 
 def sample_wave(nSamples, frequency, startPhase=0., wave_func=np.sin):
     """Sample wave function."""
-    t = DT * np.arange(nSamples + 1)
-    phase = TAU * frequency * t + startPhase
-    signal = wave_func(phase[..., :-1])
-    return signal, phase[..., -1]
+    phase = TAU * frequency * T + startPhase
+    return wave_func(phase), wrap(phase[-1] + TAU * frequency * DT)

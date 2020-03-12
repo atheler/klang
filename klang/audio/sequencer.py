@@ -14,8 +14,6 @@ from klang.music.tempo import angular_velocity
 
 
 DEFAULT_PATTERN = np.zeros(16)
-SKIP = -1
-
 PASS_THROUGH = lambda phase: phase
 
 
@@ -38,24 +36,26 @@ class Sequencer(Block):
                  microRhythm=PASS_THROUGH):
         #assert 0 <= noteDuration <= 1
         super().__init__()
-        self.outputs = [
-            MessageOutput(owner=self) for _ in range(len(pattern))
-        ]
         self.pattern = np.atleast_2d(pattern)
         self.tempo = tempo
         self.noteDuration = noteDuration
         self.microRhythm = microRhythm
 
+        self.outputs = [
+            MessageOutput(owner=self) for _ in range(len(pattern))
+        ]
         self.currentPhase = 0.
         self.prevIndex = None
         self.activeNotes = collections.deque()
 
     @property
     def nChannels(self):
+        """Number of channels."""
         return self.pattern.shape[0]
 
     @property
     def nSteps(self):
+        """Number of sequencer steps."""
         return self.pattern.shape[1]
 
     def turn_off_outdated_notes(self):
@@ -71,16 +71,18 @@ class Sequencer(Block):
 
     def update(self):
         self.turn_off_outdated_notes()
-        phase = self.microRhythm(self.currentPhase)
+        #phase = self.microRhythm(self.currentPhase)
+        phase = self.currentPhase
         idx = pie_slice_number(phase, self.nSteps)
         if idx != self.prevIndex:
             dt = TAU / self.nSteps
             for channel, value in enumerate(self.pattern.T[idx]):
-                note = Note(pitch=value, velocity=1.)
-                self.outputs[channel].send(note)
-                self.activeNotes.append(
-                    (self.currentPhase + self.noteDuration * dt, channel, note)
-                )
+                if value > 0:
+                    note = Note(pitch=value, velocity=1.)
+                    self.outputs[channel].send(note)
+                    self.activeNotes.append(
+                        (self.currentPhase + self.noteDuration * dt, channel, note)
+                    )
 
             self.prevIndex = idx
 

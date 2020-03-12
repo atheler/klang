@@ -1,14 +1,24 @@
 """Envelop generator blocks."""
+import math
+
 import numpy as np
 
 from config import BUFFER_SIZE
-from klang.audio import DT
+from klang.audio import DT, T
 from klang.blocks import Block
-from klang.constants import TAU
+from klang.constants import TAU, PI
 
+
+def calculate_slope(duration):
+    """Linear slope for given duration."""
+    if duration == 0:
+        return np.inf
+
+    return 1. / duration
 
 def sample_linear_envelope(nSamples, slope, start=0.):
     """Sample linear envelope."""
+    # TODO(atheler): Switch to t0=0. mode
     if slope == np.inf:
         return np.ones(nSamples), 1.
 
@@ -20,12 +30,10 @@ def sample_linear_envelope(nSamples, slope, start=0.):
     return signal[:-1], signal[-1]
 
 
-def calculate_slope(duration):
-    """Linear slope for given duration."""
-    if duration == 0:
-        return np.inf
-
-    return 1. / duration
+def sample_exponential_decay(decay, t0=0.):
+    amp = math.exp(-PI / decay * t0)
+    signal = amp * np.exp(-PI / decay * T)
+    return signal, t0 + DT * BUFFER_SIZE
 
 
 class EnvelopeGenerator(Block):
