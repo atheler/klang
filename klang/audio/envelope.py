@@ -4,6 +4,7 @@ import numpy as np
 from config import BUFFER_SIZE
 from klang.audio import DT
 from klang.blocks import Block
+from klang.constants import TAU
 
 
 def sample_linear_envelope(nSamples, slope, start=0.):
@@ -87,3 +88,24 @@ class AR(EnvelopeGenerator):
             self.attackTime,
             self.releaseTime,
         )
+
+
+class ExpDecay(EnvelopeGenerator):
+
+    """Exponential decay for fast click sounds."""
+
+    def __init__(self, decayTime):
+        super().__init__()
+
+        # Prepare data
+        t = DT * np.arange(BUFFER_SIZE + 1)
+        self.decay = np.exp(-t * TAU / 2 / decayTime)
+
+    def sample(self, nSamples):
+        triggered = self.trigger.get_value()
+        if triggered:
+            self.currentLevel = 1.
+
+        samples = self.currentLevel * self.decay
+        self.currentLevel = samples[-1]
+        return samples[:-1]

@@ -3,8 +3,9 @@ import itertools
 
 import numpy as np
 
-from klang.audio import MONO_SILENCE
-from klang.audio.envelope import EnvelopeGenerator, AR
+from config import BUFFER_SIZE
+from klang.audio import MONO_SILENCE, DT
+from klang.audio.envelope import EnvelopeGenerator, AR, ExpDecay
 from klang.audio.oscillators import Oscillator
 from klang.blocks import Block
 from klang.connections import MessageInput
@@ -132,3 +133,31 @@ class TemperamentSynthesizer(Synthesizer):
                 print('Switched to %s' % self.temperament)
 
         super().update()
+
+
+class HiHat(Block):
+
+    """White noise / exponential decay hi hat synthesizer."""
+
+    def __init__(self, decay=.05, loopedNoise=False):
+        super().__init__(nOutputs=1)
+        self.inputs = [MessageInput(self)]
+        if loopedNoise:
+            noise = 2 * np.random.random(BUFFER_SIZE) - 1.
+            self.noise_generator = lambda: noise
+        else:
+            self.noise_generator = lambda: 2 * np.random.random(BUFFER_SIZE) - 1.
+
+        self.envelope = ExpDecay(decay)
+
+    def update(self):
+        triggered = False
+        for note in self.input.receive():
+            if note.pitch > 0 and note.velocity > 0:
+                triggered = True
+
+        self.envelope.trigger.set_value(triggered)
+        self.envelope.update()
+        env = self.envelope.output.get_value()
+        noise = self.noise_generator()
+        self.output.set_value(env * noise)
