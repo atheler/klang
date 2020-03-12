@@ -1,35 +1,23 @@
 """Mixer"""
-import numpy as np
-
 from klang.audio import MONO_SILENCE, STEREO_SILENCE
+from klang.audio.panning import panning_amplitudes, CENTER
 from klang.blocks import Block
 from klang.constants import MONO, STEREO
 from klang.math import clip
 
 
-LEFT = -1.
-"""int: Maximum left panning value."""
-
-RIGHT = 1.
-"""int: Maximum right panning value."""
-
 
 class Mixer(Block):
 
-    """Mixer block.
-
-    TODO:
-      - Levels
-      - Panning
-      - Surround?
-    """
+    """Mono mixer with channel gains."""
 
     def __init__(self, nInputs=2, nOutputs=MONO):
         assert nOutputs in {MONO, STEREO}
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)
-        self.gains = np.ones(nInputs)
+        self.gains = nInputs * [1.]
 
     def set_gain(self, channel, gain):
+        """Set gain level for a given channel."""
         self.gains[channel] = clip(gain, 0., 1.)
 
     def update(self):
@@ -45,19 +33,27 @@ class Mixer(Block):
 
 
 class StereoMixer(Mixer):
-    def __init__(self, nInputs=2):
-        raise NotImplementedError
-        super().__init__(nInputs, nOutputs=STEREO)
-        self.panning = np.zeros(nInputs)
 
-    def set_panning(self, channel, panning):
-        self.panning[channel] = clip(panning, LEFT, RIGHT)
+    """Stereo mixer with panning."""
+
+    def __init__(self, nInputs=2, mode='constant_power', panLaw=None):
+        super().__init__(nInputs, nOutputs=STEREO)
+        self.mode = mode
+        self.panLaw = panLaw
+
+        self.panning = [
+            panning_amplitudes(CENTER, self.mode, self.panLaw)
+            for _ in range(nInputs)
+        ]
+
+    def set_pan_level(self, channel, panLevel):
+        """Set pan level for a channel."""
+        self.panning[channel] = panning_amplitudes(panLevel, self.mode, self.panLaw)
 
     def update(self):
-        # TODO(atheler): Make me!
         signalSum = STEREO_SILENCE.copy()
-        for gain, channel in zip(self.gains, self.inputs):
-            signalSum += gain * channel.get_value()
+        for gain, panning, channel in zip(self.gains, self.panning, self.inputs):
+            signalSum += gain * panning * channel.get_value()
 
         if self.nInputs > 1:
             signalSum /= self.nInputs

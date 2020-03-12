@@ -10,6 +10,16 @@ import numpy as np
 from klang.constants import TAU
 
 
+LEFT = -1.
+"""float: Maximum left panning value."""
+
+CENTER = 0.
+"""float: Center panning."""
+
+RIGHT = 1.
+"""float: Maximum right panning value."""
+
+
 def pan_law_exponent(panLaw, centerAmplitude):
     """Calculate squish exponent values for pan law."""
     assert panLaw <= 0
@@ -25,7 +35,7 @@ def panning_amplitudes(panLevel, mode='constant_power', panLaw=None):
     if panLaw is not None:
         assert panLaw <= 0
 
-    panLevel = np.clip(panLevel, -1., 1.)
+    panLevel = np.clip(panLevel, LEFT, RIGHT)
     panAngle = TAU / 8 * (1. + panLevel)
 
     if mode == 'linear':
@@ -52,7 +62,7 @@ def panning_amplitudes(panLevel, mode='constant_power', panLaw=None):
     return np.array([
         [left ** alpha],
         [right ** alpha],
-    ]).squeeze()
+    ])#.squeeze()
 
 
 def pan_signal(signal, panLevel, *args, **kwargs):
@@ -62,7 +72,7 @@ def pan_signal(signal, panLevel, *args, **kwargs):
     return amplitudes * signal
 
 
-if __name__ == '__main__':
+def demo():
     """Demo of different panning modes and pan laws. Also mono / stereo example."""
     import matplotlib.pyplot as plt
 
@@ -115,3 +125,7 @@ if __name__ == '__main__':
             ax.set_ylabel('Amplitude')
 
         plt.show()
+
+
+if __name__ == '__main__':
+    demo()
