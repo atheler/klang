@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 from klang.constants import PI, TAU
@@ -60,3 +62,8 @@ def integrate(x, dt, y0=0.):
     tmp = np.roll(x, 1, axis=0)
     tmp[0] = y0 / dt
     return dt * np.cumsum(tmp, axis=0)
+
+
+def lcm(a, b):
+    """Least common denominator."""
+    return abs(a*b) // math.gcd(a, b)
