@@ -17,19 +17,44 @@ TRIPLE = 3
 """int: A triplet."""
 
 
-def create_metre(numerator, denominator):
-    """Create time signature fraction."""
+QUAD = 4
+"""int: ???"""
+
+
+def create_metre(numerator, denominator=None):
+    """Create time signature fraction. Normal Fraction with no normalization.
+
+    Args:
+        numerator (int, float or str): Numerator.
+
+    Kwargs:
+        denominator (int): Denominator.
+
+    Returns:
+        Fraction: Metre / time signature.
+    """
     #if not isinstance(numerator, int):  # Fractional rhythms? 
     #    numerator = fractions.Fraction.from_float(numerator)
     return fractions.Fraction(numerator, denominator, _normalize=False)
 
 
 FOUR_FOUR_METRE = create_metre(4, 4)
+"""Fraction: 4 / 4 time signature."""
+
 THREE_FOUR_METRE = WALTZ_METRE = create_metre(3, 4)
+"""Fraction: 3 / 4 time signature."""
+
 TWO_FOUR_METRE = create_metre(2, 4)
+"""Fraction: 2 / 4 time signature."""
+
 TWO_TWO_METRE = create_metre(2, 2)
+"""Fraction: 2 / 2 time signature."""
+
 SIX_EIGHT_METRE = create_metre(6, 8)
+"""Fraction: 6 / 8 time signature."""
+
 NINE_EIGHT_METRE = create_metre(9, 8)
+"""Fraction: 9 / 8 time signature."""
 
 
 def is_irrational(metre):
@@ -80,5 +105,15 @@ assert not is_compound(create_metre(4, 4))
 
 
 def is_simple(metre):
-    # What is a simple metre exactly?
-    pass
+    """Check if simple metre."""
+    return metre.numerator in {DUPLE, TRIPLE, QUAD}
+
+
+assert is_simple(create_metre(4, 4))
+assert is_simple(create_metre(3, 4))
+assert is_simple(create_metre(2, 4))
+assert is_simple(create_metre(3, 8))
+assert is_simple(create_metre(2, 2))
+assert not is_simple(create_metre(6, 8))
+assert not is_simple(create_metre(12, 8))
+assert not is_simple(create_metre(9, 4))

@@ -104,7 +104,7 @@ def heighten_text(text, height, fill=' '):
     necessary.
 
     Usage:
-        >>> print(heighten_text('a', 3, '?'))
+        >>> print(heighten_text('a', height=3, fill='?'))
         ?
         ?
         a
@@ -372,7 +372,7 @@ def format_notes(notes, grouping=None, metre=FOUR_FOUR_METRE, strech=True,
         segments.append(emptySpace)
 
         if strech:
-            for _  in range(int(note / raster) - 1):
+            for _ in range(int(note / raster) - 1):
                 segments.append(emptySpace)
 
         pos += note
