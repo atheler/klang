@@ -12,10 +12,16 @@ from klang.constants import TAU
 from klang.messages import Note
 from klang.music.tempo import angular_velocity
 
+
 DEFAULT_PATTERN = np.zeros(16)
 SKIP = -1
 
 PASS_THROUGH = lambda phase: phase
+
+
+def pie_slice_number(angle, nPieces):
+    """Get slice segment index for a given angle and number of pieces."""
+    return int((angle % TAU) / TAU * nPieces)
 
 
 class Sequencer(Block):
@@ -63,14 +69,10 @@ class Sequencer(Block):
             self.outputs[channel].send(noteOff)
             self.activeNotes.popleft()
 
-    def calculate_index(self, phase):
-        """Calculate pattern index."""
-        return int((phase % TAU) / TAU * self.nSteps)
-
     def update(self):
         self.turn_off_outdated_notes()
         phase = self.microRhythm(self.currentPhase)
-        idx = self.calculate_index(phase)
+        idx = pie_slice_number(phase, self.nSteps)
         if idx != self.prevIndex:
             dt = TAU / self.nSteps
             for channel, value in enumerate(self.pattern.T[idx]):
