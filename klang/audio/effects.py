@@ -40,6 +40,16 @@ def bit_crush(samples, nBits):
     return (samples >> nBits) << nBits
 
 
+def octave_distortion(samples):
+    """Non-linear octaver distortion."""
+    return 2. * samples ** 2 - 1.
+
+
+def tanh_distortion(samples, drive=1.):
+    """Tanh distorition. Only odd harmonics."""
+    return np.tanh(drive * samples)
+
+
 class Tremolo(Block):
 
     """LFO controlled amplitude modulation (AM)."""
@@ -175,11 +185,6 @@ class Bitcrusher(Block):
         self.output.set_value(samples)
 
 
-def octave_distortion(samples):
-    """Non-linear octaver distortion."""
-    return 2. * samples ** 2 - 1.
-
-
 class OctaveDistortion(Block):
 
     """Non-linear octaver like distortion."""
@@ -190,3 +195,13 @@ class OctaveDistortion(Block):
     def update(self):
         samples = self.input.get_value()
         self.output.set_value(octave_distortion(samples))
+
+
+class TanhDistortion(Block):
+    def __init__(self, drive=1.):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.drive = drive
+
+    def update(self):
+        samples = self.input.get_value()
+        self.output.set_value(tanh_distortion(samples, self.drive))
