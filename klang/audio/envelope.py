@@ -4,9 +4,12 @@ import math
 import numpy as np
 
 from config import BUFFER_SIZE
-from klang.audio import DT, T
+from klang.audio import DT, MONO_SILENCE, T, T1
 from klang.blocks import Block
-from klang.constants import TAU, PI
+from klang.constants import PI
+
+
+ONES = np.ones(BUFFER_SIZE)
 
 
 def calculate_slope(duration):
@@ -16,17 +19,16 @@ def calculate_slope(duration):
 
     return 1. / duration
 
-def sample_linear_envelope(nSamples, slope, start=0.):
+
+def sample_linear_envelope(slope, start=0.):
     """Sample linear envelope."""
-    # TODO(atheler): Switch to t0=0. mode
     if slope == np.inf:
-        return np.ones(nSamples), 1.
+        return ONES, 1.
 
     if slope == -np.inf:
-        return np.zeros(nSamples), 0.
+        return MONO_SILENCE, 0.
 
-    t = DT * np.arange(nSamples + 1)
-    signal = (slope * t + start).clip(min=0., max=1.)
+    signal = (slope * T1 + start).clip(min=0., max=1.)
     return signal[:-1], signal[-1]
 
 
@@ -50,13 +52,13 @@ class EnvelopeGenerator(Block):
         self.input.set_value(False)
         self.output.set_value(np.zeros(BUFFER_SIZE))
 
-    def sample(self, nSamples):
+    def sample(self):
         triggered = self.trigger.get_value()
         self.currentLevel = float(triggered)
-        return self.currentLevel * np.ones(nSamples)
+        return self.currentLevel * ONES
 
     def update(self):
-        env = self.sample(BUFFER_SIZE)
+        env = self.sample()
         self.output.set_value(env)
 
     @property
@@ -80,11 +82,10 @@ class AR(EnvelopeGenerator):
         self.attackSlope = calculate_slope(attackTime)
         self.releaseSlope = -calculate_slope(releaseTime)
 
-    def sample(self, nSamples):
+    def sample(self):
         triggered = self.trigger.get_value()
         slope = self.attackSlope if triggered else self.releaseSlope
         envelope, self.currentLevel = sample_linear_envelope(
-            nSamples,
             slope,
             self.currentLevel,
         )
@@ -107,9 +108,9 @@ class ExpDecay(EnvelopeGenerator):
 
         # Prepare data
         t = DT * np.arange(BUFFER_SIZE + 1)
-        self.decay = np.exp(-t * TAU / 2 / decayTime)
+        self.decay = np.exp(-PI / decayTime * t)
 
-    def sample(self, nSamples):
+    def sample(self):
         triggered = self.trigger.get_value()
         if triggered:
             self.currentLevel = 1.

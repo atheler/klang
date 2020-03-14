@@ -44,7 +44,7 @@ WAVE_FUNCTIONS = {
 }
 
 
-def sample_wave(nSamples, frequency, startPhase=0., wave_func=np.sin):
+def sample_wave(frequency, startPhase=0., wave_func=np.sin):
     """Sample wave function."""
     phase = TAU * frequency * T + startPhase
     return wave_func(phase), wrap(phase[-1] + TAU * frequency * DT)

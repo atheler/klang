@@ -57,7 +57,8 @@ def determine_execution_order(blocks):
 
 
 def pack_signals(signals, bufferSize):
-    """Interleave samples from multiple mono signals. C contiguous for audio card.
+    """Interleave samples from multiple mono signals. C contiguous for audio
+    card.
 
     Format:
         [[L0, R0]

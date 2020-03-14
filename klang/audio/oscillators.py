@@ -1,7 +1,4 @@
 """Oscillator audio blocks."""
-import numpy as np
-
-from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE
 from klang.blocks import Block
 from klang.audio.waves import sample_wave
@@ -15,17 +12,16 @@ class Oscillator(Block):
         self.output.set_value(MONO_SILENCE)
         self.currentPhase = 0.
 
-    def sample(self, nFrames):
+    def sample(self):
         freq = self.frequency.get_value()
         samples, self.currentPhase = sample_wave(
-            BUFFER_SIZE,
             freq,
             self.currentPhase,
         )
         return samples
 
     def update(self):
-        samples = self.sample(BUFFER_SIZE)
+        samples = self.sample()
         self.output.set_value(samples)
 
 
@@ -34,7 +30,7 @@ class Lfo(Oscillator):
         super().__init__(frequency)
 
     def update(self):
-        samples = self.sample(BUFFER_SIZE)
+        samples = self.sample()
         self.output.set_value((samples + 1.) / 2.)
 
 

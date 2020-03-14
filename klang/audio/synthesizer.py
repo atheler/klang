@@ -4,14 +4,24 @@ import itertools
 import numpy as np
 
 from config import BUFFER_SIZE
-from klang.audio import MONO_SILENCE, DT
+from klang.audio import MONO_SILENCE
 from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, ExpDecay
 from klang.audio.oscillators import Oscillator, sample_wave
 from klang.blocks import Block
+from klang.connections import AlreadyConnectedError
 from klang.connections import MessageInput
 from klang.math import clip
 from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
-from klang.connections import AlreadyConnectedError
+
+
+_temperaments = list(TEMPERAMENTS.values())
+
+
+def sample_pitch_decay(frequency, decay, intensity, t0=0.):
+    """Sample decaying pitch curve."""
+    env, t1 = sample_exponential_decay(decay, t0)
+    pitch = frequency * (1. + intensity * env)
+    return pitch, t1
 
 
 class Voice(Block):
@@ -64,9 +74,8 @@ class Synthesizer(Block):
         super().__init__(nInputs=0, nOutputs=1)
         self.temperament = temperament
 
-        self.inputs = [MessageInput(self)]
+        self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
-
         self.voices = [
             OscillatorVoice(envelope=AR(attackTime=0.02, releaseTime=.1)) for _  in range(self.MAX_VOICES)
         ]
@@ -110,9 +119,6 @@ class Synthesizer(Block):
 
         samples /= self.MAX_VOICES
         self.output.set_value(samples)
-
-
-_temperaments = list(TEMPERAMENTS.values())
 
 
 class TemperamentSynthesizer(Synthesizer):
@@ -163,13 +169,6 @@ class HiHat(Block):
         self.output.set_value(env * noise)
 
 
-def sample_pitch_decay(frequency, decay, intensity, t0=0.):
-    """Sample decaying pitch curve."""
-    env, t1 = sample_exponential_decay(decay, t0)
-    pitch = frequency * (1. + intensity * env)
-    return pitch, t1
-
-
 class Kick(Block):
     def __init__(self, frequency=40., decay=.8, intensity=2, pitchDecay=.3):
         super().__init__(nInputs=0, nOutputs=1)
@@ -183,16 +182,12 @@ class Kick(Block):
         self.currentPhase = 0.
 
     def update(self):
-        triggered = False
         for note in self.input.receive():
             if note.pitch > 0 and note.velocity > 0:
-                triggered = True
-
-        if triggered:
-            self.currentTime = 0.
-            self.currentPhase = 0.
+                self.currentTime = 0.
+                self.currentPhase = 0.
 
         frequency, _ = sample_pitch_decay(self.frequency, self.pitchDecay, self.intensity, self.currentTime)
         env, self.currentTime = sample_exponential_decay(self.decay, self.currentTime)
-        signal, self.currentPhase = sample_wave(None, frequency, startPhase=self.currentPhase)
+        signal, self.currentPhase = sample_wave(frequency, startPhase=self.currentPhase)
         self.output.set_value(env * signal)
