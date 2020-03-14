@@ -1,5 +1,7 @@
 """Music sequencer."""
 import collections
+import itertools
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -120,3 +122,16 @@ if __name__ == '__main__':
                 print(queue.popleft())
 
     plt.show()
+
+
+def random_sequence(length, period=None, minVal=60, maxVal=72):
+    """Generate random sequence for given length with cycle period."""
+    if period is None:
+        period = length
+
+    cycle = itertools.cycle([random.randint(minVal, maxVal) for _ in range(period)])
+    seq = []
+    while len(seq) < length:
+        seq.append(next(cycle))
+
+    return seq
