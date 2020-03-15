@@ -11,10 +11,14 @@ class Mixer(Block):
 
     """Mono mixer with channel gains."""
 
-    def __init__(self, nInputs=2, nOutputs=MONO):
+    def __init__(self, nInputs=2, nOutputs=MONO, gains=None):
+        if gains is None:
+            gains = nInputs * [1.]
         assert nOutputs in {MONO, STEREO}
+        assert len(gains) == nInputs
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)
-        self.gains = nInputs * [1.]
+
+        self.gains = gains
 
     def set_gain(self, channel, gain):
         """Set gain level for a given channel."""
@@ -36,8 +40,8 @@ class StereoMixer(Mixer):
 
     """Stereo mixer with panning."""
 
-    def __init__(self, nInputs=2, mode='constant_power', panLaw=None):
-        super().__init__(nInputs, nOutputs=STEREO)
+    def __init__(self, nInputs=2, gains=None, mode='constant_power', panLaw=None):
+        super().__init__(nInputs, nOutputs=STEREO, gains=gains)
         self.mode = mode
         self.panLaw = panLaw
 
