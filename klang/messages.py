@@ -1,4 +1,16 @@
+"""Messages passed around in the system."""
 import collections
 
-Note = collections.namedtuple('Note', 'pitch velocity')
-FrequencyNote = collections.namedtuple('FrequencyNote', 'frequency velocity')
+
+class PitchNote(collections.namedtuple('PitchNote', 'pitch velocity')):
+
+    """MIDI a-like pitch / velocity note."""
+
+    pass
+
+
+class FrequencyNote(collections.namedtuple('FrequencyNote', 'frequency velocity')):
+
+    """Frequency / velocity note."""
+
+    pass

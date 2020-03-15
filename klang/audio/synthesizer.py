@@ -100,7 +100,7 @@ class Synthesizer(Block):
         self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
         self.voices = [
-            OscillatorVoice(envelope=AR(attack=0.02, release=.1)) for _  in range(self.MAX_VOICES)
+            OscillatorVoice(envelope=AR(attack=0.02, release=.1)) for _ in range(self.MAX_VOICES)
         ]
         self.freeVoice = itertools.cycle(self.voices)
 
