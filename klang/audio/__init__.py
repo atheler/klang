@@ -25,6 +25,9 @@ T = DT * np.arange(BUFFER_SIZE)
 T1 = DT * np.arange(BUFFER_SIZE + 1)
 """array: Buffer time points plus one (continuation)."""
 
+ONES = np.ones(BUFFER_SIZE)
+"""array: Nothing but ones."""
+
 
 # Make all numpy ndarray's in this module read-only
 for _arr in [val for val in globals().values() if isinstance(val, np.ndarray)]:

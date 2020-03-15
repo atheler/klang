@@ -123,6 +123,11 @@ class MessageInput(Input):
         assert isinstance(msgOutput, MessageOutput)
         super().connect(msgOutput)
 
+    def push(self, message):
+        """Push message to queue."""
+        queue = self.value
+        queue.append(message)
+
     def receive(self):
         """Iterate over received messages."""
         queue = self.get_value()

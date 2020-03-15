@@ -6,14 +6,11 @@ import numpy as np
 import scipy.signal
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from envelopes import ONES
-from klang.audio import DT, MONO_SILENCE, T, T1
+from klang.audio import DT, MONO_SILENCE, T, T1, ONES
 from klang.blocks import Block
 from klang.connections import MessageInput
 from klang.constants import PI
 
-
-ONES = np.ones(BUFFER_SIZE)
 
 EXP_EPS = 1e-3
 """float: Epsilon precision for exponential envelope curves."""
@@ -232,10 +229,11 @@ np.testing.assert_equal(next(_CONT), [42, 42, 42, 42])
 np.testing.assert_equal(next(_CONT), [42, 42, 42, 42])
 
 
-class EnvelopGenerator(Block):
+class EnvelopeGenerator(Block):
 
     """Envelope base class. Trigger messages -> envelope signal. Current
-    envelope signal has to be stored in sampleGenerator.
+    envelope samples have to be stored in sampleGenerator. EnvelopeGenerator
+    implements a simple on-off envelope.
     """
 
     def __init__(self):
@@ -247,7 +245,7 @@ class EnvelopGenerator(Block):
 
     @property
     def current_level(self):
-        """Get current envelope level."""
+        """Get current / latest envelope level."""
         return self.output.get_value()[-1]
 
     @property
@@ -286,7 +284,7 @@ class EnvelopGenerator(Block):
         self.output.set_value(next(self.sampleGenerator))
 
 
-class AR(EnvelopGenerator):
+class AR(EnvelopeGenerator):
 
     """Attack-release envelope generator."""
 
@@ -309,7 +307,7 @@ class AR(EnvelopGenerator):
             self.sampleGenerator = continue_after_end(falling, fill_value=0.)
 
 
-class ADSR(EnvelopGenerator):
+class ADSR(EnvelopeGenerator):
 
     """Attack-decay-sustain-release envelope generator."""
 
@@ -340,7 +338,7 @@ class ADSR(EnvelopGenerator):
             self.sampleGenerator = continue_after_end(falling, fill_value=0.)
 
 
-class Pulse(EnvelopGenerator):
+class Pulse(EnvelopeGenerator):
 
     """Decay to zero only envelope generator."""
 
