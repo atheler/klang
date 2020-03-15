@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 import scipy.signal
+import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio import NYQUIST_FREQUENCY
@@ -205,3 +206,26 @@ class TanhDistortion(Block):
     def update(self):
         samples = self.input.get_value()
         self.output.set_value(tanh_distortion(samples, self.drive))
+
+
+class PitchShifter(Block):
+
+    WINDOW = np.hanning(BUFFER_SIZE)
+
+    def __init__(self, shift=2., dryWet=.5, mode='sinc_fastest'):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.dryWet = dryWet
+        self.resampler = samplerate.CallbackResampler(
+            self.callback,
+            ratio=1. / shift,
+            converter_type=mode,
+            channels=1,
+        )
+
+    def callback(self):
+        return self.input.value * self.WINDOW
+
+    def update(self):
+        orig = self.input.value
+        shifted = self.resampler.read(BUFFER_SIZE)
+        self.output.set_value(blend(orig, shifted, self.dryWet))
