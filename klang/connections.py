@@ -7,17 +7,6 @@ import collections
 from klang.errors import KlangError
 
 
-MAX_MESSAGES = 50
-"""int: Maximum number of messages on a queue."""
-
-
-class NotConnectedError(KlangError):
-
-    """Connectable is not connected."""
-
-    pass
-
-
 class AlreadyConnectedError(KlangError):
 
     """Connectable already connected."""
@@ -25,13 +14,25 @@ class AlreadyConnectedError(KlangError):
     pass
 
 
+class NotConnectableError(KlangError):
+
+    """The two components can not be connected with each other."""
+
+    pass
+
+
 class Connectable:
 
-    """Base class for connectable objects."""
+    """Base class for connectable objects.
 
-    def __init__(self, owner, value=0., singleConnection=False):
+    Attributes:
+        owner (object): Owner object of connectable.
+        singleConnection (bool): Maximum one connection possible.
+        connections (set): Connected connectables.
+    """
+
+    def __init__(self, owner=None, singleConnection=False):
         self.owner = owner
-        self.value = value  # Also paceholder value for unconnected Input
         self.singleConnection = singleConnection
         self.connections = set()
 
@@ -42,7 +43,8 @@ class Connectable:
 
     def connect(self, other):
         """Make a connection to another connectable."""
-        if self.singleConnection and self.connected:
+        if (self.singleConnection and self.connected)\
+            or (other.singleConnection and other.connected):
             raise AlreadyConnectedError
 
         self.connections.add(other)
@@ -53,17 +55,6 @@ class Connectable:
         self.connections.remove(other)
         other.connections.remove(self)
 
-    def unplug(self):
-        """Kill all connections."""
-        for con in set(self.connections):
-            self.disconnect(con)
-
-    def get_value(self):
-        return self.value
-
-    def set_value(self, value):
-        self.value = value
-
     def __str__(self):
         return '%s(%s, %s)' % (
             self.__class__.__name__,
@@ -72,87 +63,140 @@ class Connectable:
         )
 
 
-class Input(Connectable):
+class _Input(Connectable):
+
+    """Input connection base class."""
+
+    def __init__(self, owner=None):
+        super().__init__(owner, singleConnection=True)
+
+    def connect(self, output):
+        """Connect with an output."""
+        if not isinstance(output, _Output):
+            raise NotConnectableError('Input can only connect to a output!')
+
+        super().connect(output)
+
+
+class _Output(Connectable):
+
+    """Output connection base class."""
+
+    def connect(self, input):
+        """Connect with an input."""
+        if not isinstance(input, _Input):
+            raise NotConnectableError('Output can only connect to inputs!')
+
+        super().connect(input)
+
+
+class _ValueContainer:
+
+    """Value attribute mixin class."""
+
+    def __init__(self, value=0.):
+        self._value = value
+
+    @property
+    def value(self):
+        """Get value."""
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        """Set value."""
+        self._value = value
+
+    def set_value(self, value):
+        """Get value."""
+        self._value = value
+
+    def get_value(self):
+        """Set value."""
+        return self._value
+
+
+class Input(_Input, _ValueContainer):
 
     """Input slot.
 
     Can be connected to only one output.
     """
 
-    def __init__(self, owner, value=0.):
-        super().__init__(owner, value, singleConnection=True)
+    def __init__(self, owner=None, value=0.):
+        super().__init__(owner=owner)
+        _ValueContainer.__init__(self, value=value)
 
-    def connect(self, output):
-        """Connect with an output."""
-        assert isinstance(output, Output)
-        super().connect(output)
+    @property
+    def value(self):
+        """Get value either from connected output or from this input itself."""
+        if self.connected:
+            output, = self.connections
+            return output._value
+
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        # Needs to be overwritten. We do not inherit @value.setter from
+        # _ValueContainer!
+        self._value = value
 
     def get_value(self):
-        if not self.connected:
-            return self.value
+        if self.connected:
+            output, = self.connections
+            return output._value
 
-        output, = self.connections
-        return output.value
+        return self._value
 
 
-class Output(Connectable):
+class Output(_Output, _ValueContainer):
 
     """Output slot.
 
     Holds the value. Can be connected to multiple inputs.
     """
 
-    def connect(self, input):
-        """Connect with an input."""
-        assert isinstance(input, Input)
-        super().connect(input)
+    def __init__(self, owner=None, value=0.):
+        super().__init__(owner=owner)
+        _ValueContainer.__init__(self, value=value)
 
 
-class MessageInput(Input):
+class _MessageQueue:
+
+    """Message queue mixin class."""
+
+    MAX_MESSAGES = 50
+    """int: Maximum number of messages on a queue."""
+
+    def __init__(self):
+        self.queue = collections.deque(maxlen=self.MAX_MESSAGES)
+
+    def push(self, message):
+        self.queue.append(message)
+
+
+class MessageInput(_Input, _MessageQueue):
 
     """Input for messages (Input where value attribute is a queue)."""
 
-    def __init__(self, owner):
-        super().__init__(
-            owner,
-            value=collections.deque(maxlen=MAX_MESSAGES),
-        )
-
-    def connect(self, msgOutput):
-        """Connect with an message output."""
-        assert isinstance(msgOutput, MessageOutput)
-        super().connect(msgOutput)
+    def __init__(self, owner=None):
+        super().__init__(owner=owner)
+        _MessageQueue.__init__(self)
 
     def receive(self):
         """Iterate over received messages."""
-        queue = self.get_value()
-        while queue:
-            yield queue.popleft()
+        while self.queue:
+            yield self.queue.popleft()
 
 
-class MessageOutput(Output):
+class MessageOutput(_Output):
 
     """Output for messages (Input where value attribute is a queue)."""
 
-    def __init__(self, owner):
-        super().__init__(
-            owner,
-            value=collections.deque(maxlen=MAX_MESSAGES),
-            singleConnection=True,
-        )
-
-    def connect(self, msgInput):
-        """Connect with an message input."""
-        assert isinstance(msgInput, MessageInput)
-        super().connect(msgInput)
-
     def send(self, message):
         """Send message. No notificaiton."""
-        queue = self.value
-        queue.append(message)
+        for con in self.connections:
+            con.push(message)
 
-    def receive(self):
-        """Iterate over received messages."""
-        queue = self.get_value()
-        while queue:
-            yield queue.popleft()
+
