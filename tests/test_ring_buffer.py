@@ -7,8 +7,7 @@ from klang.ring_buffer import RingBuffer
 
 class TestRingBuffer(unittest.TestCase):
     def setUp(self):
-        self.ring = RingBuffer(10)
-        self.ring.data[:] = np.arange(10)
+        self.ring = RingBuffer(np.arange(10))
 
     def test_getitem_with_index_and_wrap_around(self):
         for i in range(-10, 20):
@@ -31,7 +30,8 @@ class TestRingBuffer(unittest.TestCase):
         np.testing.assert_equal(self.ring.data, [43, 1, 44, 3, 4, 5, 6, 7, 42, 9])
 
     def test_write_read(self):
-        ring = RingBuffer((10, 2))
+        data = np.zeros((10, 2))
+        ring = RingBuffer(data)
         ring.write(np.ones((1, 2)))
         ring.write(np.ones((2, 2)) * 2)
         ring.write(np.ones((3, 2)) * 3)
@@ -41,11 +41,18 @@ class TestRingBuffer(unittest.TestCase):
         np.testing.assert_equal(ring.read(2), [[2, 2], [3, 3]])
 
     def test_stereo_delay_buffer(self):
-        buf = RingBuffer((88200, 2))
-        buf.writeIdx = 44100  # One second delay
-        old = buf.read(512)
+        zeros = np.zeros((88200, 2))
+        buf = RingBuffer(zeros, offset=44100)  # One second delay
+        first = np.ones((44100, 2))
+        buf.write(first)
 
-        self.assertEqual(old.shape, (512, 2))
+        np.testing.assert_equal(buf.read(44100), zeros[:44100])
+
+        second = 2 * np.ones((44100, 2))
+        buf.write(second)
+
+        np.testing.assert_equal(buf.read(44100), first)
+        np.testing.assert_equal(buf.read(44100), second)
 
 
 if __name__ == '__main__':
