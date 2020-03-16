@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio import DT
-from klang.blocks import Block
+from klang.block import Block
 from klang.connections import MessageOutput
 from klang.constants import TAU
 from klang.messages import PitchNote

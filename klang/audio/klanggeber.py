@@ -6,10 +6,11 @@ import numpy as np
 import pyaudio
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.blocks import Block, output_neighbors, input_neighbors
+from klang.block import Block, output_neighbors, input_neighbors
 from klang.constants import MONO, STEREO
 from klang.errors import KlangError
 from klang.graph import graph_matrix, topological_sorting
+from klang.util import WavWriter
 
 
 def network_graph(blocks):
@@ -129,11 +130,20 @@ class KlangGeber:
 
     """Sound engine block executor."""
 
-    def __init__(self, nInputs=0, nOutputs=STEREO):
+    def __init__(self, nInputs=0, nOutputs=STEREO, filepath=None):
+        """Kwargs:
+            nInputs (int): Number of audio inputs.
+            nOutputs (int): Number of audio outputs.
+            filepath (str): WAV file output filepath.
+        """
         self.nInputs = nInputs
         self.nOutputs = nOutputs
         self.adc = Adc(nOutputs=nInputs)
         self.dac = Dac(nInputs=nOutputs)
+        if filepath:
+            self.wavWriter = WavWriter(filepath, nChannels=nOutputs)
+        else:
+            self.wavWriter = None
 
     def start(self):
         silence = np.zeros((BUFFER_SIZE, self.nOutputs), dtype=np.float32)
@@ -158,6 +168,10 @@ class KlangGeber:
 
             outData = pack_signals(channels, BUFFER_SIZE)
             assert outData.shape == (BUFFER_SIZE, self.nOutputs)
+
+            if self.wavWriter:
+                self.wavWriter.write(outData)
+
             return outData.astype(np.float32), pyaudio.paContinue
 
         # Example: Callback Mode Audio I/O from
@@ -182,6 +196,8 @@ class KlangGeber:
             stream.stop_stream()
             stream.close()
             pa.terminate()
+            if self.wavWriter:
+                self.wavWriter.close()
 
     def __enter__(self):
         if self.nInputs == 0:
@@ -193,4 +209,9 @@ class KlangGeber:
         return self.adc, self.dac
 
     def __exit__(self, exception_type, exception_value, traceback):
+        """Start klang execution."""
+        anErrorOccured = exception_type or exception_value or traceback
+        if anErrorOccured:
+            return
+
         self.start()

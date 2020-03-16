@@ -1,12 +1,5 @@
 """Audio blocks."""
-import collections
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from config import SAMPLING_RATE
 from klang.connections import Input, Output
-from klang.util import write_wave
 
 
 def output_neighbors(block):
@@ -80,39 +73,3 @@ class Block:
             return '%s(%r)' % (self.__class__.__name__, self.name)
 
         return self.__class__.__name__
-
-
-class Plotter(Block):
-    def __init__(self):
-        super().__init__()
-        self.buffers = collections.defaultdict(list)
-
-    def register(self, output):
-        self.inputs.append(Input(self))
-        output.connect(self.inputs[-1])
-
-    def update(self):
-        for input in self.inputs:
-            self.buffers[input].append(input.get_value())
-
-    def plot(self):
-        for input, chunks in self.buffers.items():
-            plt.plot(np.concatenate(chunks))
-
-
-class WavWriter(Block):
-
-    """Write WAV file from input."""
-
-    def __init__(self, filepath, samplingRate=SAMPLING_RATE):
-        super().__init__(nInputs=1)
-        self.filepath = filepath
-        self.samplingRate = samplingRate
-        self.buffer = []
-
-    def update(self):
-        samples = self.input.get_value()
-        self.buffer.append(samples)
-
-    def finalize(self):
-        write_wave(np.concatenate(self.buffer), self.filepath, self.samplingRate)

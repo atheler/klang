@@ -3,7 +3,7 @@ import collections
 
 from pynput.keyboard import Listener
 
-from klang.blocks import Block
+from klang.block import Block
 from klang.connections import MessageOutput
 from klang.constants import REF_OCTAVE, DODE
 from klang.math import clip

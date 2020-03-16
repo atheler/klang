@@ -1,6 +1,6 @@
 """Oscillator audio blocks."""
 from klang.audio import MONO_SILENCE
-from klang.blocks import Block
+from klang.block import Block
 from klang.audio.waves import sample_wave
 
 

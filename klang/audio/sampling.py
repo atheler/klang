@@ -10,7 +10,7 @@ import numpy as np
 import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.blocks import Block
+from klang.block import Block
 from klang.connections import MessageInput
 from klang.constants import MONO
 from klang.util import load_wave

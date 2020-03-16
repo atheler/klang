@@ -7,7 +7,7 @@ from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE
 from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, Pulse
 from klang.audio.oscillators import Oscillator, sample_wave
-from klang.blocks import Block
+from klang.block import Block
 from klang.connections import AlreadyConnectedError
 from klang.connections import MessageInput
 from klang.math import clip
@@ -37,7 +37,8 @@ class Voice(Block):
 
     @property
     def active(self):
-        if self.input.get_value():
+        """Return True if voice is active (active envelope or pending message)."""
+        if self.input.queue:
             return True
 
         return self.envelope.active

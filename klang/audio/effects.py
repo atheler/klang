@@ -7,7 +7,7 @@ import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio import NYQUIST_FREQUENCY
-from klang.blocks import Block
+from klang.block import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
 from klang.audio.oscillators import Lfo
