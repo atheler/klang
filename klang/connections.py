@@ -34,6 +34,7 @@ class Connectable:
     def __init__(self, owner=None, singleConnection=False):
         self.owner = owner
         self.singleConnection = singleConnection
+
         self.connections = set()
 
     @property
@@ -186,8 +187,7 @@ class MessageInput(_Input, _MessageQueue):
 
     def push(self, message):
         """Push message to queue."""
-        queue = self.value
-        queue.append(message)
+        self.queue.append(message)
 
     def receive(self):
         """Iterate over received messages."""
@@ -203,5 +203,3 @@ class MessageOutput(_Output):
         """Send message. No notificaiton."""
         for con in self.connections:
             con.push(message)
-
-
