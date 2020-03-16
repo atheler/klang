@@ -184,6 +184,11 @@ class MessageInput(_Input, _MessageQueue):
         super().__init__(owner=owner)
         _MessageQueue.__init__(self)
 
+    def push(self, message):
+        """Push message to queue."""
+        queue = self.value
+        queue.append(message)
+
     def receive(self):
         """Iterate over received messages."""
         while self.queue:

@@ -5,12 +5,13 @@ import numpy as np
 
 from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE
-from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, ExpDecay
+from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, Pulse
 from klang.audio.oscillators import Oscillator, sample_wave
 from klang.blocks import Block
 from klang.connections import AlreadyConnectedError
 from klang.connections import MessageInput
 from klang.math import clip
+from klang.messages import FrequencyNote
 from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
 
 
@@ -25,18 +26,34 @@ def sample_pitch_decay(frequency, decay, intensity, t0=0.):
 
 
 class Voice(Block):
+
+    """Base class for single syntehsizer voice. This is atest"""
+
     def __init__(self, envelope):
         super().__init__(nOutputs=1)
+        self.inputs = [MessageInput(owner=self)]
         self.amplitude = 0.
         self.envelope = envelope
 
     @property
     def active(self):
+        if self.input.get_value():
+            return True
+
         return self.envelope.active
 
-    def process_note(self, velocity):
-        self.amplitude = clip(velocity, 0., 1.)
-        self.envelope.trigger.set_value(velocity > 0.)
+    def process_note(self, note):
+        noteOn = (note.velocity > 0)
+        if noteOn:
+            self.amplitude = clip(note.velocity, 0., 1.)
+
+        self.envelope.input.push(note)
+
+    def update(self):
+        for note in self.input.receive():
+            self.process_note(note)
+
+        self.envelope.update()
 
 
 class OscillatorVoice(Voice):
@@ -48,12 +65,18 @@ class OscillatorVoice(Voice):
     def frequency(self):
         return self.oscillator.frequency.get_value()
 
-    def process_note(self, frequency, velocity):
-        super().process_note(velocity)
-        if velocity > 0.:
-            self.oscillator.frequency.set_value(frequency)
+    def process_note(self, note):
+        noteOn = (note.velocity > 0)
+        if noteOn:
+            self.amplitude = clip(note.velocity, 0., 1.)
+            self.oscillator.frequency.set_value(note.frequency)
+
+        self.envelope.input.push(note)
 
     def update(self):
+        for note in self.input.receive():
+            self.process_note(note)
+
         self.oscillator.update()
         osc = self.oscillator.output.get_value()
 
@@ -77,7 +100,7 @@ class Synthesizer(Block):
         self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
         self.voices = [
-            OscillatorVoice(envelope=AR(attackTime=0.02, releaseTime=.1)) for _  in range(self.MAX_VOICES)
+            OscillatorVoice(envelope=AR(attack=0.02, release=.1)) for _ in range(self.MAX_VOICES)
         ]
         self.freeVoice = itertools.cycle(self.voices)
 
@@ -89,21 +112,22 @@ class Synthesizer(Block):
             msg = fmt % other.owner
             raise AlreadyConnectedError(msg)
 
-        queue = self.input.value()
-        queue.extend(notes)
+        for note in notes:
+            self.input.push(note)
 
     def process_note(self, note):
         """Process note."""
         freq = self.temperament.pitch_2_frequency(note.pitch)
+        freqNote = FrequencyNote(frequency=freq, velocity=note.velocity)
         if note.velocity > 0:
-            #print('Play new note')
+            #print('Play new note', freqNote)
             voice = next(self.freeVoice)
-            voice.process_note(freq, note.velocity)
+            voice.input.push(freqNote)
         else:
-            #print('Kill old note')
+            #print('Kill old note', freqNote)
             for voice in self.voices:
                 if voice.frequency == freq:
-                    voice.process_note(freq, note.velocity)
+                    voice.input.push(freqNote)
 
     def update(self):
         for note in self.input.receive():
@@ -154,15 +178,13 @@ class HiHat(Block):
         else:
             self.noise_generator = lambda: 2 * np.random.random(BUFFER_SIZE) - 1.
 
-        self.envelope = ExpDecay(decay)
+        self.envelope = Pulse(decay, mode='exp')
 
     def update(self):
         triggered = False
         for note in self.input.receive():
-            if note.pitch > 0 and note.velocity > 0:
-                triggered = True
+            self.envelope.input.push(note)
 
-        self.envelope.trigger.set_value(triggered)
         self.envelope.update()
         env = self.envelope.output.get_value()
         noise = self.noise_generator()

@@ -7,7 +7,7 @@ from klang.blocks import Block
 from klang.connections import MessageOutput
 from klang.constants import REF_OCTAVE, DODE
 from klang.math import clip
-from klang.messages import Note
+from klang.messages import PitchNote
 
 
 SILENT = 0.
@@ -109,7 +109,7 @@ class MusicalKeyboard(Keyboard):
         if char in self.CHAR_2_BASE_PITCH:
             pitch = self.CHAR_2_BASE_PITCH[char] + self.octave * DODE
             velocity = self.velocity if key.pressed else SILENT
-            note = Note(pitch, velocity)
+            note = PitchNote(pitch, velocity)
             self.output.send(note)
             return
 
