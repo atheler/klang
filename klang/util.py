@@ -15,8 +15,7 @@ def convert_samples_to_float(samples):
     if not np.issubdtype(samples.dtype, np.integer):
         raise ValueError('Already float samples!')
 
-    iinfo = np.iinfo(samples.dtype)
-    maxValue = max(abs(iinfo.min), abs(iinfo.max))
+    maxValue = abs(np.iinfo(samples.dtype).min)
     return samples / maxValue
 
 
@@ -32,14 +31,13 @@ def convert_samples_to_int(samples, dtype=np.int16):
     if np.issubdtype(samples.dtype, np.integer):
         raise ValueError('Already int samples!')
 
-    iinfo = np.iinfo(dtype)
-    maxValue = max(abs(iinfo.min), abs(iinfo.max))
+    maxValue = np.iinfo(dtype).max
     return (maxValue * samples).astype(dtype)
 
 
 np.testing.assert_equal(
-    convert_samples_to_int(np.array([-1., 0.])),
-    np.array([-32768, 0], dtype=np.int16),
+    convert_samples_to_int(np.array([-1., 0., 1.])),
+    np.array([-32767, 0, 32767], dtype=np.int16),
 )
 
 
