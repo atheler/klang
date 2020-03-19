@@ -118,6 +118,8 @@ class SampleProvider:
     def trim(self, start=0, stop=None):
         """Trim playback boundaries to [start, stop)."""
         stop = stop or self.length
+        start = int(start)
+        stop = int(stop)
         assert 0 <= start < stop <= self.length
         self.start = start
         self.stop = stop
