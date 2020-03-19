@@ -27,3 +27,6 @@ ONE_D = 1
 
 TWO_D = 2
 """int: TODO."""
+
+CENT_PER_OCTAVE = 1200
+"""int: Cents per octave."""
