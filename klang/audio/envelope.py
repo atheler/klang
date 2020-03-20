@@ -114,7 +114,7 @@ def envelope_curve(target, duration, start=0., mode='exp'):
     """
     assert mode in {'lin', 'exp'}
     deviation = abs(target - start)
-    if deviation == 0:
+    if deviation == 0 or duration <= 0:
         return np.array([target])
 
     if mode == 'lin':
@@ -338,7 +338,7 @@ class ADSR(EnvelopeGenerator):
             self.sampleGenerator = continue_after_end(falling, fill_value=0.)
 
 
-class Pulse(EnvelopeGenerator):
+class D(EnvelopeGenerator):
 
     """Decay to zero only envelope generator."""
 
