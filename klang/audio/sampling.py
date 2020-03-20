@@ -3,12 +3,16 @@
 Note, for raw audio samples we use a different data layout then for our normal
 audio samples. With multi channel audio axis=0 -> Time, axis=1 -> Channels.
 
+Two different array layouts for multi channel:
+  - data: Raw audio samples obtained from WAV file. Shape ~ (length, nChannels).
+    Time contiguous.
+  - samples: Audio samples in the Klang network. Shape ~ (nChannels, length).
+    Channels contiguous. Channel broadcastable (e.g. mono -> stereo like
+    monoEnv * multiChannelSamples).
+
 TODO:
   - class Sampler
   - class Looper
-
-Open Questions:
-  - data vs. samples. Array orientation
 """
 import numpy as np
 import samplerate
@@ -17,20 +21,18 @@ from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.block import Block
 from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
+from klang.math import clip
 from klang.util import load_wave
 
 
-def is_audio_samples_shape(array):
-    """Check if proper shape of audio samples."""
-    array = np.asarray(array)
-    if array.ndim == 0:
-        return False
+SAMPLERATE_CONVERTER_TYPES = set(samplerate.converters.ConverterType.__members__)
+"""set: All possible converter types of samplerate library."""
 
-    if array.ndim == MONO:
-        return True
+CRUDE_RESAMPLER_MODES = {'crude', 'very_crude'}
+"""set: All possible mode for CrudeResampler."""
 
-    length, nChannels = array.shape
-    return length > nChannels
+VALID_MODES = SAMPLERATE_CONVERTER_TYPES.union(CRUDE_RESAMPLER_MODES)
+"""set: All possible resampler modes."""
 
 
 def interp_2d(x, xp, fp, *args, **kwargs):
@@ -69,82 +71,29 @@ def sum_to_mono(samples):
     return samples.reshape((-1, 1))
 
 
-class SampleProvider:
+def is_audio_samples_shape(array):
+    """Check if proper shape of audio samples."""
+    array = np.asarray(array)
+    if array.ndim == 0:
+        return False
 
-    """Sample callback. Provides new samples for samplerate interpolators via
-    __call__. Supports audio trimming and looping.
-    """
+    if array.ndim == MONO:
+        return True
 
-    def __init__(self, data, loop=False, start=0, stop=None):
-        """Args:
-            data (array): Data.
+    length, nChannels = array.shape
+    return length > nChannels
 
-        Kwargs:
-            loop (bool): Looped playback.
-            start (int): Playback start.
-            stop (int): Playback stop.
-        """
-        assert is_audio_samples_shape(data)
-        self.data = data
-        self.loop = loop
-        self.start = 0
-        self.stop = self.length
 
-        self.currentIndex = 0
-        self.trim(start, stop)
+def number_of_channels(samples):
+    """Number of audio channels."""
+    if samples.ndim == MONO:
+        return MONO
 
-    @property
-    def length(self):
-        """Length of samples buffer."""
-        return self.data.shape[0]
+    return samples.shape[0]
 
-    @property
-    def nChannels(self):
-        """Length of samples buffer."""
-        if self.data.ndim == MONO:
-            return MONO
 
-        return self.data.shape[1]
-
-    @property
-    def playing(self):
-        """Still playing."""
-        return self.currentIndex < self.stop
-
-    def rewind(self):
-        """Rewind to the beginning."""
-        self.currentIndex = self.start
-
-    def trim(self, start=0, stop=None):
-        """Trim playback boundaries to [start, stop)."""
-        stop = stop or self.length
-        start = int(start)
-        stop = int(stop)
-        assert 0 <= start < stop <= self.length
-        self.start = start
-        self.stop = stop
-        self.currentIndex = max(self.currentIndex, start)
-
-    def __call__(self, nFrames=BUFFER_SIZE):
-        """Get the next nFrames samples."""
-        start = self.currentIndex
-        stop = start + nFrames
-        reachedEnd = (stop >= self.stop)
-        if reachedEnd:
-            if self.loop:
-                stop = (stop % self.stop) + self.start
-            else:
-                # Block for future uses
-                stop = self.stop
-
-        self.currentIndex = stop
-        if start <= stop:
-            return self.data[start:stop]
-
-        return np.concatenate([
-            self.data[self.start:stop],
-            self.data[start:self.stop],
-        ])
+assert number_of_channels(np.zeros(10)) == MONO
+assert number_of_channels(np.zeros((10, 100))) == 10
 
 
 class CrudeResampler:
@@ -199,73 +148,125 @@ class CrudeResampler:
         return interp_2d(x, xp, fp)
 
 
-class Resampler:
+def init_resampler(callback, ratio, mode, channels):
+    """Init a resampler instance. Either samplerate.CallbackResampler or
+    CrudeResampler depending on mode.
+
+    Args:
+        callback (function): Sample callback.
+        ratio (float): Convertion rate.
+        mdoe (str): Converter type.
+        channels (int): Number of audio channels.
+
+    Returns:
+        samplerate.CallbackResampler or CrudeResampler: Instance.
+    """
+    assert mode in VALID_MODES
+
+    # Select resampler type
+    if mode in SAMPLERATE_CONVERTER_TYPES:
+        cls = samplerate.CallbackResampler
+    else:
+        cls = CrudeResampler
+
+    resampler = cls(
+        callback,
+        ratio,
+        converter_type=mode,
+        channels=channels,
+    )
+    return resampler
+
+
+class Sample:
 
     """Audio sample container.
 
-    Resample audio samples with different sampling rates and with varying playback speed.
+    Resample audio samples with different sampling rates and with varying
+    playback speed. Audio samples are passed to resampler via the callback()
+    method. New samples can be acuired via calling the read() method.
     """
 
-    VALID_SAMPLERATE_MODES = set(samplerate.converters.ConverterType.__members__)
-    """set: Valid modes / samplerate converters."""
-
-    VALID_MODES = VALID_SAMPLERATE_MODES.union(CrudeResampler.VALID_CONVERTER_TYPES)
-    """set: All valid modes."""
-
-    def __init__(self, rate, data, mode='linear', playbackSpeed=1., loop=False):
-        assert mode in self.VALID_MODES
+    def __init__(self, rate, data, start=0, stop=None, loop=False,
+                 playbackSpeed=1., mode='linear'):
+        assert is_audio_samples_shape(data)
         self.rate = rate
-        self.provider = SampleProvider(data, loop=loop)
-        if mode in self.VALID_SAMPLERATE_MODES:
-            cls = samplerate.CallbackResampler
-        else:
-            cls = CrudeResampler
+        self.data = data
+        self.start = 0
+        self.stop = self.length
+        self.loop = loop
 
-        ratio = self.calculate_ratio(playbackSpeed)
-        self.resampler = cls(
-            self.provider,
-            ratio=ratio,
-            converter_type=mode,
-            channels=self.provider.nChannels,
+        self.currentIndex = 0
+        self.trim(start, stop)
+        self.resampler = init_resampler(
+            self.callback,
+            self.calculate_ratio(playbackSpeed),
+            mode,
+            self.nChannels,
         )
 
     @property
     def length(self):
-        return self.provider.length
+        """Length of samples buffer."""
+        return self.data.shape[0]
 
     @property
     def nChannels(self):
-        return self.provider.nChannels
-
-    @property
-    def currentIndex(self):
-        return self.provider.currentIndex
+        """Length of samples buffer."""
+        return number_of_channels(self.data.T)
 
     @property
     def playing(self):
-        return self.provider.playing
+        """Still playing."""
+        return self.currentIndex < self.stop
+
+    def rewind(self):
+        """Rewind to the beginning."""
+        self.currentIndex = self.start
+        self.resampler.reset()
+
+    def trim(self, start=0, stop=None):
+        """Trim playback boundaries to [start, stop)."""
+        start = int(start)
+        stop = int(stop or self.length)
+        assert 0 <= start < stop <= self.length  # TODO(atheler): start <= stop?
+        self.start = start
+        self.stop = stop
+        self.currentIndex = clip(self.currentIndex, start, stop)
 
     def calculate_ratio(self, playbackSpeed):
+        """Calculate reample ratio from playback speed."""
         return SAMPLING_RATE / self.rate / playbackSpeed
 
     def set_playback_speed(self, playbackSpeed):
+        """Set playback speed for next read() call."""
         ratio = self.calculate_ratio(playbackSpeed)
         self.resampler.set_starting_ratio(ratio)
 
-    def rewind(self):
-        self.provider.rewind()
-        self.resampler.reset()
+    def callback(self, nFrames=BUFFER_SIZE):
+        """Sample callback."""
+        start = self.currentIndex
+        stop = start + nFrames
+        reachedEnd = (stop >= self.stop)
+        if reachedEnd:
+            if self.loop:
+                stop = (stop % self.stop) + self.start
+            else:
+                # Block for future uses
+                stop = self.stop
+
+        self.currentIndex = stop
+        if start <= stop:
+            return self.data[start:stop]
+
+        return np.concatenate([
+            self.data[self.start:stop],
+            self.data[start:self.stop],
+        ])
 
     def read(self, nFrames=BUFFER_SIZE):
+        """Get next samples."""
         return self.resampler.read(nFrames)
-
-    def __str__(self):
-        return '%s(%d / %d, %s)' % (
-            self.__class__.__name__,
-            self.provider.currentIndex,
-            self.provider.length,
-            'playing' if self.provider.playing else 'stopped'
-        )
 
 
 class AudioFile(Block):
@@ -282,10 +283,10 @@ class AudioFile(Block):
         if mono and data.shape[1] > 1:
             data = sum_to_mono(data)
 
-        self.resampler = Resampler(rate, data, *args, **kwargs)
+        self.samples = Sample(rate, data, *args, **kwargs)
         self.filepath = ''
         self.playing = False
-        self.silence = np.zeros((self.resampler.nChannels, BUFFER_SIZE))
+        self.silence = np.zeros((self.samples.nChannels, BUFFER_SIZE))
         self.mute_outputs()
 
     @classmethod
@@ -298,12 +299,13 @@ class AudioFile(Block):
 
     @property
     def playingPosition(self):
-        return self.resampler.currentIndex / self.resampler.rate
+        """Current playback position."""
+        return self.samples.currentIndex / self.samples.rate
 
     @property
     def duration(self):
-        """Audio file total duration."""
-        return self.resampler.length / self.resampler.rate
+        """Audio files total duration."""
+        return self.samples.length / self.samples.rate
 
     def play(self):
         """Start playback."""
@@ -315,7 +317,7 @@ class AudioFile(Block):
 
     def rewind(self):
         """Rewind to beginning."""
-        self.resampler.rewind()
+        self.samples.rewind()
 
     def stop(self):
         """Stop playback."""
@@ -330,8 +332,8 @@ class AudioFile(Block):
         if not self.playing:
             return self.mute_outputs()
 
-        data = self.resampler.read(BUFFER_SIZE)
-        self.playing = self.resampler.playing
+        data = self.samples.read(BUFFER_SIZE)
+        self.playing = self.samples.playing
         samples = extend_with_silence(data.T)
         self.output.set_value(samples)
 
@@ -342,7 +344,7 @@ class AudioFile(Block):
             infos = []
 
         infos.extend([
-            'Playing' if self.resampler.playing else 'Paused',
+            'Playing' if self.playing else 'Paused',
             '%.3f / %.3f sec' % (self.playingPosition, self.duration),
         ])
         return '%s(%s)' % (

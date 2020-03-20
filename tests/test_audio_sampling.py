@@ -1,18 +1,20 @@
-import unittest
-import io
 import functools
+import io
+import unittest
 
 import numpy as np
 import scipy.io.wavfile
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.audio import DT, MONO_SILENCE, STEREO_SILENCE
-from klang.audio.sampling import extend_with_silence, SampleProvider, interp_2d, Resampler, AudioFile
+from klang.audio import MONO_SILENCE, STEREO_SILENCE
+from klang.audio.sampling import (
+    extend_with_silence, interp_2d, Sample, AudioFile, VALID_MODES
+)
 from klang.constants import TAU, MONO, STEREO
 from klang.util import convert_samples_to_int
 
 
-MULTI_SILECNE = np.zeros((5, BUFFER_SIZE))
+MULTI_CHANNEL_SILENCE = np.zeros((5, BUFFER_SIZE))
 LONG = int(10. * SAMPLING_RATE)
 SHORT = 4 * BUFFER_SIZE
 CASES = [
@@ -74,16 +76,16 @@ class TestExpandWithSilence(unittest.TestCase):
     def test_with_different_cases(self):
         np.testing.assert_equal(extend_with_silence(MONO_SILENCE), MONO_SILENCE)
         np.testing.assert_equal(extend_with_silence(STEREO_SILENCE), STEREO_SILENCE)
-        np.testing.assert_equal(extend_with_silence(MULTI_SILECNE), MULTI_SILECNE)
+        np.testing.assert_equal(extend_with_silence(MULTI_CHANNEL_SILENCE), MULTI_CHANNEL_SILENCE)
         np.testing.assert_equal(extend_with_silence(np.zeros(100)), MONO_SILENCE)
         np.testing.assert_equal(extend_with_silence(np.zeros((2, 100))), STEREO_SILENCE)
-        np.testing.assert_equal(extend_with_silence(np.zeros((5, 6))), MULTI_SILECNE)
+        np.testing.assert_equal(extend_with_silence(np.zeros((5, 6))), MULTI_CHANNEL_SILENCE)
 
 
-class TestSampleProvider(unittest.TestCase):
+class TestSample(unittest.TestCase):
     def test_attributes(self):
         samples = np.arange(10)
-        provider = SampleProvider(samples)
+        provider = Sample(SAMPLING_RATE, samples)
 
         self.assertEqual(provider.length, 10)
         self.assertEqual(provider.start, 0)
@@ -94,45 +96,45 @@ class TestSampleProvider(unittest.TestCase):
     def test_non_looping(self):
         for kwargs in CASES:
             data = generate_audio_data(**kwargs)
-            provider = SampleProvider(data, loop=False)
+            provider = Sample(SAMPLING_RATE, data, loop=False)
             while True:
-                chunk = provider()
+                chunk = provider.callback()
                 if chunk.shape[0] < BUFFER_SIZE:
                     assert 0 <= chunk.shape[0] < BUFFER_SIZE
                     break
 
-            chunk = provider()
+            chunk = provider.callback()
             assert chunk.shape[0] == 0
 
     def test_looping(self):
         for kwargs in CASES:
             data = generate_audio_data(**kwargs)
-            provider = SampleProvider(data, loop=True)
+            provider = Sample(SAMPLING_RATE, data, loop=True)
             for _ in range(len(data) // BUFFER_SIZE + 10):
-                chunk = provider()
+                chunk = provider.callback()
                 assert chunk.shape[0] == BUFFER_SIZE
 
     def test_wrong_clipping_arguments(self):
         toLong = len(MONO_SILENCE) + 1
         with self.assertRaises(AssertionError):
-            SampleProvider(MONO_SILENCE, start=-5)
+            Sample(SAMPLING_RATE, MONO_SILENCE, start=-5)
 
         with self.assertRaises(AssertionError):
-            SampleProvider(MONO_SILENCE, stop=toLong)
+            Sample(SAMPLING_RATE, MONO_SILENCE, stop=toLong)
 
         with self.assertRaises(AssertionError):
-            SampleProvider(MONO_SILENCE, start=10, stop=5)
+            Sample(SAMPLING_RATE, MONO_SILENCE, start=10, stop=5)
 
     def test_audio_sample_trimming(self):
         data = np.arange(15)
-        provider = SampleProvider(data)
+        provider = Sample(SAMPLING_RATE, data)
 
         provider.trim(start=2, stop=11)
 
-        np.testing.assert_equal(provider(nFrames=4), [2, 3, 4, 5])
-        np.testing.assert_equal(provider(nFrames=4), [6, 7, 8, 9])
-        np.testing.assert_equal(provider(nFrames=4), [10])
-        np.testing.assert_equal(provider(nFrames=4), [])
+        np.testing.assert_equal(provider.callback(nFrames=4), [2, 3, 4, 5])
+        np.testing.assert_equal(provider.callback(nFrames=4), [6, 7, 8, 9])
+        np.testing.assert_equal(provider.callback(nFrames=4), [10])
+        np.testing.assert_equal(provider.callback(nFrames=4), [])
 
 
 class TestResampler(unittest.TestCase):
@@ -140,8 +142,8 @@ class TestResampler(unittest.TestCase):
         bufferSize = 256
         data = generate_audio_data(duration=.1, channels=MONO)
         length = data.shape[0]
-        for mode in Resampler.VALID_MODES:
-            resampler = Resampler(SAMPLING_RATE, data, mode=mode)
+        for mode in VALID_MODES:
+            resampler = Sample(SAMPLING_RATE, data, mode=mode)
             for _ in range(length // bufferSize):
                 chunk = resampler.read()
 
@@ -155,8 +157,8 @@ class TestResampler(unittest.TestCase):
         bufferSize = 256
         data = generate_audio_data(duration=.1, channels=STEREO)
         length = data.shape[0]
-        for mode in Resampler.VALID_MODES:
-            resampler = Resampler(SAMPLING_RATE, data, mode=mode)
+        for mode in VALID_MODES:
+            resampler = Sample(SAMPLING_RATE, data, mode=mode)
             for _ in range(length // bufferSize):
                 chunk = resampler.read()
 
@@ -168,9 +170,9 @@ class TestResampler(unittest.TestCase):
 
     def test_varying_playback_speed(self):
         data = generate_audio_data(duration=1., channels=MONO)
-        for mode in Resampler.VALID_MODES:
+        for mode in VALID_MODES:
             playbackSpeed = .1
-            resampler = Resampler(SAMPLING_RATE, data, mode=mode, playbackSpeed=playbackSpeed)
+            resampler = Sample(SAMPLING_RATE, data, mode=mode, playbackSpeed=playbackSpeed)
             for _ in range(100):
                 chunk = resampler.read()
                 if len(chunk) < BUFFER_SIZE:
@@ -181,7 +183,7 @@ class TestResampler(unittest.TestCase):
 
     def test_rewind(self):
         data = generate_audio_data(duration=1., channels=MONO)
-        for mode in Resampler.VALID_MODES:
+        for mode in VALID_MODES:
             pass
 
 
@@ -242,7 +244,7 @@ class TestAudioFile(unittest.TestCase):
 
             assert not all_zero(af.output.value)
 
-            # Sample provider should be empty by now
+            # Sample samples should be empty by now
             af.update()
             assert all_zero(af.output.value)
 
