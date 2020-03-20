@@ -306,6 +306,10 @@ class AR(EnvelopeGenerator):
             )
             self.sampleGenerator = continue_after_end(falling, fill_value=0.)
 
+    def __str__(self):
+        fmt = '{}(attack={attack}, release={release}, mode={mode})'
+        return fmt.format(self.__class__.__name__, **self.__dict__)
+
 
 class ADSR(EnvelopeGenerator):
 
@@ -337,6 +341,10 @@ class ADSR(EnvelopeGenerator):
             )
             self.sampleGenerator = continue_after_end(falling, fill_value=0.)
 
+    def __str__(self):
+        fmt = '{}(attack={attack}, decay={decay}, sustain={sustain}, release={release}, mode={mode})'
+        return fmt.format(self.__class__.__name__, **self.__dict__)
+
 
 class D(EnvelopeGenerator):
 
@@ -354,3 +362,7 @@ class D(EnvelopeGenerator):
         self.triggered = False
         pulseEnv = envelope_curve(target=0., duration=self.decay, start=1., mode=self.mode)
         self.sampleGenerator = continue_after_end(pulseEnv, fill_value=0.)
+
+    def __str__(self):
+        fmt = '{}(decay={decay}, mode={mode})'
+        return fmt.format(self.__class__.__name__, **self.__dict__)
