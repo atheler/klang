@@ -18,10 +18,13 @@ import numpy as np
 import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
+from klang.audio.envelope import AR
+from klang.audio.synthesizer import Voice
 from klang.block import Block
 from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
 from klang.math import clip
+from klang.music.tunings import EQUAL_TEMPERAMENT
 from klang.util import load_wave
 
 
@@ -367,3 +370,32 @@ class Sampler(Block):
     @classmethod
     def from_wave(self, filepath):
         pass
+
+
+_C_FREQUENCY = EQUAL_TEMPERAMENT.pitch_2_frequency(60)
+
+
+class SampleVoice(Voice):
+
+    """Basic sample voice."""
+
+    def __init__(self, rate, data, baseFrequency=_C_FREQUENCY, envelope=None, *args, **kwargs):
+        super().__init__(envelope or AR(attack=0.00, release=.1))
+        self.baseFrequency = baseFrequency
+        self.sample = Sample(rate, data, *args, **kwargs)
+
+    def process_note(self, note):
+        super().process_note(note)
+        noteOn = (note.velocity > 0)
+        if noteOn:
+            self.sample.rewind()
+            freq = note.frequency / self.baseFrequency
+            self.sample.set_playback_speed(freq)
+
+    def update(self):
+        super().update()
+        samples = self.sample.read().T
+        env = self.envelope.output.value
+        signal = self.amplitude * env * extend_with_silence(samples)
+        self.output.set_value(signal)
+        #self.output.set_value(env * extend_with_silence(samples))
