@@ -40,7 +40,7 @@ class Temperament:
 
     """Tuning temperament."""
 
-    def __init__(self, cents, kammerton=KAMMERTON):
+    def __init__(self, cents, kammerton=KAMMERTON, name=''):
         """Args:
             cents (array): Tuning.
         Kwargs:
@@ -48,6 +48,7 @@ class Temperament:
         """
         assert len(cents) == DODE
         self.kammerton = kammerton
+        self.name = name
 
         cents = np.asarray(cents)
         self.ratios = cent_2_ratio(cents)
@@ -55,13 +56,17 @@ class Temperament:
 
     def pitch_2_frequency(self, pitch):
         octave, note = np.divmod(pitch, DODE)
-        return self.baseFrequency * self.ratios[note] * (1 << (octave - REF_OCTAVE))
+        return self.baseFrequency * self.ratios[note] * (2. ** (octave - REF_OCTAVE))
 
     def __str__(self):
-        return '%s(kammerton: %.1f Hz)' % (
-            self.__class__.__name__,
-            self.kammerton,
-        )
+        infos = []
+        if self.name:
+            infos.append('%r' % self.name)
+
+        infos.extend([
+            'kammerton: %.1f Hz' % self.kammerton
+        ])
+        return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
 
 def _init_temperaments(filepath='resources/tunings.csv'):
@@ -77,17 +82,17 @@ def _init_temperaments(filepath='resources/tunings.csv'):
     rnd = np.sort(np.random.randint(0, CENT_PER_OCTAVE, size=12))
     temperaments = {
         'Equal': EQUAL_TEMPERAMENT,
-        'Young': Temperament(ratio_2_cent(youngRatios)),
-        'Pythagorean': Temperament(ratio_2_cent(pythagoreanRatios)),
-        'Random': Temperament(rnd),
+        'Young': Temperament(ratio_2_cent(youngRatios), name='Young'),
+        'Pythagorean': Temperament(ratio_2_cent(pythagoreanRatios), name='Pythagorean'),
+        'Random': Temperament(rnd, name='Random'),
     }
 
     for name, cents in load_music_data_from_csv(filepath).items():
-        temperaments[name.title().strip()] = Temperament(cents)
+        temperaments[name.title().strip()] = Temperament(cents, name=name)
 
     return temperaments
 
 
-EQUAL_TEMPERAMENT = Temperament(np.arange(DODE)*100, kammerton=KAMMERTON)
+EQUAL_TEMPERAMENT = Temperament(np.arange(DODE)*100, kammerton=KAMMERTON, name='Equal')
 TEMPERAMENTS['Equal'] = EQUAL_TEMPERAMENT
 TEMPERAMENTS.update(_init_temperaments())
