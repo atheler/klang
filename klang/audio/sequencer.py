@@ -11,8 +11,9 @@ from klang.audio import DT
 from klang.block import Block
 from klang.connections import MessageOutput
 from klang.constants import TAU
-from klang.messages import PitchNote
+from klang.messages import Note
 from klang.music.tempo import angular_velocity
+from klang.music.tunings import EQUAL_TEMPERAMENT
 
 
 DEFAULT_PATTERN = np.zeros(16)
@@ -67,7 +68,7 @@ class Sequencer(Block):
             if self.currentPhase < end:
                 break
 
-            noteOff = PitchNote(pitch=note.pitch, velocity=0.)
+            noteOff = note._replace(velocity=0.)
             self.outputs[channel].send(noteOff)
             self.activeNotes.popleft()
 
@@ -80,7 +81,8 @@ class Sequencer(Block):
             dt = TAU / self.nSteps
             for channel, value in enumerate(self.pattern.T[idx]):
                 if value > 0:
-                    note = PitchNote(pitch=value, velocity=1.)
+                    frequency = EQUAL_TEMPERAMENT.pitch_2_frequency(value)
+                    note = Note(frequency, velocity=1., pitch=value)
                     self.outputs[channel].send(note)
                     self.activeNotes.append(
                         (self.currentPhase + self.noteDuration * dt, channel, note)

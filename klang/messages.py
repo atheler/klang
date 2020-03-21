@@ -2,22 +2,9 @@
 import collections
 
 
-class PitchNote(collections.namedtuple('PitchNote', 'pitch velocity')):
+class Note(collections.namedtuple('Note', 'frequency velocity pitch')):
 
-    """MIDI a-like pitch / velocity note."""
-
-    pass
-
-
-class FrequencyNote(collections.namedtuple('FrequencyNote', 'frequency velocity')):
-
-    """Frequency / velocity note."""
-
-    pass
-
-
-
-class NewNote(collections.namedtuple('NewNote', 'frequency velocity pitch')):
+    """Music note. Pitch optional. Used for voice mapping in synthesizer."""
 
     def __new__(cls, frequency, velocity, pitch=None):
         return super().__new__(cls, frequency, velocity, pitch)

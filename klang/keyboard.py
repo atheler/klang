@@ -8,7 +8,7 @@ from klang.block import Block
 from klang.connections import MessageOutput
 from klang.constants import REF_OCTAVE, DODE
 from klang.math import clip
-from klang.messages import NewNote
+from klang.messages import Note
 from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
 
 
@@ -120,7 +120,7 @@ class MusicalKeyboard(Keyboard):
         pitch = self.CHAR_2_BASE_PITCH[char] + self.octave * DODE
         frequency = self.temperament.pitch_2_frequency(pitch)
         velocity = self.velocity if noteOn else SILENT
-        note = NewNote(frequency, velocity, pitch)
+        note = Note(frequency, velocity, pitch)
         self.output.send(note)
 
     def change_octave(self, char):
