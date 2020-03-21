@@ -18,8 +18,6 @@ Pitch curve: Via a bend() method?
 import copy
 
 from klang.audio import MONO_SILENCE
-from klang.audio.envelope import EnvelopeGenerator
-from klang.audio.oscillators import Oscillator
 from klang.block import Block
 from klang.connections import MessageInput
 from klang.math import clip
