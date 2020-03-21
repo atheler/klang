@@ -65,14 +65,15 @@ class NoteScheduler:
     def __init__(self, policy='newest'):
         assert policy in self.VALID_POLICIES
         self.policy = policy
+        self.couter = itertools.count()
         self.keyNotes = list()
 
     def get_key(self, note):
         """Get key for note according to scheduling policy."""
         if self.policy == 'newest':
-            key = len(self.keyNotes)
+            key = next(self.couter)
         elif self.policy == 'oldest':
-            key = -len(self.keyNotes)
+            key = -next(self.couter)
         elif self.policy == 'highest':
             key = note.pitch
         elif self.policy == 'lowest':
