@@ -19,7 +19,7 @@ import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.audio.envelope import AR
-from klang.audio.synthesizer import Voice
+from klang.audio.voices import Voice
 from klang.block import Block
 from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
@@ -151,8 +151,8 @@ class CrudeResampler:
         return interp_2d(x, xp, fp)
 
 
-def init_resampler(callback, ratio, mode, channels):
-    """Init a resampler instance. Either samplerate.CallbackResampler or
+def initialize_resampler(callback, ratio, mode, channels):
+    """Initialize a resampler instance. Either samplerate.CallbackResampler or
     CrudeResampler depending on mode.
 
     Args:
@@ -201,7 +201,7 @@ class Sample:
 
         self.currentIndex = 0
         self.trim(start, stop)
-        self.resampler = init_resampler(
+        self.resampler = initialize_resampler(
             self.callback,
             self.calculate_ratio(playbackSpeed),
             mode,
@@ -247,7 +247,7 @@ class Sample:
         self.resampler.set_starting_ratio(ratio)
 
     def callback(self, nFrames=BUFFER_SIZE):
-        """Sample callback."""
+        """Sample callback. Get some new samples for resampler."""
         start = self.currentIndex
         stop = start + nFrames
         reachedEnd = (stop >= self.stop)
@@ -276,39 +276,32 @@ class AudioFile(Block):
 
     """Audio file block.
 
-    Single sample playback with varying playback speed.
+    Single sample playback from WAV.
     """
 
-    def __init__(self, data, rate=SAMPLING_RATE, mono=False, *args, **kwargs):
+    def __init__(self, filepath, mono=False, *args, **kwargs):
+        rate, data = load_wave(filepath)
         assert is_audio_samples_shape(data)
         super().__init__(nOutputs=1)
-        data = np.asarray(data)
         if mono and data.shape[1] > 1:
             data = sum_to_mono(data)
 
-        self.samples = Sample(rate, data, *args, **kwargs)
-        self.filepath = ''
-        self.playing = False
-        self.silence = np.zeros((self.samples.nChannels, BUFFER_SIZE))
-        self.mute_outputs()
-
-    @classmethod
-    def from_wave(cls, filepath, *args, **kwargs):
-        """Load audio file from WAV file."""
-        rate, data = load_wave(filepath)
-        self = cls(data, rate, *args, **kwargs)
         self.filepath = filepath
-        return self
+
+        self.sample = Sample(rate, data, *args, **kwargs)
+        self.playing = False
+        self.silence = np.zeros((self.sample.nChannels, BUFFER_SIZE))
+        self.mute_outputs()
 
     @property
     def playingPosition(self):
         """Current playback position."""
-        return self.samples.currentIndex / self.samples.rate
+        return self.sample.currentIndex / self.sample.rate
 
     @property
     def duration(self):
         """Audio files total duration."""
-        return self.samples.length / self.samples.rate
+        return self.sample.length / self.sample.rate
 
     def play(self):
         """Start playback."""
@@ -320,7 +313,7 @@ class AudioFile(Block):
 
     def rewind(self):
         """Rewind to beginning."""
-        self.samples.rewind()
+        self.sample.rewind()
 
     def stop(self):
         """Stop playback."""
@@ -335,8 +328,8 @@ class AudioFile(Block):
         if not self.playing:
             return self.mute_outputs()
 
-        data = self.samples.read(BUFFER_SIZE)
-        self.playing = self.samples.playing
+        data = self.sample.read(BUFFER_SIZE)
+        self.playing = self.sample.playing
         samples = extend_with_silence(data.T)
         self.output.set_value(samples)
 

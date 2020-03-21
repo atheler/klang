@@ -193,19 +193,13 @@ class TestAudioFile(unittest.TestCase):
         for channels in [MONO, STEREO]:
             data = generate_audio_data(length=SAMPLING_RATE, channels=channels)
             filelike = pack_audio_data_in_file(data)
-            af = AudioFile.from_wave(filelike)
-
-    def test_invalid_data(self):
-        with self.assertRaises(AssertionError):
-            AudioFile(0.)
-
-        with self.assertRaises(AssertionError):
-            AudioFile(np.zeros((2, 128)))
+            af = AudioFile(filelike)
 
     def test_attributes(self):
         for channels in [MONO, STEREO]:
             data = generate_audio_data(length=SAMPLING_RATE, channels=channels)
-            af = AudioFile(data)
+            filelike = pack_audio_data_in_file(data)
+            af = AudioFile(filelike)
 
             self.assertEqual(af.playingPosition, 0.)
             self.assertEqual(af.duration, 1.0)
@@ -214,7 +208,8 @@ class TestAudioFile(unittest.TestCase):
     def test_playback(self):
         for channels in [MONO, STEREO]:
             data = generate_audio_data(length=SAMPLING_RATE, channels=channels)
-            af = AudioFile(data)
+            filelike = pack_audio_data_in_file(data)
+            af = AudioFile(filelike)
 
             af.update()
 
