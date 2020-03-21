@@ -1,4 +1,5 @@
 """Envelop generator blocks."""
+import abc
 import itertools
 import math
 
@@ -283,6 +284,10 @@ class EnvelopeGenerator(Block):
 
         self.output.set_value(next(self.sampleGenerator))
 
+    @abc.abstractmethod
+    def __deepcopy__(self, memo):
+        pass
+
 
 class AR(EnvelopeGenerator):
 
@@ -309,6 +314,9 @@ class AR(EnvelopeGenerator):
     def __str__(self):
         fmt = '{}(attack={attack}, release={release}, mode={mode})'
         return fmt.format(self.__class__.__name__, **self.__dict__)
+
+    def __deepcopy__(self, memo):
+        return type(self)(self.attack, self.release, self.mode)
 
 
 class ADSR(EnvelopeGenerator):
@@ -345,6 +353,9 @@ class ADSR(EnvelopeGenerator):
         fmt = '{}(attack={attack}, decay={decay}, sustain={sustain}, release={release}, mode={mode})'
         return fmt.format(self.__class__.__name__, **self.__dict__)
 
+    def __deepcopy__(self, memo):
+        return type(self)(self.attack, self.decay, self.sustain, self.release, self.mode)
+
 
 class D(EnvelopeGenerator):
 
@@ -366,3 +377,6 @@ class D(EnvelopeGenerator):
     def __str__(self):
         fmt = '{}(decay={decay}, mode={mode})'
         return fmt.format(self.__class__.__name__, **self.__dict__)
+
+    def __deepcopy__(self, memo):
+        return type(self)(self.decay, self.mode)

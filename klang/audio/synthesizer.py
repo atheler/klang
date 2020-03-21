@@ -1,21 +1,16 @@
 """Synthesizer audio blocks."""
+import copy
 import itertools
+import abc
 
 import numpy as np
 
 from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE
-from klang.audio.envelope import sample_exponential_decay, EnvelopeGenerator, AR, Pulse
-from klang.audio.oscillators import Oscillator, sample_wave
+from klang.audio.envelope import sample_exponential_decay, D
+from klang.audio.oscillators import sample_wave
 from klang.block import Block
-from klang.connections import AlreadyConnectedError
 from klang.connections import MessageInput
-from klang.math import clip
-from klang.messages import FrequencyNote
-from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
-
-
-_temperaments = list(TEMPERAMENTS.values())
 
 
 def sample_pitch_decay(frequency, decay, intensity, t0=0.):
@@ -25,145 +20,124 @@ def sample_pitch_decay(frequency, decay, intensity, t0=0.):
     return pitch, t1
 
 
-class Voice(Block):
-
-    """Base class for single syntehsizer voice. This is atest"""
-
-    def __init__(self, envelope):
-        super().__init__(nOutputs=1)
-        self.inputs = [MessageInput(owner=self)]
-        self.amplitude = 0.
-        self.envelope = envelope
-
-    @property
-    def active(self):
-        """Return True if voice is active (active envelope or pending message)."""
-        if self.input.queue:
-            return True
-
-        return self.envelope.active
-
-    def process_note(self, note):
-        noteOn = (note.velocity > 0)
-        if noteOn:
-            self.amplitude = clip(note.velocity, 0., 1.)
-
-        self.envelope.input.push(note)
-
-    def update(self):
-        for note in self.input.receive():
-            self.process_note(note)
-
-        self.envelope.update()
-
-
-class OscillatorVoice(Voice):
-    def __init__(self, oscillator=None, envelope=None):
-        super().__init__(envelope or EnvelopeGenerator())
-        self.oscillator = oscillator or Oscillator()
-
-    @property
-    def frequency(self):
-        return self.oscillator.frequency.get_value()
-
-    def process_note(self, note):
-        noteOn = (note.velocity > 0)
-        if noteOn:
-            self.amplitude = clip(note.velocity, 0., 1.)
-            self.oscillator.frequency.set_value(note.frequency)
-
-        self.envelope.input.push(note)
-
-    def update(self):
-        for note in self.input.receive():
-            self.process_note(note)
-
-        self.oscillator.update()
-        osc = self.oscillator.output.get_value()
-
-        self.envelope.update()
-        env = self.envelope.output.get_value()
-
-        signal = self.amplitude * env * osc
-        self.output.set_value(signal)
+def duplicate_voice(voice, number):
+    """Duplicate voice for polyphony."""
+    return [copy.deepcopy(voice) for _ in range(number)]
 
 
 class Synthesizer(Block):
 
-    """Simple polyphonic synthesizer."""
+    """Synthesizer base class."""
 
-    MAX_VOICES = 24
-
-    def __init__(self, temperament=EQUAL_TEMPERAMENT):
+    def __init__(self):
         super().__init__(nInputs=0, nOutputs=1)
-        self.temperament = temperament
-
         self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
-        self.voices = [
-            OscillatorVoice(envelope=AR(attack=0.02, release=.1)) for _ in range(self.MAX_VOICES)
-        ]
-        self.freeVoice = itertools.cycle(self.voices)
 
-    def play_notes(self, *notes):
-        """Play notes."""
-        if self.input.connected:
-            fmt = 'Synthesizer input is already connected with %s!'
-            other, = self.input.connections
-            msg = fmt % other.owner
-            raise AlreadyConnectedError(msg)
-
+    def play_note(self, *notes):
+        """Play some note(s) directly."""
         for note in notes:
-            self.input.push(note)
+            self.process_note(note)
 
+    @abc.abstractmethod
     def process_note(self, note):
-        """Process note."""
-        freq = self.temperament.pitch_2_frequency(note.pitch)
-        freqNote = FrequencyNote(frequency=freq, velocity=note.velocity)
-        if note.velocity > 0:
-            #print('Play new note', freqNote)
-            voice = next(self.freeVoice)
-            voice.input.push(freqNote)
-        else:
-            #print('Kill old note', freqNote)
-            for voice in self.voices:
-                if voice.frequency == freq:
-                    voice.input.push(freqNote)
+        """Process single note."""
+        raise NotImplementedError
 
     def update(self):
         for note in self.input.receive():
             self.process_note(note)
 
-        samples = MONO_SILENCE.copy()
-        for voice in self.voices:
-            if not voice.active:
-                continue
 
-            voice.update()
-            samples += voice.output.get_value()
+class MonophonicSynthesizer(Synthesizer):
 
-        samples /= self.MAX_VOICES
+    """Monophonic synthesizer with a single voice.
+
+    TODO:
+      - Glissando
+    """
+
+    def __init__(self, voice):
+        super().__init__()
+        self.voice = voice
+        self.noteStack = []
+
+    def get_note_to_play(self, note):
+        """Get current note to play. Access to the note stack. Imitates the
+        behavior of monophonic synthesizer. On a monophonic a new note overrules
+        the previously played note(s). When the new note gets release, we fall
+        back to the previously played note (if it is still on).
+        Otherwise we release.
+
+        TODO:
+          - Implement different note priority schemes found on old, monophonic
+            synthesizer. E.g.:
+              - Newest note (currently implemented)
+              - Highest pitch
+              - Lowest pitch
+        """
+        if note.velocity > 0:  # Note on
+            self.noteStack.append(note)
+            return note
+
+        # Remove notes with note.pitch from noteStack
+        for oldNote in list(self.noteStack):
+            if oldNote.pitch == note.pitch:
+                self.noteStack.remove(oldNote)
+
+        # Get previously played note
+        if self.noteStack:
+            latestNote = self.noteStack[-1]
+        else:
+            latestNote = note  # No note left on stack. Release (note.velocity = 0).
+
+        return latestNote
+
+    def process_note(self, note):
+        note = self.get_note_to_play(note)
+        self.voice.input.push(note)
+
+    def update(self):
+        super().update()
+        samples = MONO_SILENCE
+        if self.voice.active:
+            self.voice.update()
+            samples = self.voice.output.value
+
         self.output.set_value(samples)
 
 
-class TemperamentSynthesizer(Synthesizer):
-    def __init__(self):
+class PolyphonicSynthesizer(Synthesizer):
+
+    """Polyphonic synthesizer with multiple voices."""
+
+    MAX_VOICES = 24
+
+    def __init__(self, voice):
         super().__init__()
-        self.inputs.append(MessageInput(self))
+        self.voices = duplicate_voice(voice, self.MAX_VOICES)
+        self.freeVoice = itertools.cycle(self.voices)
+
+    def process_note(self, note):
+        if note.velocity > 0:
+            #print('Play new note', note)
+            voice = next(self.freeVoice)
+            voice.input.push(note)
+        else:
+            #print('Kill old note', note)
+            for voice in self.voices:
+                if voice.currentPitch == note.pitch:
+                    voice.input.push(note)
 
     def update(self):
-        for key in self.inputs[1].receive():
-            try:
-                char = key.char
-                idx = int(char)
-            except (AttributeError, ValueError):
-                continue
-
-            if 0 <= idx < len(_temperaments):
-                self.temperament = _temperaments[idx]
-                print('Switched to %s' % self.temperament)
-
         super().update()
+        samples = MONO_SILENCE.copy()
+        for voice in self.voices:
+            if voice.active:
+                voice.update()
+                samples += voice.output.value
+
+        self.output.set_value(samples / self.MAX_VOICES)
 
 
 class HiHat(Block):
@@ -179,7 +153,7 @@ class HiHat(Block):
         else:
             self.noise_generator = lambda: 2 * np.random.random(BUFFER_SIZE) - 1.
 
-        self.envelope = Pulse(decay, mode='exp')
+        self.envelope = D(decay, mode='exp')
 
     def update(self):
         triggered = False
@@ -203,6 +177,7 @@ class Kick(Block):
         self.inputs = [MessageInput(self)]
         self.currentTime = 0.
         self.currentPhase = 0.
+
 
     def update(self):
         for note in self.input.receive():

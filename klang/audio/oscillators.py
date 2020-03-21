@@ -5,6 +5,9 @@ from klang.audio.waves import sample_wave
 
 
 class Oscillator(Block):
+
+    """Basic oscillator."""
+
     def __init__(self, frequency=440.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency = self.input
@@ -24,8 +27,17 @@ class Oscillator(Block):
         samples = self.sample()
         self.output.set_value(samples)
 
+    def __deepcopy__(self, memo):
+        oscCopy = type(self)(frequency=self.frequency.value)
+        oscCopy.currentPhase = self.currentPhase
+        oscCopy.output.set_value(self.output.value)
+        return oscCopy
+
 
 class Lfo(Oscillator):
+
+    """Simple LFO. Same as Oscillator but output value range is [0., 1.]."""
+
     def __init__(self, frequency=1.):
         super().__init__(frequency)
 
