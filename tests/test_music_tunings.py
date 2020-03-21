@@ -29,6 +29,18 @@ class TestTemperament(unittest.TestCase):
         self.assertAlmostEqual(equal.pitch_2_frequency(69), kammerton)
         self.assertAlmostEqual(equal.pitch_2_frequency(69 + 12), 2*kammerton)
 
+    def test_note_ranges(self):
+        """Test frequency conversion over a wider range of notes (also negative
+        pitch numbers!).
+        """
+        equalTuning = np.arange(12) * 100
+        kammerton = 440.
+        equal = Temperament(equalTuning, kammerton=kammerton)
+        a4pitch = 69
+        for i in range(-6, 6):
+            pitch = a4pitch + i * 12
+            self.assertAlmostEqual(equal.pitch_2_frequency(pitch), kammerton* 2**i)
+
 
 if __name__ == '__main__':
     unittest.main()
