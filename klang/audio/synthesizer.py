@@ -1,7 +1,8 @@
 """Synthesizer audio blocks."""
+import abc
+import bisect
 import copy
 import itertools
-import abc
 
 import numpy as np
 
@@ -49,6 +50,63 @@ class Synthesizer(Block):
             self.process_note(note)
 
 
+class NoteScheduler:
+
+    """Note scheduling for monophonic synthesizers. Notes get inserted-sorted
+    according to chosen policy.
+
+    TODO:
+      - Heap?
+    """
+
+    VALID_POLICIES = {'newest', 'oldest', 'lowest', 'highest'}
+    """set: Valid policy values."""
+
+    def __init__(self, policy='newest'):
+        assert policy in self.VALID_POLICIES
+        self.policy = policy
+        self.keyNotes = list()
+
+    def get_key(self, note):
+        """Get key for note according to scheduling policy."""
+        if self.policy == 'newest':
+            key = len(self.keyNotes)
+        elif self.policy == 'oldest':
+            key = -len(self.keyNotes)
+        elif self.policy == 'highest':
+            key = note.pitch
+        elif self.policy == 'lowest':
+            key = -note.pitch
+
+        return key
+
+    def insert_new_note(self, note):
+        """Add new note to NoteScheduler."""
+        key = self.get_key(note)
+        item = (key, note)
+        bisect.insort(self.keyNotes, item)
+
+    def remove_old_note(self, note):
+        """Remove turned off notes from scheduler."""
+        for item in list(self.keyNotes):
+            _, oldNote = item
+            if oldNote.pitch == note.pitch:
+                self.keyNotes.remove(item)
+
+    def get_next_note(self, note):
+        """Given a new note, get the current note which needs to be played."""
+        if note.velocity > 0:
+            self.insert_new_note(note)
+        else:
+            self.remove_old_note(note)
+
+        if not self.keyNotes:
+            return note
+
+        _, note = self.keyNotes[-1]
+        return note
+
+
 class MonophonicSynthesizer(Synthesizer):
 
     """Monophonic synthesizer with a single voice.
@@ -57,44 +115,13 @@ class MonophonicSynthesizer(Synthesizer):
       - Glissando
     """
 
-    def __init__(self, voice):
+    def __init__(self, voice, policy='newest'):
         super().__init__()
         self.voice = voice
-        self.noteStack = []
-
-    def get_note_to_play(self, note):
-        """Get current note to play. Access to the note stack. Imitates the
-        behavior of monophonic synthesizer. On a monophonic a new note overrules
-        the previously played note(s). When the new note gets release, we fall
-        back to the previously played note (if it is still on).
-        Otherwise we release.
-
-        TODO:
-          - Implement different note priority schemes found on old, monophonic
-            synthesizer. E.g.:
-              - Newest note (currently implemented)
-              - Highest pitch
-              - Lowest pitch
-        """
-        if note.velocity > 0:  # Note on
-            self.noteStack.append(note)
-            return note
-
-        # Remove notes with note.pitch from noteStack
-        for oldNote in list(self.noteStack):
-            if oldNote.pitch == note.pitch:
-                self.noteStack.remove(oldNote)
-
-        # Get previously played note
-        if self.noteStack:
-            latestNote = self.noteStack[-1]
-        else:
-            latestNote = note  # No note left on stack. Release (note.velocity = 0).
-
-        return latestNote
+        self.noteScheduler = NoteScheduler(policy)
 
     def process_note(self, note):
-        note = self.get_note_to_play(note)
+        note = self.noteScheduler.get_next_note(note)
         self.voice.input.push(note)
 
     def update(self):
@@ -189,3 +216,4 @@ class Kick(Block):
         env, self.currentTime = sample_exponential_decay(self.decay, self.currentTime)
         signal, self.currentPhase = sample_wave(frequency, startPhase=self.currentPhase)
         self.output.set_value(env * signal)
+
