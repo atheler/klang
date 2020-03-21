@@ -1,4 +1,6 @@
 """Audio blocks."""
+import abc
+
 from klang.connections import Input, Output
 
 
@@ -59,6 +61,7 @@ class Block:
         """First output."""
         return self.outputs[0]
 
+    @abc.abstractmethod
     def update(self):
         """Block's run method.
 
@@ -66,7 +69,7 @@ class Block:
             We use 'update' instead of 'run' because of name collision with
             Python thread's run method.
         """
-        raise NotImplementedError('Abstract base class')
+        return
 
     def __str__(self):
         if self.name:
