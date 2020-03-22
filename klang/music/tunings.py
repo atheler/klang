@@ -76,14 +76,17 @@ def _init_temperaments(filepath='resources/tunings.csv'):
         1.878842233,
     ]
     pythagoreanRatios = [
-        1., 12./11., 9./8., 6./5., 5./4., 4./3., 7./5., 3./2., 8./5., 5./3.,
-        7./4., 11./6.,
+        1, 12/11, 9/8, 6/5, 5/4, 4/3, 7/5, 3/2, 8/5, 5/3, 7/4, 11/6,
+    ]
+    justIntonation = [
+        1, 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8,
     ]
     rnd = np.sort(np.random.randint(0, CENT_PER_OCTAVE, size=12))
     temperaments = {
         'Equal': EQUAL_TEMPERAMENT,
         'Young': Temperament(ratio_2_cent(youngRatios), name='Young'),
         'Pythagorean': Temperament(ratio_2_cent(pythagoreanRatios), name='Pythagorean'),
+        'Just': Temperament(ratio_2_cent(justIntonation), name='Just'),
         'Random': Temperament(rnd, name='Random'),
     }
 
