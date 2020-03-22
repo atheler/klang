@@ -3,6 +3,7 @@ import abc
 import bisect
 import copy
 import itertools
+import heapq
 
 import numpy as np
 
@@ -52,11 +53,8 @@ class Synthesizer(Block):
 
 class NoteScheduler:
 
-    """Note scheduling for monophonic synthesizers. Notes get inserted-sorted
-    according to chosen policy.
-
-    TODO:
-      - Heap?
+    """Note scheduling for monophonic synthesizers. Manages the active note-ons.
+    Notes get inserted-sorted according to chosen policy.
     """
 
     VALID_POLICIES = {'newest', 'oldest', 'lowest', 'highest'}
@@ -66,10 +64,13 @@ class NoteScheduler:
         assert policy in self.VALID_POLICIES
         self.policy = policy
         self.couter = itertools.count()
-        self.keyNotes = list()
+        self.notes = list()
+        heapq.heapify(self.notes)
 
     def get_key(self, note):
-        """Get key for note according to scheduling policy."""
+        """Note key function. Get key for note according to scheduling
+        policy.
+        """
         if self.policy == 'newest':
             key = next(self.couter)
         elif self.policy == 'oldest':
@@ -79,32 +80,38 @@ class NoteScheduler:
         elif self.policy == 'lowest':
             key = -note.pitch
 
-        return key
+        return -key  # Min-heap
 
-    def insert_new_note(self, note):
-        """Add new note to NoteScheduler."""
+    def add_note(self, note):
+        """Add new note-on to note scheduler."""
         key = self.get_key(note)
         item = (key, note)
-        bisect.insort(self.keyNotes, item)
+        heapq.heappush(self.notes, item)
 
-    def remove_old_note(self, note):
-        """Remove turned off notes from scheduler."""
-        for item in list(self.keyNotes):
+    def remove_note(self, note):
+        """Remove turned off note from note scheduler."""
+        for item in self.notes:
             _, oldNote = item
             if oldNote.pitch == note.pitch:
-                self.keyNotes.remove(item)
+                break
+        else:  # If no break
+            return
+
+        # pylint: disable=undefined-loop-variable
+        self.notes.remove(item)
+        heapq.heapify(self.notes)
 
     def get_next_note(self, note):
         """Given a new note, get the current note which needs to be played."""
         if note.velocity > 0:
-            self.insert_new_note(note)
+            self.add_note(note)
         else:
-            self.remove_old_note(note)
+            self.remove_note(note)
 
-        if not self.keyNotes:
+        if not self.notes:
             return note
 
-        _, note = self.keyNotes[-1]
+        _, note = self.notes[0]
         return note
 
 
