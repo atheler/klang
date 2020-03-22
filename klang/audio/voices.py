@@ -71,7 +71,6 @@ class OscillatorVoice(Voice):
     """Oscillator + envelope voice."""
 
     def __init__(self, envelope, oscillator):
-        print('OscillatorVoice.__init__', envelope, oscillator)
         super().__init__(envelope)
         self.oscillator = oscillator
 
