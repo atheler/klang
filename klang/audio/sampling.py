@@ -133,9 +133,8 @@ class CrudeResampler:
     def read(self, nFrames):
         # Fetch samples
         nSamplesNeeded = int(nFrames / self.ratio)
-        fp = self.callback(nFrames=nSamplesNeeded)
-        length = fp.shape[0]
-
+        data = self.callback(nFrames=nSamplesNeeded)
+        length = data.shape[0]
         if length == 0:
             return np.zeros((0, self.channels))
 
@@ -145,10 +144,10 @@ class CrudeResampler:
         # Linear sample interpolation
         x = np.linspace(0, length, nFrames, endpoint=False)
         if self.converter_type == 'very_crude':
-            x = x.astype(int)
+            return data[x.astype(int)]
 
         xp = np.arange(length)
-        return interp_2d(x, xp, fp)
+        return interp_2d(x, xp, data)
 
 
 def initialize_resampler(callback, ratio, mode, channels):
