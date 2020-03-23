@@ -174,6 +174,7 @@ class _MessageQueue:
         self.queue = collections.deque(maxlen=self.MAX_MESSAGES)
 
     def push(self, message):
+        """Push message on the message queue."""
         self.queue.append(message)
 
 
@@ -193,6 +194,15 @@ class MessageInput(_Input, _MessageQueue):
         """Iterate over received messages."""
         while self.queue:
             yield self.queue.popleft()
+
+    def receive_latest(self):
+        """Return latest received messages (if any). Discard the rest."""
+        if not self.queue:
+            return None
+
+        latestMsg = self.queue.pop()
+        self.queue.clear()
+        return latestMsg
 
 
 class MessageOutput(_Output):

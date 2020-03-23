@@ -259,10 +259,7 @@ class EnvelopeGenerator(Block):
 
     def dirty(self):
         """Envelope triggered state changed."""
-        note = None
-        for note in self.input.receive():
-            pass
-
+        note = self.input.receive_latest()
         if not note:
             return False
 

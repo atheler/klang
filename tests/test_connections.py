@@ -148,6 +148,27 @@ class TestMessageInputOutput(unittest.TestCase):
 
         self.assertEqual(next(dst.receive()), msg)
 
+    def test_receive(self):
+        input = MessageInput()
+        messages = list(range(10))
+        for msg in messages:
+            input.push(msg)
+
+        self.assertEqual(list(input.receive()), messages)
+        self.assertEqual(len(input.queue), 0)
+
+    def test_receive_latest(self):
+        input = MessageInput()
+
+        self.assertIs(input.receive_latest(), None)
+
+        messages = list(range(10))
+        for msg in messages:
+            input.push(msg)
+
+        self.assertEqual(input.receive_latest(), 9)
+        self.assertEqual(len(input.queue), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
