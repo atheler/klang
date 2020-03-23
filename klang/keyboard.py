@@ -120,7 +120,7 @@ class MusicalKeyboard(Keyboard):
         pitch = self.CHAR_2_BASE_PITCH[char] + self.octave * DODE
         frequency = self.temperament.pitch_2_frequency(pitch)
         velocity = self.velocity if noteOn else SILENT
-        note = Note(frequency, velocity, pitch)
+        note = Note(pitch, velocity=velocity, frequency=frequency)
         self.output.send(note)
 
     def change_octave(self, char):

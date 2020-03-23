@@ -80,7 +80,7 @@ class NoteScheduler:
         elif self.policy == 'lowest':
             key = -note.pitch
 
-        return -key  # Min-heap
+        return -key  # Min-heap -> Reverse key
 
     def add_note(self, note):
         """Add new note-on to note scheduler."""
@@ -103,7 +103,7 @@ class NoteScheduler:
 
     def get_next_note(self, note):
         """Given a new note, get the current note which needs to be played."""
-        if note.velocity > 0:
+        if note.on:
             self.add_note(note)
         else:
             self.remove_note(note)
@@ -154,7 +154,7 @@ class PolyphonicSynthesizer(Synthesizer):
         self.freeVoice = itertools.cycle(self.voices)
 
     def process_note(self, note):
-        if note.velocity > 0:
+        if note.on:
             #print('Play new note', note)
             voice = next(self.freeVoice)
             voice.input.push(note)

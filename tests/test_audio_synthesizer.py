@@ -8,8 +8,7 @@ from klang.music.tunings import EQUAL_TEMPERAMENT
 def make_notes(*pitches, velocity=1., temperament=EQUAL_TEMPERAMENT):
     """Make notes from pitches."""
     return [
-        Note(temperament.pitch_2_frequency(pitch), velocity, pitch)
-        for pitch in pitches
+        Note(pitch=pitch, velocity=velocity) for pitch in pitches
     ]
 
 

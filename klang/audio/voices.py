@@ -45,9 +45,8 @@ class Voice(Block):
 
     def process_note(self, note):
         """Process note."""
-        noteOn = (note.velocity > 0)
-        if noteOn:
-            self.amplitude = clip(note.velocity, 0., 1.)
+        if note.on:
+            self.amplitude = note.velocity
             self.currentPitch = note.pitch
         else:
             self.currentPitch = 0

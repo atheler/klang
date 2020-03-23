@@ -259,18 +259,16 @@ class EnvelopeGenerator(Block):
 
     def dirty(self):
         """Envelope triggered state changed."""
-        # Try fetching latest note
         note = None
         for note in self.input.receive():
             pass
 
-        if note is None:
-            return
+        if not note:
+            return False
 
-        triggered = (note.velocity > 0)
-        dirty = (triggered != self.triggered)
-        self.triggered = triggered
-        return dirty
+        changed = (note.on != self.triggered)
+        self.triggered = note.on
+        return changed
 
     def update_sample_generator(self):
         """Generate new envelope samples."""

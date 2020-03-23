@@ -4,19 +4,37 @@ import collections
 from klang.music.tunings import EQUAL_TEMPERAMENT
 
 
-class Note(collections.namedtuple('Note', 'frequency velocity pitch')):
+class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
 
     """Music note. Pitch optional. Used for voice mapping in synthesizer."""
 
-    def __new__(cls, frequency, velocity, pitch=None):
-        return super().__new__(cls, frequency, velocity, pitch)
+    def __new__(cls, pitch, velocity=1.0, frequency=None,
+                temperament=EQUAL_TEMPERAMENT):
+        """Args:
+            pitch (int): Pitch number.
 
-    @classmethod
-    def from_pitch(cls, pitch, velocity=1., temperament=EQUAL_TEMPERAMENT):
-        """Create Note from pitch."""
-        freq = temperament.pitch_2_frequency(pitch)
-        return cls(freq, velocity, pitch)
+        Kwargs:
+            velocity (float): Note velocity.
+            frequency (float): Frequency value.
+            temperament (Temperament): Tuning for default frequency.
+        """
+        assert 0 <= pitch < 128
+        assert 0 <= velocity <= 1.
+        if frequency is None:
+            frequency = temperament.pitch_2_frequency(pitch)
+
+        assert frequency > 0
+        return super().__new__(cls, pitch, velocity, frequency)
+
+    @property
+    def on(self):
+        """If note-on."""
+        return self.velocity > 0.
+
+    @property
+    def off(self):
+        """If note-off."""
+        return self.velocity == 0.
 
     def __str__(self):
-        return 'Note(frequency=%.1f, velocity=%.1f, pitch=%d)' % self
-        #return 'Note(pitch=%d, velocity=%.1f)' % (self.pitch, self.velocity)
+        return 'Note(pitch=%d, velocity=%.1f, frequency=%.1f Hz)' % self
