@@ -12,22 +12,6 @@ from klang.messages import Note
 from klang.music.tunings import EQUAL_TEMPERAMENT, TEMPERAMENTS
 
 
-SILENT = 0.
-"""float: Silent velocity value."""
-
-LOUDER = .1
-"""float: Louder increment."""
-
-QUIETER = -.1
-"""float: Quieter decrement."""
-
-TEMPERAMENTS = list(TEMPERAMENTS.values())
-"""list: Temperament values. Makes the first 10 temperament accessible."""
-
-DIGITS = set(string.digits)
-"""set: String digits."""
-
-
 class Keyboard(Block):
 
     """Base version of keyboard input."""
@@ -74,6 +58,7 @@ class Keyboard(Block):
 
     def update(self):
         pass
+        # Dummy. Override abstract base method
 
     def __str__(self):
         return '%s(%s)' % (
@@ -98,6 +83,18 @@ class MusicalKeyboard(Keyboard):
     }
     """dict: Keyboard character (str) -> Pitch number."""
 
+    SILENT = 0.
+    """float: Silent velocity value."""
+
+    LOUDER = .1
+    """float: Louder increment."""
+
+    QUIETER = -.1
+    """float: Quieter decrement."""
+
+    TEMPERAMENTS = list(TEMPERAMENTS.values())
+    """list: Temperament values. Makes the first 10 temperament accessible."""
+
     def __init__(self, suppress=False, others=False,
                  defaultTemperament=EQUAL_TEMPERAMENT):
         """Kwargs:
@@ -119,7 +116,7 @@ class MusicalKeyboard(Keyboard):
         """Play music note (note-on and note-off)."""
         pitch = self.CHAR_2_BASE_PITCH[char] + self.octave * DODE
         frequency = self.temperament.pitch_2_frequency(pitch)
-        velocity = self.velocity if noteOn else SILENT
+        velocity = self.velocity if noteOn else self.SILENT
         note = Note(pitch, velocity=velocity, frequency=frequency)
         self.output.send(note)
 
@@ -138,10 +135,10 @@ class MusicalKeyboard(Keyboard):
         """Increase / decrease current velocity."""
         if char == 'c':
             fmt = 'Decrease velocity to %.1f'
-            vel = self.velocity + QUIETER
+            vel = self.velocity + self.QUIETER
         else:
             fmt = 'Increased velocity to %.1f'
-            vel = self.velocity + LOUDER
+            vel = self.velocity + self.LOUDER
 
         self.velocity = clip(vel, .1, 1.)
         print(fmt % self.velocity)
@@ -178,7 +175,7 @@ class MusicalKeyboard(Keyboard):
             if char in {'c', 'v'}:
                 return self.change_velocity(char)
 
-            if char in DIGITS:  # None in string.digits would fail!
+            if char in set(string.digits):
                 return self.change_temperament(char)
 
         if self.others:

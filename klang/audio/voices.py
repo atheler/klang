@@ -75,8 +75,7 @@ class OscillatorVoice(Voice):
 
     def process_note(self, note):
         super().process_note(note)
-        noteOn = (note.velocity > 0)
-        if noteOn:
+        if note.on:
             self.oscillator.frequency.set_value(note.frequency)
 
     def update(self):
@@ -89,6 +88,6 @@ class OscillatorVoice(Voice):
 
     def __deepcopy__(self, memo):
         return type(self)(
-                envelope=copy.deepcopy(self.envelope),
-                oscillator=copy.deepcopy(self.oscillator),
+            envelope=copy.deepcopy(self.envelope),
+            oscillator=copy.deepcopy(self.oscillator),
         )

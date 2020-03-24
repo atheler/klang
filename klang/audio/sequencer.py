@@ -82,7 +82,7 @@ class Sequencer(Block):
             for channel, value in enumerate(self.pattern.T[idx]):
                 if value > 0:
                     frequency = EQUAL_TEMPERAMENT.pitch_2_frequency(value)
-                    note = Note(frequency, velocity=1., pitch=value)
+                    note = Note(pitch=value, velocity=1., frequency=frequency)
                     self.outputs[channel].send(note)
                     self.activeNotes.append(
                         (self.currentPhase + self.noteDuration * dt, channel, note)

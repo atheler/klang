@@ -378,8 +378,7 @@ class SampleVoice(Voice):
 
     def process_note(self, note):
         super().process_note(note)
-        noteOn = (note.velocity > 0)
-        if noteOn:
+        if note.on:
             self.sample.rewind()
             freq = note.frequency / self.baseFrequency
             self.sample.set_playback_speed(freq)

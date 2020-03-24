@@ -57,11 +57,8 @@ class NoteScheduler:
     Notes get inserted-sorted according to chosen policy.
     """
 
-    VALID_POLICIES = {'newest', 'oldest', 'lowest', 'highest'}
-    """set: Valid policy values."""
-
     def __init__(self, policy='newest'):
-        assert policy in self.VALID_POLICIES
+        assert policy in {'newest', 'oldest', 'lowest', 'highest'}
         self.policy = policy
         self.couter = itertools.count()
         self.notes = list()
@@ -216,7 +213,7 @@ class Kick(Block):
 
     def update(self):
         for note in self.input.receive():
-            if note.pitch > 0 and note.velocity > 0:
+            if note.pitch > 0 and note.on:
                 self.currentTime = 0.
                 self.currentPhase = 0.
 

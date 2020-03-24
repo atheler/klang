@@ -108,13 +108,13 @@ class _ValueContainer:
         """Set value."""
         self._value = value
 
-    def set_value(self, value):
-        """Get value."""
-        self._value = value
-
     def get_value(self):
         """Set value."""
         return self._value
+
+    def set_value(self, value):
+        """Get value."""
+        self._value = value
 
 
 class Input(_Input, _ValueContainer):
@@ -185,10 +185,6 @@ class MessageInput(_Input, _MessageQueue):
     def __init__(self, owner=None):
         super().__init__(owner=owner)
         _MessageQueue.__init__(self)
-
-    def push(self, message):
-        """Push message to queue."""
-        self.queue.append(message)
 
     def receive(self):
         """Iterate over received messages."""
