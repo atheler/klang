@@ -61,10 +61,6 @@ def is_irrational(metre):
     return not is_dyadic(metre)
 
 
-assert not is_irrational(create_metre(3, 4))
-assert is_irrational(create_metre(3, 5))
-
-
 def is_fractional(metre):
     """Check if fractional metre."""
     return metre.numerator % 1 != 0  # TODO(atheler): Kind of redundant in this fraction based setting.
@@ -81,13 +77,6 @@ def is_complex(metre):
     return True
 
 
-assert not is_complex(create_metre(4, 4))
-assert not is_complex(create_metre(3, 4))
-assert not is_complex(create_metre(6, 8))
-assert is_complex(create_metre(5, 4))
-assert is_complex(create_metre(7, 8))
-
-
 def is_compound(metre):
     """Check if compound metre. E.g. 6/8, 9/8."""
     if metre.numerator < 6:
@@ -96,23 +85,6 @@ def is_compound(metre):
     return is_divisible(metre.numerator, TRIPLE)
 
 
-assert is_compound(create_metre(6, 8))
-assert is_compound(create_metre(9, 8))
-assert is_compound(create_metre(12, 8))
-assert not is_compound(create_metre(3, 4))
-assert not is_compound(create_metre(4, 4))
-
-
 def is_simple(metre):
     """Check if simple metre."""
     return metre.numerator in {DUPLE, TRIPLE, QUAD}
-
-
-assert is_simple(create_metre(4, 4))
-assert is_simple(create_metre(3, 4))
-assert is_simple(create_metre(2, 4))
-assert is_simple(create_metre(3, 8))
-assert is_simple(create_metre(2, 2))
-assert not is_simple(create_metre(6, 8))
-assert not is_simple(create_metre(12, 8))
-assert not is_simple(create_metre(9, 4))
