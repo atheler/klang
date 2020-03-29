@@ -50,7 +50,7 @@ class TestLfo(unittest.TestCase):
         lfo = Lfo(frequency=freq)
 
         t = DT * np.arange(BUFFER_SIZE)
-        ref = np.sin(TAU * freq * t)
+        ref = np.sin(TAU * freq * t - .25 * TAU)
         ref = (ref + 1.) / 2.
         lfo.update()
 

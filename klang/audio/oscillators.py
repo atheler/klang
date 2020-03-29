@@ -29,6 +29,9 @@ class Phasor(Block):
         self.output._value += delta
         self.output._value %= TAU
 
+    def __str__(self):
+        return '%s(%.1f Hz)' % (type(self).__name__, self.frequency)
+
     def __deepcopy__(self, memo):
         return type(self)(
             frequency=self.frequency,
@@ -78,6 +81,9 @@ class Oscillator(Block):
         self.output.set_value(values)
         self.phasor.update()
 
+    def __str__(self):
+        return '%s(%.1f Hz)' % (type(self).__name__, self.phasor.frequency)
+
     def __deepcopy__(self, memo):
         return type(self)(
             frequency=self.frequency,
@@ -92,10 +98,14 @@ class Lfo(Oscillator):
     """Simple low frequency oscillator (LFO). Same as Oscillator but output
     value range is [0., 1.].
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.phasor.output._value -= TAU/4  # So that we start at 0
 
     def update(self):
         samples = self.sample()
         self.output.set_value((samples + 1.) / 2.)
+        self.phasor.update()
 
 
 class FmOscillator(Oscillator):
