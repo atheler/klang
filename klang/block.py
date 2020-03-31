@@ -25,21 +25,21 @@ class Block:
     """Block base class.
 
     Attributes:
-        name (str): Custom name of the owner (if any).
         inputs (list of klang.connections.Input): Input connection.
         outputs (list of klang.connections.Output): Output connection.
+        name (str): Custom name of the owner (if any).
     """
 
-    def __init__(self, name='', nInputs=0, nOutputs=0):
+    def __init__(self, nInputs=0, nOutputs=0, name=''):
         """
         Kwargs:
             nInputs (int): Number of inputs.
             nOutputs (int): Number of outputs.
             name (str): Custom name of the owner.
         """
-        self.name = name
         self.inputs = [Input(owner=self) for _ in range(nInputs)]
         self.outputs = [Output(owner=self) for _ in range(nOutputs)]
+        self.name = name
 
     @property
     def nInputs(self):
@@ -72,7 +72,8 @@ class Block:
         return
 
     def __str__(self):
+        infos = []
         if self.name:
-            return '%s(%r)' % (self.__class__.__name__, self.name)
+            infos.append('name: %r' % self.name)
 
-        return self.__class__.__name__
+        return '%s(%s)' % (type(self).__name__, ', '.join(infos))
