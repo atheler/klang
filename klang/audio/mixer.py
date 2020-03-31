@@ -6,7 +6,6 @@ from klang.constants import MONO, STEREO
 from klang.math import clip
 
 
-
 class Mixer(Block):
 
     """Mono mixer with channel gains."""
@@ -14,6 +13,7 @@ class Mixer(Block):
     def __init__(self, nInputs=2, nOutputs=MONO, gains=None):
         if gains is None:
             gains = nInputs * [1.]
+
         assert nOutputs in {MONO, STEREO}
         assert len(gains) == nInputs
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)

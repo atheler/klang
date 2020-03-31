@@ -16,29 +16,20 @@ NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 """int: Nyquist frequency."""
 
 
-def _read_only(func):
-    """Make returned numpy array from func read-only."""
-    @functools.wraps(func)
-    def decorated_func(*args, **kwargs):
-        arr = func(*args, **kwargs)
-        arr.setflags(write=False)
-        return arr
-
-    return decorated_func
-
-
 @functools.lru_cache()
-@_read_only
 def get_silence(shape):
     """Get some silence. All zero array. Cached."""
-    return np.zeros(shape)
+    arr = np.zeros(shape)
+    arr.setflags(write=False)
+    return arr
 
 
 @functools.lru_cache()
-@_read_only
 def get_time(length, dt=DT):
     """Get time values. Cached."""
-    return dt * np.arange(length)
+    arr = dt * np.arange(length)
+    arr.setflags(write=False)
+    return arr
 
 
 MONO_SILENCE = get_silence(BUFFER_SIZE)

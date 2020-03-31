@@ -34,7 +34,6 @@ class Connectable:
     def __init__(self, owner=None, singleConnection=False):
         self.owner = owner
         self.singleConnection = singleConnection
-
         self.connections = set()
 
     @property

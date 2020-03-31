@@ -16,7 +16,12 @@ from klang.ring_buffer import RingBuffer
 
 
 def blend(a, b, x):
-    """Dry / wet blend two signals together."""
+    """Dry / wet blend two signals together.
+
+    Usage:
+        >>> blend(np.zeros(4), np.ones(4), .5)
+        array([0.5, 0.5, 0.5, 0.5])
+    """
     return (1. - x) * a + x * b
 
 

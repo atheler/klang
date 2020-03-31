@@ -98,9 +98,6 @@ class Lfo(Oscillator):
     """Simple low frequency oscillator (LFO). Same as Oscillator but output
     value range is [0., 1.].
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.phasor.output._value -= TAU/4  # So that we start at 0
 
     def update(self):
         samples = self.sample()
