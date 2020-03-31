@@ -10,7 +10,7 @@ import numpy as np
 from config import BUFFER_SIZE
 from klang.audio import MONO_SILENCE
 from klang.audio.envelope import sample_exponential_decay, D
-from klang.audio.oscillators import sample_wave
+from klang.audio.waves import sample_wave
 from klang.block import Block
 from klang.connections import MessageInput
 

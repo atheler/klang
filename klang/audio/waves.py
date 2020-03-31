@@ -3,9 +3,12 @@
 Note:
   - scipy.signal waveform functions are quite slow.
 """
+import warnings
+
 import numpy as np
 
-from klang.audio import DT, T
+from config import BUFFER_SIZE
+from klang.audio import DT, T, get_time
 from klang.constants import TAU
 from klang.math import wrap
 
@@ -44,7 +47,9 @@ WAVE_FUNCTIONS = {
 }
 
 
-def sample_wave(frequency, startPhase=0., wave_func=np.sin):
+def sample_wave(frequency, startPhase=0., wave_func=np.sin, shape=BUFFER_SIZE):
     """Sample wave function."""
-    phase = TAU * frequency * T + startPhase
+    warnings.warn('sample_wave() function to be deprecated?')
+    t = get_time(shape)
+    phase = TAU * frequency * t + startPhase
     return wave_func(phase), wrap(phase[-1] + TAU * frequency * DT)

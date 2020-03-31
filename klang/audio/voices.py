@@ -76,7 +76,8 @@ class OscillatorVoice(Voice):
     def process_note(self, note):
         super().process_note(note)
         if note.on:
-            self.oscillator.frequency.set_value(note.frequency)
+            #self.oscillator.frequency.set_value(note.frequency)
+            self.oscillator.frequency = note.frequency
 
     def update(self):
         super().update()
