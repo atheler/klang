@@ -5,3 +5,4 @@ PyAudio
 pynput
 samplerate
 beautifulsoup4
+python-rtmidi
