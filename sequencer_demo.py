@@ -2,7 +2,7 @@
 from klang.audio.effects import Delay
 from klang.audio.klanggeber import KlangGeber
 from klang.audio.mixer import Mixer
-from klang.audio.sequencer import Sequencer, random_sequence
+from klang.audio.sequencer import Sequencer, random_pattern
 from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer, MonophonicSynthesizer
 
 
@@ -16,7 +16,7 @@ TEMPO = 120
 PATTERN = [
     [ 60, 0, 0, 60, 0, 0, 60, 0, 60, 0, 0, 60, 0, 60, 0, 60, ],  # Kick drum
     4 * [0, 0, 127, 0],  # Hi-Hat
-    #random_sequence(16, 5),
+    #random_pattern(16, 5),
     [65, 70, 65, 68, 72, 65, 70, 65, 68, 72, 65, 70, 65, 68, 72, 65],  # Synthesizer
 ]
 #FILEPATH = 'klang_output.wav'
@@ -25,7 +25,8 @@ FILEPATH = None
 seq = Sequencer(
     PATTERN,
     tempo=TEMPO,
-    noteDuration=.8
+    #noteDuration=.8
+    relNoteDuration=.8
 )
 
 kick = Kick(decay=.8)

@@ -2,138 +2,200 @@
 import collections
 import itertools
 import random
+import time
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.audio import DT
+from klang.audio.oscillators import Phasor
 from klang.block import Block
-from klang.connections import MessageOutput
+from klang.connections import MessageInput, MessageOutput
 from klang.constants import TAU
+from klang.math import is_divisible
 from klang.messages import Note
-from klang.music.tempo import angular_velocity
-from klang.music.tunings import EQUAL_TEMPERAMENT
+from klang.music.metre import FOUR_FOUR_METRE, number_of_beats
+from klang.music.tempo import bar_period
 
 
-DEFAULT_PATTERN = np.zeros(16)
-PASS_THROUGH = lambda phase: phase
-
-
-def pie_slice_number(angle, nPieces):
-    """Get slice segment index for a given angle and number of pieces."""
-    return int((angle % TAU) / TAU * nPieces)
-
-
-class Sequencer(Block):
-
-    """Sequencer for pattern playback with an output per pattern line.
-
-    TODO:
-      - Proper / useful way to do sequencing?
-      - Pattern SKIP value (aka. multiple currentPhases).
-      - Micro rhythms.
-    """
-
-    def __init__(self, pattern=DEFAULT_PATTERN, tempo=120., noteDuration=.5,
-                 microRhythm=PASS_THROUGH):
-        #assert 0 <= noteDuration <= 1
-        super().__init__()
-        self.pattern = np.atleast_2d(pattern)
-        self.tempo = tempo
-        self.noteDuration = noteDuration
-        self.microRhythm = microRhythm
-
-        self.outputs = [
-            MessageOutput(owner=self) for _ in range(len(pattern))
-        ]
-        self.currentPhase = 0.
-        self.prevIndex = None
-        self.activeNotes = collections.deque()
-
-    @property
-    def nChannels(self):
-        """Number of channels."""
-        return self.pattern.shape[0]
-
-    @property
-    def nSteps(self):
-        """Number of sequencer steps."""
-        return self.pattern.shape[1]
-
-    def turn_off_outdated_notes(self):
-        """Send note-off messages for outdated notes."""
-        while self.activeNotes:
-            end, channel, note = self.activeNotes[0]  # Peek
-            if self.currentPhase < end:
-                break
-
-            noteOff = note._replace(velocity=0.)
-            self.outputs[channel].send(noteOff)
-            self.activeNotes.popleft()
-
-    def update(self):
-        self.turn_off_outdated_notes()
-        #phase = self.microRhythm(self.currentPhase)
-        phase = self.currentPhase
-        idx = pie_slice_number(phase, self.nSteps)
-        if idx != self.prevIndex:
-            dt = TAU / self.nSteps
-            for channel, value in enumerate(self.pattern.T[idx]):
-                if value > 0:
-                    frequency = EQUAL_TEMPERAMENT.pitch_2_frequency(value)
-                    note = Note(pitch=value, velocity=1., frequency=frequency)
-                    self.outputs[channel].send(note)
-                    self.activeNotes.append(
-                        (self.currentPhase + self.noteDuration * dt, channel, note)
-                    )
-
-            self.prevIndex = idx
-
-        omega = angular_velocity(self.tempo)
-        self.currentPhase += DT * BUFFER_SIZE * omega
-
-    def __str__(self):
-        return '%s(%.1f BPM, %d channels, %d steps)' % (
-            self.__class__.__name__,
-            self.tempo,
-            self.nChannels,
-            self.nSteps,
-        )
-
-
-if __name__ == '__main__':
-    duration = 4.
-    pattern = [
-        [ 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 ],
-        [ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 ],
-        [ 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0 ],
-    ]
-
-    seq = Sequencer(pattern)
-    print(seq)
-
-    length = int(duration * SAMPLING_RATE)
-    #t = DT * np.arange(length)
-
-    for i in range(length // BUFFER_SIZE):
-        seq.update()
-        for out in seq.outputs:
-            queue = out.get_value()
-            while queue:
-                print(queue.popleft())
-
-    plt.show()
-
-
-def random_sequence(length, period=None, minVal=60, maxVal=72):
+def random_pattern(length, period=None, minVal=60, maxVal=72):
     """Generate random sequence for given length with cycle period."""
     if period is None:
         period = length
 
-    cycle = itertools.cycle([random.randint(minVal, maxVal) for _ in range(period)])
+    cycle = itertools.cycle([
+        random.randint(minVal, maxVal) for _ in range(period)
+    ])
     seq = []
     while len(seq) < length:
         seq.append(next(cycle))
 
     return seq
+
+
+def pizza_slice_number(angle, nSlices):
+    """Get slice number for a given angle and a total number of pieces."""
+    return int((angle % TAU) / TAU * nSlices)
+
+
+class PizzaSlicer(Block):
+
+    """Circular phase edge detector. Input phase -> discrete index messages."""
+
+    def __init__(self, nSlices):
+        super().__init__(nInputs=1)
+        self.nSlices = nSlices
+        self.currentIdx = -1
+        self.outputs = [MessageOutput(owner=self)]
+
+    def increment(self):
+        """Increment current index by one."""
+        self.currentIdx = (self.currentIdx + 1) % self.nSlices
+
+    def update(self):
+        phase = self.input.value
+        idx = pizza_slice_number(phase, self.nSlices)
+        missing = (idx - self.currentIdx) % self.nSlices
+        for _ in range(missing):
+            self.increment()
+            self.output.send(self.currentIdx)
+
+    def __str__(self):
+        return '%s(nSlices: %s)' % (type(self).__name__, self.nSlices)
+
+
+class PatternLookup(Block):
+
+    """Pattern lookup. Index -> Note generator. Also note-off via note
+    duration.
+    """
+
+    clock = time.time
+
+    def __init__(self, pattern, noteDuration=.1234):
+        super().__init__()
+        self.pattern = pattern
+        self.noteDuration = noteDuration
+        self.inputs = [MessageInput(owner=self)]
+        self.outputs = [MessageOutput(owner=self)]
+        self.activeNotes = collections.deque()
+
+    def outdated_notes(self, now):
+        """Iterate over outdated notes."""
+        while self.activeNotes:
+            end, note = self.activeNotes[0]  # Peek
+            if now < end:
+                return
+
+            yield note
+            self.activeNotes.popleft()
+
+    def update(self):
+        now = self.clock()
+        for note in self.outdated_notes(now):
+            noteOff = note._replace(velocity=0.)
+            self.output.send(noteOff)
+
+        for msg in self.input.receive():
+            value = self.pattern[msg]
+            if not value:
+                continue
+
+            note = Note(pitch=value, velocity=1.)
+            self.activeNotes.append((now + self.noteDuration, note))
+            self.output.send(note)
+
+    def __str__(self):
+        return '%s(%s, noteDuration: %.1f)' % (
+            type(self).__name__,
+            self.pattern,
+            self.noteDuration,
+        )
+
+
+class Sequence(Block):
+
+    """Single channel sequence.
+
+    Three internal blocks with optional external MicroRhythm:
+
+        Phasor  ->  PizzaSlicer -> PatternLookup.
+               |  ^
+               v  |
+            MicroRhythm
+    """
+
+    def __init__(self, pattern, tempo=120., relNoteDuration=.5,
+                 metre=FOUR_FOUR_METRE, beatValue=None):
+        """Args:
+            pattern (list): Sequence pattern.
+
+        Kwargs:
+            tempo (float): Beats per minute.
+            relNoteDuration (float): Note duration relative to cell size.
+            metre (Fraction): Time signature.
+            beatValue (Fraction): Beat value.
+        """
+        self.validate_pattern(pattern, metre, beatValue)
+        super().__init__()
+
+        # Phasor
+        barPeriod = bar_period(tempo, metre, beatValue)
+        self.phasor = Phasor(frequency=1. / barPeriod)
+
+        # Pizza slicer
+        nSteps = len(pattern)
+        self.pizza = PizzaSlicer(nSlices=nSteps)
+        self.phasor.output.connect(self.pizza.input)
+
+        # Lookup
+        noteDuration = relNoteDuration * barPeriod / nSteps
+        self.lookup = PatternLookup(pattern, noteDuration)
+        self.pizza.output.connect(self.lookup.input)
+        self.outputs = [self.lookup.output]
+
+    @property
+    def nSteps(self):
+        """Number of steps."""
+        return self.lookup.pattern.shape[0]
+
+    @staticmethod
+    def validate_pattern(pattern, metre, beatValue=None):
+        """Validate pattern. Does it fit on the metre?"""
+        nBeats = number_of_beats(metre, beatValue)
+        if not is_divisible(len(pattern), nBeats):
+            msg = 'Can not map pattern %s onto metre' % pattern
+            raise ValueError(msg)
+
+    def connect_micro_rhythm(self, microRhythm):
+        """Insert micro rhythm block between phasor and PizzaSlicer."""
+        self.phasor.output.disconnect(self.pizza.input)
+        self.phasor.output.connect(microRhythm.input)
+        microRhythm.output.connect(self.pizza.input)
+
+    def update(self):
+        pass  # Do nothing! Update is taken care of via the output connection!
+
+    def __str__(self):
+        return '%s(pattern: %s)' % (type(self).__name__, self.lookup.pattern)
+
+
+class Sequencer(Block):
+
+    """Multi channel sequencer.
+
+    TODO:
+      - Phasor sync?
+    """
+
+    def __init__(self, pattern, *args, **kwargs):
+        super().__init__()
+        self.sequences = [Sequence(ptr, *args, **kwargs) for ptr in pattern]
+        self.outputs = [seq.output for seq in self.sequences]
+
+    @property
+    def nChannels(self):
+        """Number of channels."""
+        return len(self.sequences)
+
+    def update(self):
+        pass  # Do nothing! Update is taken care of via the output connections!
+
+    def __str__(self):
+        return '%s(channels: %d)' % (type(self).__name__, self.nChannels)

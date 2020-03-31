@@ -1,6 +1,5 @@
 """Rhyhtm related stuff.
 
-
 Micro rhythms as tempo deviations.
 
 omega(phi) = 1. + omega^~(phi)
@@ -11,42 +10,16 @@ Euclidian Rhyhtm
   - https://github.com/WilCrofter/Euclidean_Rhythms/blob/master/euclidean_rhythms.py
   - https://pdfs.semanticscholar.org/c652/d0a32895afc5d50b6527447824c31a553659.pdf
 """
+import fractions
+
 import numpy as np
 import scipy.interpolate
 
 from klang.constants import TAU
-from klang.math import clip
-from klang.music.metre import FOUR_FOUR_METRE
 from klang.music.note_formatting import cumsum
 from klang.music.note_values import QUARTER_NOTE
-
-
-def swing(ratio, metre=FOUR_FOUR_METRE):
-    """Create swing function. For now only swing ratios between [.5, 2] supported.
-
-    TODO:
-      - Different velocity deviation function for more swing?
-
-    Swing function derivation:
-        t is in radian (\phi already taken...)
-
-        Basic swing curve:
-            \omega(t) = 1 + a\sin(n t)
-            \phi(t) = \int_{0}^{t} \omega(k) \mathrm{d}k = t + \frac{a-a\cos(nt))}{n}
-
-        Amplitude a can be computed from the ratio r in the following way:
-            t_{r} = \frac{r \tau}{1 + r}
-
-        Then solve for a
-            \phi(t_{r})
-    """
-    # Determine swing amplitude
-    firstOffBeat = TAU * ratio / (1. + ratio)
-    amp = (TAU / 2 - firstOffBeat) / (1. - np.cos(firstOffBeat))
-    assert abs(amp) < 1., 'To much swing!'
-
-    n = metre.denominator
-    return lambda phi: phi + amp * (1. - np.cos(n * phi)) / n
+from klang.audio.effects import blend
+from klang.block import Block
 
 
 def _compute_bitmap(num_slots, num_pulses):
@@ -109,50 +82,88 @@ def euclidian_rhythm(nPulses, nSlots):
     return list(reversed(bitmap))
 
 
-class MicroRhythm:
+def format_notes(notes):
+    """Usage:
+        >>> print(format_notes([QUARTER_NOTE, EIGHT_NOTE, SIXTEENTH_NOTE]))
+        [1/4, 1/8, 1/16]
+    """
+    if isinstance(notes, fractions.Fraction):
+        return str(notes)
+
+    return '[%s]' % ', '.join(map(str, notes))
+
+
+def harmonize(func, phase, n):
+    """Extend micro rhythm to full circle TAU."""
+    values = func(n * phase % TAU)
+    offset = int(n * phase / TAU) * TAU
+    return (values + offset) / n
+
+
+def phrase(func, phase, phrasing, n):
+    """Evaluate micro rhythm phase for some phrasing."""
+    straight = phase % TAU
+    groove = harmonize(func, phase, n)
+    return blend(
+        straight,
+        groove,
+        x=phrasing,
+    )
+
+
+class MicroRhyhtm(Block):
 
     """N tuplet rhythm pattern.
 
     http://general-theory-of-rhythm.org/basic-principles/
     """
 
-    def __init__(self, notes, kind='linear', beatValue=QUARTER_NOTE):
-        """Args:
-            notes (list): Note values.
-
-        Kwargs:
-            kind (str): Interpolation kind.
-        """
+    def __init__(self, notes, phrasing=1., beatValue=QUARTER_NOTE,
+                 kind='linear', name=''):
+        super().__init__(nInputs=2, nOutputs=1)
         self.notes = notes
         self.beatValue = beatValue
+        self.name = name
+        self.phrasing = self.inputs[1]
+        self.phrasing.set_value(phrasing)
+        self.interpolator = self.create_phase_interpolator(notes, kind)
 
-        # Interpolation
-        n = len(notes)
+    @staticmethod
+    def create_phase_interpolator(notes, kind):
+        """Create micro rhythm phase interpolator from note pattern."""
+        nNotes = len(notes)
         duration = sum(notes)
         starts = cumsum(notes)
         angles = (TAU / duration * np.r_[starts, duration]).astype(float)
-        self.interpolator = scipy.interpolate.interp1d(
+        return scipy.interpolate.interp1d(
             angles,
-            np.linspace(0, TAU, n+1),
+            np.linspace(0, TAU, nNotes + 1),
             kind,
         )
 
-    def sample(self, phi, phrasing=1.):
-        phi = phi % TAU
-        phrasing = clip(phrasing, 0., 1.)
-        return phrasing * self.interpolator(phi) + (1. - phrasing) * phi
+    def warp(self, phase, n=None):
+        """Distort phase according to micro rhythm pattern.
 
-    def __call__(self, phi, phrasing=1.):
-        return self.sample(phi, phrasing)
+        Kwargs:
+            n (int): Harmonics multiplier. How many times to apply micro rhythm
+                on the interval [0, TAU).
+            """
+        n = n or 1 // self.beatValue
+        print('phrasing:', self.phrasing.value)
+        return phrase(self.interpolator, phase, self.phrasing.value, n)
 
-    def magic_method_without_a_name_yet(self, phi, n, phrasing=1.):
-        """Kind of a rhythmic up-scaling / cycling. Apply this rhythm one-beat
-        cycle to multiple beats `n`. Repeat?
-        """
-        pass
+    def update(self):
+        phase = self.input.value
+        self.output.set_value(self.warp(phase))
 
-    def harmonize(self, phi, n=1, phrasing=1.):
-        phi = phi % TAU
-        values = self.sample(n * phi, phrasing)
-        offset = (n * phi / TAU).astype(int) * TAU
-        return (values + offset) / n
+    def __str__(self):
+        infos = []
+        if self.name:
+            infos.append(repr(self.name))
+
+        infos.extend([
+            format_notes(self.notes),
+            'phrasing: %.1f' % self.phrasing.value,
+            'beatValue: %s' % self.beatValue,
+        ])
+        return '%s(notes: %s)' % (type(self).__name__, ', '.join(infos))
