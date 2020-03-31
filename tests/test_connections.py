@@ -169,6 +169,19 @@ class TestMessageInputOutput(unittest.TestCase):
         self.assertEqual(input.receive_latest(), 9)
         self.assertEqual(len(input.queue), 0)
 
+    def test_one_to_many(self):
+        src = MessageOutput()
+        destinations = [MessageInput(), MessageInput(), MessageInput()]
+        for dst in destinations:
+            src.connect(dst)
+
+        messages = ['This', 'is', 'it']
+        for msg in messages:
+            src.send(msg)
+
+        for dst in destinations:
+            self.assertEqual(list(dst.receive()), messages)
+
 
 if __name__ == '__main__':
     unittest.main()
