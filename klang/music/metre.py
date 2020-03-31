@@ -52,6 +52,9 @@ TWO_TWO_METRE = create_metre(2, 2)
 SIX_EIGHT_METRE = create_metre(6, 8)
 """Fraction: 6 / 8 time signature."""
 
+SEVEN_EIGHT_METRE = create_metre(7, 8)
+"""Fraction: 7 / 8 time signature."""
+
 NINE_EIGHT_METRE = create_metre(9, 8)
 """Fraction: 9 / 8 time signature."""
 
@@ -88,3 +91,46 @@ def is_compound(metre):
 def is_simple(metre):
     """Check if simple metre."""
     return metre.numerator in {DUPLE, TRIPLE, QUAD}
+
+
+def default_beat_value(metre):
+    """Default / "best guess" beat value for a given metre.
+
+    Args:
+        metre (Fraction): Time signature.
+
+    Returns:
+        Fraction: Beat value.
+
+    Usage:
+        >>> simple = create_metre(4, 4)
+        ... default_beat_value(simple)
+        Fraction(1, 4)
+
+        >>> waltz = create_metre(3, 4)
+        ...default_beat_value(waltz)
+        Fraction(1, 4)
+
+        >>> compound = create_metre(6, 8)
+        ... default_beat_value(compound)
+        Fraction(3, 4)
+
+        >>> complex_ = create_metre(7, 8)
+        ... default_beat_value(complex_)
+        Fraction(2, 8)
+    """
+    if is_compound(metre):
+        return create_metre(3, metre.denominator)
+
+    if is_complex(metre):
+        return create_metre(2, metre.denominator)
+
+    return create_metre(1, metre.denominator)
+
+
+def number_of_beats(metre, beatValue=None):
+    """Number of beats in a bar."""
+    if beatValue is None:
+        beatValue = default_beat_value(metre)
+
+    return metre / beatValue
