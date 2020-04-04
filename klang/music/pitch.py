@@ -31,11 +31,13 @@ ACCIDENTAL_SHIFTS = {
 
 def frequency_2_pitch(frequency, kammerton=KAMMERTON):
     """Frequency to MIDI note number (equal temperament)."""
+    # TODO(atheler): To be deprecated?
     return 69 + 12 * np.log2(frequency / kammerton)
 
 
 def pitch_2_frequency(noteNumber, kammerton=KAMMERTON):
     """MIDI note number to frequency (equal temperament)."""
+    # TODO(atheler): To be deprecated?
     return (2 ** ((noteNumber - 69) / 12)) * kammerton
 
 

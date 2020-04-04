@@ -42,11 +42,13 @@ def pitch_classes_2_chord(pitchClasses):
 
 
 def _invert_up(chord):
+    """Invert chord up. Helper for invert_chord()."""
     lowest, *core = chord
     return core + [lowest + SEMITONES_PER_OCTAVE]
 
 
 def _invert_down(chord):
+    """Invert chord down. Helper for invert_chord()."""
     *core, highest = chord
     return [highest - SEMITONES_PER_OCTAVE] + core
 
@@ -70,8 +72,14 @@ np.testing.assert_equal(invert_chord(MAJOR, inversion=-1), [-5, 0, 4])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=-2), [-8, -5, 0])
 
 
-CHORDS = {
-    name: np.array(data)
-    for name, data
-    in load_music_data_from_csv(CHORDS_FILEPATH).items()
-}
+def _load_chords_from_csv(filepath):
+    """Load chords from CSV file."""
+    chords = {
+        name: np.array(data)
+        for name, data
+        in load_music_data_from_csv(filepath).items()
+    }
+    return chords
+
+
+CHORDS = _load_chords_from_csv(CHORDS_FILEPATH)

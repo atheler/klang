@@ -1,9 +1,8 @@
 """Synthesizer audio blocks."""
 import abc
-import bisect
 import copy
-import itertools
 import heapq
+import itertools
 
 import numpy as np
 
@@ -24,7 +23,7 @@ def sample_pitch_decay(frequency, decay, intensity, t0=0.):
 
 def duplicate_voice(voice, number):
     """Duplicate voice for polyphony."""
-    return [copy.deepcopy(voice) for _ in range(number)]
+    return [copy.deepcopy(voice, memo=None) for _ in range(number)]
 
 
 class Synthesizer(Block):
@@ -32,7 +31,7 @@ class Synthesizer(Block):
     """Synthesizer base class."""
 
     def __init__(self):
-        super().__init__(nInputs=0, nOutputs=1)
+        super().__init__(nOutputs=1)
         self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
 

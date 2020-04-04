@@ -18,6 +18,7 @@ import numpy as np
 import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
+from klang.audio import get_silence
 from klang.audio.envelope import AR
 from klang.audio.voices import Voice
 from klang.block import Block
@@ -131,6 +132,9 @@ class CrudeResampler:
         pass
 
     def read(self, nFrames):
+        """Try to read the next nFrames. samplerate style. Can return less then
+        the requested nFrames!.
+        """
         # Fetch samples
         nSamplesNeeded = int(nFrames / self.ratio)
         data = self.callback(nFrames=nSamplesNeeded)
@@ -289,7 +293,8 @@ class AudioFile(Block):
 
         self.sample = Sample(rate, data, *args, **kwargs)
         self.playing = False
-        self.silence = np.zeros((self.sample.nChannels, BUFFER_SIZE))
+        shape = (self.sample.nChannels, BUFFER_SIZE)
+        self.silence = get_silence(shape)
         self.mute_outputs()
 
     @property
@@ -371,7 +376,8 @@ class SampleVoice(Voice):
 
     """Basic sample voice."""
 
-    def __init__(self, rate, data, baseFrequency=_C_FREQUENCY, envelope=None, *args, **kwargs):
+    def __init__(self, rate, data, baseFrequency=_C_FREQUENCY, envelope=None,
+                 *args, **kwargs):
         super().__init__(envelope or AR(attack=0.00, release=.1))
         self.baseFrequency = baseFrequency
         self.sample = Sample(rate, data, *args, **kwargs)

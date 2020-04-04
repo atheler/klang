@@ -68,7 +68,8 @@ def pack_signals(signals, bufferSize):
             ...
          [LN, RN]]
     """
-    ret = np.empty((bufferSize, len(signals)))
+    shape = (bufferSize, len(signals))
+    ret = np.empty(shape)
     for i, samples in enumerate(signals):
         ret[:, i] = samples
 

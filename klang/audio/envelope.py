@@ -17,26 +17,6 @@ EXP_EPS = 1e-3
 """float: Epsilon precision for exponential envelope curves."""
 
 
-def calculate_slope(duration):
-    """Linear slope for given duration."""
-    if duration == 0:
-        return np.inf
-
-    return 1. / duration
-
-
-def sample_linear_envelope(slope, start=0.):
-    """Sample linear envelope."""
-    if slope == np.inf:
-        return ONES, 1.
-
-    if slope == -np.inf:
-        return MONO_SILENCE, 0.
-
-    signal = (slope * T1 + start).clip(min=0., max=1.)
-    return signal[:-1], signal[-1]
-
-
 def sample_exponential_decay(decay, t0=0.):
     amp = math.exp(-PI / decay * t0)
     signal = amp * np.exp(-PI / decay * T)

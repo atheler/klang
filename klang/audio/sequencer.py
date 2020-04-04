@@ -145,10 +145,10 @@ class Sequence(Block):
         self.phasor.output.connect(self.pizza.input)
 
         # Lookup
-        noteDuration = relNoteDuration * barPeriod / nSteps
-        self.lookup = PatternLookup(pattern, noteDuration)
+        absNoteDuration = relNoteDuration * barPeriod / nSteps
+        self.lookup = PatternLookup(pattern, absNoteDuration)
         self.pizza.output.connect(self.lookup.input)
-        self.outputs = [self.lookup.output]
+        self.outputs = [self.lookup.output]  # Alias output
 
     @property
     def nSteps(self):

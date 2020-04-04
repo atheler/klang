@@ -149,7 +149,6 @@ class MicroRhyhtm(Block):
                 on the interval [0, TAU).
             """
         n = n or 1 // self.beatValue
-        print('phrasing:', self.phrasing.value)
         return phrase(self.interpolator, phase, self.phrasing.value, n)
 
     def update(self):

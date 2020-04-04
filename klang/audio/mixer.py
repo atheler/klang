@@ -17,7 +17,6 @@ class Mixer(Block):
         assert nOutputs in {MONO, STEREO}
         assert len(gains) == nInputs
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)
-
         self.gains = gains
 
     def set_gain(self, channel, gain):
@@ -44,7 +43,6 @@ class StereoMixer(Mixer):
         super().__init__(nInputs, nOutputs=STEREO, gains=gains)
         self.mode = mode
         self.panLaw = panLaw
-
         self.panning = [
             panning_amplitudes(CENTER, self.mode, self.panLaw)
             for _ in range(nInputs)
