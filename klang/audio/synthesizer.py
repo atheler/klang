@@ -12,6 +12,7 @@ from klang.audio.envelope import sample_exponential_decay, D
 from klang.audio.waves import sample_wave
 from klang.block import Block
 from klang.connections import MessageInput
+from klang.audio.oscillators import Chirper
 
 
 def sample_pitch_decay(frequency, decay, intensity, t0=0.):
@@ -209,7 +210,6 @@ class Kick(Block):
         self.currentTime = 0.
         self.currentPhase = 0.
 
-
     def update(self):
         for note in self.input.receive():
             if note.pitch > 0 and note.on:
@@ -220,4 +220,3 @@ class Kick(Block):
         env, self.currentTime = sample_exponential_decay(self.decay, self.currentTime)
         signal, self.currentPhase = sample_wave(frequency, startPhase=self.currentPhase)
         self.output.set_value(env * signal)
-

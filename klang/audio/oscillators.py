@@ -1,9 +1,34 @@
 """Oscillator audio blocks."""
+from scipy.signal.waveforms import _chirp_phase
+
 from config import BUFFER_SIZE
 from klang.audio import DT, get_silence, get_time
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.constants import TAU
+
+
+def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
+    """Create chirp phase. Ascending and descending. Same as
+    scipy.signal.waveforms._chirp_phase with constant frequency extension for
+    t >= tEnd.
+    """
+    if (tEnd <= t[0]) or (freqStart == freqEnd):
+        # Only constant frequency
+        return TAU * freqEnd * t
+
+    phase = _chirp_phase(t, f0=freqStart, t1=tEnd, f1=freqEnd, method=method,
+                         vertex_zero=vertex_zero)
+    if t[-1] < tEnd:
+        # Only chirping
+        return phase
+
+    # Mixture between chirp and constant frequency
+    constFreq = (t >= tEnd)
+    mid = constFreq.argmax()
+    phaseOffset = phase[mid] - TAU * freqEnd * t[mid]
+    phase[mid:] = TAU * freqEnd * t[mid:] + phaseOffset
+    return phase
 
 
 class Phasor(Block):
@@ -91,6 +116,37 @@ class Oscillator(Block):
             startPhase=self.phasor.currentPhase,
             shape=self.shape,
         )
+
+
+class Chirper(Block):
+
+    """Chirp oscillator. Frequency ascend or descend."""
+
+    def __init__(self, startFrequency, duration, endFrequency, method='linear',
+                 wave_func=sine):
+        super().__init__(nOutputs=1)
+        self.startFrequency = startFrequency
+        self.duration = duration
+        self.endFrequency = endFrequency
+        self.method = method
+        self.wave_func = wave_func
+        self.t = get_time(BUFFER_SIZE).copy()
+
+    def reset(self):
+        """Reset chirper to start state."""
+        self.t = get_time(BUFFER_SIZE).copy()
+
+    def update(self):
+        phase = chirp_phase(
+            self.t,
+            self.startFrequency,
+            self.duration,
+            self.endFrequency,
+            self.method,
+        )
+        values = self.wave_func(phase)
+        self.output.set_value(values)
+        self.t += DT * BUFFER_SIZE
 
 
 class Lfo(Oscillator):
