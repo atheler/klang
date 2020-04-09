@@ -1,12 +1,13 @@
 """Audio effects blocks."""
 import math
+import functools
 
 import numpy as np
 import scipy.signal
 import samplerate
 
-from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.audio import NYQUIST_FREQUENCY
+from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
+from klang.audio import NYQUIST_FREQUENCY, get_silence
 from klang.block import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
@@ -93,11 +94,11 @@ class Delay(Block):
     """Simple digital delay."""
 
     MAX_DELAY = 2.
+    """float: Max delay duration / max buffer size."""
 
     def __init__(self, delay=1., feedback=.1, drywet=.5):
         assert delay <= self.MAX_DELAY
         super().__init__(nInputs=1, nOutputs=1)
-        #self.delay = delay
         self.feedback = feedback
         self.drywet = drywet
 
@@ -116,42 +117,139 @@ class Delay(Block):
         self.output.set_value(blend(new, old, self.drywet))
 
 
-class Filter(Block):
+class FilterCoefficients:
 
-    """Second order Butterworth low pass filter.
+    """Cache result of filter design function for different frequencies."""
 
-    Not tested.
+    F_MIN = 20.
+    F_MAX = 20000.
+
+    def __init__(self, design_func, *args, **kwargs):
+        self.design_func = design_func
+        self.args = args
+        self.kwargs = kwargs
+        self.frequencies = np.logspace(
+            np.log2(self.F_MIN),
+            np.log2(self.F_MAX),
+            num=1000,
+            base=2,
+        )
+        self.coefficients = [
+            design_func(*args, Wn=f / NYQUIST_FREQUENCY, **kwargs)
+            for f in self.frequencies
+        ]
+
+    def get_coefficients(self, frequency):
+        i = np.searchsorted(self.frequencies, frequency)
+        length = self.frequencies.shape[0]
+        return self.coefficients[i.clip(0, length-1)]
+
+    def __str__(self):
+        infos = [self.coefficients.design_func.__name__]
+        infos.extend('%s' % arg for arg in self.coefficients.args)
+        infos.extend('%s=%s' % keyvalue for keyvalue in self.coefficients.kwargs.items())
+        return '%s(%s)' % (type(self).__name__, ', '.join(infos))
+
+
+class _Filter:
+
+    """Chunk filterer. Wrapper for scipy.signal.lfilter functions. Chunk-wise
+    filtering with state preservation. Also possible to change filter frequency
+    (via FilterCoefficients).
+
+    Notes:
+      - We use scipy.signal ba coefficients and not sos (10x faster).
     """
 
-    def __init__(self, frequency=1243., order=2):
+    def __init__(self, design_func, *args, **kwargs):
+        self.coefficients = FilterCoefficients(design_func, *args, **kwargs)
+        self.currentCoeffs = ([], [])
+        self.state = []
+        freq = kwargs.get('Wn', .5) * NYQUIST_FREQUENCY
+        self.set_frequency(freq)
+        self.reset()
+
+    def set_frequency(self, frequency):
+        """Set filter cutoff frequency."""
+        self.currentCoeffs = self.coefficients.get_coefficients(frequency)
+
+    def reset(self):
+        """Reset filter state."""
+        self.state = scipy.signal.lfiltic(*self.currentCoeffs, y=[])
+
+    def filter(self, signal):
+        """Filter some signal chunk."""
+        filteredSignal, self.state = scipy.signal.lfilter(
+            *self.currentCoeffs,
+            x=signal,
+            zi=self.state,
+        )
+        return filteredSignal
+
+    def __str__(self):
+        ret = str(self.coefficients)
+        return ret.replace('FilterCoefficients', '_Filter')
+
+
+class Observer:
+
+    """Check if value of connection changed."""
+
+    def __init__(self, connection):
+        assert hasattr(connection, '_value')
+        self.connection = connection
+        self.prevValue = None
+
+    def did_change(self):
+        """Did the value of the connection change?"""
+        value = self.connection.get_value()
+        if self.prevValue == value:
+            return False
+
+        self.prevValue = value
+        return True
+
+
+class Filter(Block):
+
+    """Butterworth filter block."""
+
+    MAX_CHANNELS = STEREO
+    """int: Maximum number of channels (for filter initialization)."""
+
+    def __init__(self, *args, frequency=KAMMERTON,
+                 design_func=scipy.signal.butter, N=2, btype='lowpass',
+                 **kwargs):
         super().__init__(nInputs=2, nOutputs=1)
         _, self.frequency = self.inputs
         self.frequency.set_value(frequency)
-        self.order = order
+        self.filters = [
+            _Filter(design_func, *args, N=N, btype=btype, *args, **kwargs)
+            for _ in range(self.MAX_CHANNELS)
+        ]
+        self.listener = Observer(connection=self.frequency)
 
-        self.coefficients = [1.], [1.]
-        self.zi = np.zeros(1)
-        self.update_coefficients()
-
-    def update_coefficients(self):
-        """Update filter coefficients."""
-        freq = self.frequency.get_value()
-        self.coefficients = scipy.signal.butter(
-            N=self.order,
-            Wn=freq / NYQUIST_FREQUENCY,
-            btype='lowpass',
-        )
-        self.zi = np.zeros(self.order)
+    def update_frequency(self):
+        """Update all internal frequencies to a new cutoff frequency."""
+        freq = float(self.frequency.value)  # Assure scalar
+        for fil in self.filters:
+            fil.set_frequency(freq)
 
     def update(self):
-        samples = self.input.get_value()
-        out, self.zi = scipy.signal.lfilter(
-            *self.coefficients,
-            x=samples,
-            zi=self.zi,
-        )
-        self.output.set_value(out)
+        if self.listener.did_change():
+            self.update_frequency()
 
+        signal = self.input.get_value()
+        if signal.ndim == MONO:
+            fil = self.filters[0]
+            out = fil.filter(signal)
+        else:
+            out = np.array([
+                fil.filter(chunk)
+                for fil, chunk in zip(self.filters, signal)
+            ])
+
+        self.output.set_value(out)
 
 
 class Subsampler(Block):

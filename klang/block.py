@@ -63,17 +63,18 @@ class Block:
 
     @abc.abstractmethod
     def update(self):
-        """Block's run method.
-
-        Trivia:
-            We use 'update' instead of 'run' because of name collision with
-            Python thread's run method.
-        """
+        """Block's update / run / tick method."""
         return
 
     def __str__(self):
         infos = []
         if self.name:
             infos.append('name: %r' % self.name)
+
+        if self.nInputs > 0:
+            infos.append('%d inputs' % self.nInputs)
+
+        if self.nOutputs > 0:
+            infos.append('%d outputs' % self.nOutputs)
 
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
