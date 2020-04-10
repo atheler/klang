@@ -2,9 +2,8 @@
 from klang.audio.effects import Delay
 from klang.audio.klanggeber import KlangGeber
 from klang.audio.mixer import Mixer
-from klang.audio.sequencer import Sequencer, random_pattern
+from klang.audio.sequencer import Sequencer
 from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer, MonophonicSynthesizer
-
 
 from klang.audio.oscillators import Oscillator
 from klang.audio.envelope import AR
@@ -14,7 +13,7 @@ from klang.audio.voices import OscillatorVoice
 # Params
 TEMPO = 120
 PATTERN = [
-    [ 60, 0, 0, 60, 0, 0, 60, 0, 60, 0, 0, 60, 0, 60, 0, 60, ],  # Kick drum
+    [60, 0, 0, 60, 0, 0, 60, 0, 60, 0, 0, 60, 0, 60, 0, 60],  # Kick drum
     4 * [0, 0, 127, 0],  # Hi-Hat
     #random_pattern(16, 5),
     [65, 70, 65, 68, 72, 65, 70, 65, 68, 72, 65, 70, 65, 68, 72, 65],  # Synthesizer
@@ -25,7 +24,6 @@ FILEPATH = None
 seq = Sequencer(
     PATTERN,
     tempo=TEMPO,
-    #noteDuration=.8
     relNoteDuration=.8
 )
 
@@ -34,13 +32,12 @@ hihat = HiHat()
 
 # Create synthesizer
 osc = Oscillator()
-env = AR(.1, .02)
-voice = OscillatorVoice(env, osc)
+env = AR(attack=.1, release=.02)
+voice = OscillatorVoice(envelope=env, oscillator=osc)
 synthesizer = PolyphonicSynthesizer(voice)
 
-mixer = Mixer(nInputs=3, gains=[.7, .1, 1.])
 fx = Delay(delay=.25, feedback=.25)
-
+mixer = Mixer(nInputs=3, gains=[.7, .1, 1.])
 
 with KlangGeber(nOutputs=1, filepath=FILEPATH) as dac:
     seq.output.connect(kick.input)
