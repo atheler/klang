@@ -64,7 +64,7 @@ class Block:
     @abc.abstractmethod
     def update(self):
         """Block's update / run / tick method."""
-        return
+        raise NotImplementedError('Abstract base method!')
 
     def __str__(self):
         infos = []

@@ -1,13 +1,12 @@
 """Audio effects blocks."""
 import math
-import functools
 
 import numpy as np
 import scipy.signal
 import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.audio import NYQUIST_FREQUENCY, get_silence
+from klang.audio import NYQUIST_FREQUENCY
 from klang.block import Block
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
@@ -38,7 +37,7 @@ def sub_sample(array, skip):
 
 
 def bit_crush(samples, nBits):
-    """But crush samples.
+    """Bit crush samples.
 
     Usage:
         >>> bit_crush(np.arange(-4, 4), nBits=1)
@@ -75,7 +74,6 @@ class Tremolo(Block):
         samples = self.input.get_value()
         rate = self.rate.get_value()
         intensity = self.intensity.get_value()
-        print('rate:', rate, ', intensity:', intensity)
 
         # Update LFO
         self.lfo.frequency.set_value(rate)

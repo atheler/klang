@@ -4,6 +4,13 @@ from klang.block import Block
 from klang.connections import MessageInput
 
 
+MIDI_NOTE_OFF = 0b10000000
+"""int: MIDI note off message status byte for MIDI channel 0."""
+
+MIDI_NOTE_ON = 0b10010000
+"""int: MIDI note on message status byte for MIDI channel 0."""
+
+
 def open_midiout(portNumber):
     """Open rtmidi midiout instance. Close it later on!"""
     midiout = rtmidi.MidiOut()
@@ -25,9 +32,9 @@ def open_midiout(portNumber):
 def note_to_midi_message(note, channel=0):
     """Convert klang note to midi message."""
     if note.on:
-        statusByte = 0x90 + channel
+        statusByte = MIDI_NOTE_ON + channel
     else:
-        statusByte = 0x80 + channel
+        statusByte = MIDI_NOTE_OFF + channel
 
     velocity = int(note.velocity * 127)
     return [statusByte, note.pitch, velocity]
