@@ -1,8 +1,9 @@
 """Oscillator audio blocks."""
+import numpy as np
 from scipy.signal.waveforms import _chirp_phase
 
 from config import BUFFER_SIZE
-from klang.audio import DT, get_silence, get_time
+from klang.audio import DT, get_time
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.constants import TAU
@@ -31,90 +32,63 @@ def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
     return phase
 
 
-class Phasor(Block):
+def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
+    """Get phase values for a given frequency and a starting phase. Also
+    supports an array of frequencies (varying frequency). If so has to be
+    BUFFER_SIZE long.
 
-    """Oscillating phase driver."""
+    Args:
+        frequency (float or array): Frequency value(s). If varying frequency
+            these have to correspond to the length argument.
 
-    def __init__(self, frequency=1., startPhase=0.):
-        """Kwargs:
-            frequency (float): Phasor frequency.
-            startPhase (float): Starting phase.
-        """
-        super().__init__(nOutputs=1)
-        self.frequency = frequency
-        self.output.set_value(startPhase)
+    Kwargs:
+        startPhase (float): Starting phase.
+        length (int): Length of returned phase array.
+        dt (float): Time interval.
 
-    @property
-    def currentPhase(self):
-        """Current phase of the phasor."""
-        return self.output.value
+    Returns:
+        tuple: Phase array and next starting phase.
+    """
+    constFrequency = (np.ndim(frequency) == 0)
+    if constFrequency:
+        t = get_time(length + 1, dt)
+        phase = TAU * frequency * t + startPhase
 
-    def update(self):
-        delta = TAU * self.frequency * DT * BUFFER_SIZE
-        self.output._value += delta
-        self.output._value %= TAU
+    else:
+        phase = np.empty(length + 1)
+        phase[0] = startPhase
+        phase[1:] = TAU * dt * np.cumsum(frequency) + startPhase
 
-    def __str__(self):
-        return '%s(%.1f Hz)' % (type(self).__name__, self.frequency)
-
-    def __deepcopy__(self, memo):
-        return type(self)(
-            frequency=self.frequency,
-            startPhase=self.currentPhase,
-        )
+    phase = phase % TAU
+    return phase[:-1], phase[-1]
 
 
 class Oscillator(Block):
-
-    """Wave function oscillator."""
-
-    def __init__(self, frequency=440., wave_func=sine, startPhase=0.,
-                 shape=BUFFER_SIZE):
-        """Kwargs:
-            frequency (float): Oscillator frequency.
-            wave_func (function): Wave function: wave_func(phases) -> values.
-            startPhase (float): Starting phase.
-            shape (int): Output value shape.
-        """
-        assert shape in {1, BUFFER_SIZE}
-        super().__init__(nOutputs=1)
+    def __init__(self, initialFrequency=440., wave_func=sine, startPhase=0.):
+        super().__init__(nInputs=1, nOutputs=1)
         self.wave_func = wave_func
-        self.shape = shape
-
-        silence = get_silence(shape)
-        self.output.set_value(silence)
-        self.phasor = Phasor(frequency, startPhase)
-
-    @property
-    def frequency(self):
-        """Get current frequency."""
-        return self.phasor.frequency
-
-    @frequency.setter
-    def frequency(self, frequency):
-        """Set frequency."""
-        self.phasor.frequency = frequency
+        self.currentPhase = startPhase
+        self.frequency, = self.inputs
+        self.frequency.set_value(initialFrequency)
 
     def sample(self):
-        """Calculate current samples."""
-        t = get_time(self.shape)
-        phase = TAU * self.frequency * t + self.phasor.currentPhase
+        """Get next samples of oscillator and step further."""
+        frequency = self.frequency.value
+        phase, self.currentPhase = sample_phase(frequency, startPhase=self.currentPhase)
         return self.wave_func(phase)
 
     def update(self):
-        values = self.sample()
-        self.output.set_value(values)
-        self.phasor.update()
+        samples = self.sample()
+        self.output.set_value(samples)
 
     def __str__(self):
-        return '%s(%.1f Hz)' % (type(self).__name__, self.phasor.frequency)
+        return '%s(%.1f Hz)' % (type(self).__name__, self.frequency.value)
 
     def __deepcopy__(self, memo):
         return type(self)(
-            frequency=self.frequency,
+            initialFrequency=self.frequency.value,
             wave_func=self.wave_func,
-            startPhase=self.phasor.currentPhase,
-            shape=self.shape,
+            startPhase=self.currentPhase,
         )
 
 
@@ -157,13 +131,39 @@ class Lfo(Oscillator):
 
     def update(self):
         samples = self.sample()
-        self.output.set_value((samples + 1.) / 2.)
-        self.phasor.update()
+        self.output.set_value(.5 * (samples + 1.))
 
 
 class FmOscillator(Oscillator):
-    # TODO(atheler): Make me!
-    pass
+
+    """Frequency modulation oscillator."""
+
+    def __init__(self, initialFrequency=440., intensity=1., modFrequency=10.,
+                 wave_func=sine, startPhase=0.):
+        super().__init__(initialFrequency, wave_func, startPhase)
+        self.intensity = intensity
+        self.modulator = Oscillator(modFrequency, wave_func=wave_func)
+
+    def sample(self):
+        """Get next samples of oscillator and step further."""
+        frequency = self.frequency.value
+        phase, self.currentPhase = sample_phase(frequency, startPhase=self.currentPhase)
+        modSamples = self.modulator.output.value
+        return self.wave_func(phase + self.intensity * modSamples)
+
+    def update(self):
+        self.modulator.update()
+        samples = self.sample()
+        self.output.set_value(samples)
+
+    def __deepcopy__(self, memo):
+        return type(self)(
+            initialFrequency=self.frequency.value,
+            intensity=self.intensity,
+            modFrequency=self.modulator.frequency.value,
+            wave_func=self.wave_func,
+            startPhase=self.currentPhase,
+        )
 
 
 class WavetableOscillator(Oscillator):

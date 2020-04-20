@@ -12,6 +12,9 @@ from config import BUFFER_SIZE, SAMPLING_RATE
 DT = 1. / SAMPLING_RATE
 """float: Sampling interval."""
 
+INTERVAL = DT * BUFFER_SIZE
+"""float: Buffer duration"""
+
 NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 """int: Nyquist frequency."""
 
