@@ -131,18 +131,18 @@ def levenshtein(first, second, deletionCost=1, insertionCost=1, substitutionCost
     nRows = len(first) + 1
     nCols = len(second) + 1
     assert nRows > 1 and nCols > 1
-    H = np.zeros((nRows, nCols), dtype=int)
-    H[:, 0] = np.arange(nRows)
-    H[0, :] = np.arange(nCols)
+    costs = np.zeros((nRows, nCols), dtype=int)
+    costs[:, 0] = np.arange(nRows)
+    costs[0, :] = np.arange(nCols)
     for row, a in enumerate(first, start=1):
         for col, b in enumerate(second, start=1):
-            H[row, col] = min(
-                H[row-1][col] + deletionCost,                      # Cost of deletions
-                H[row][col-1] + insertionCost,                     # Cost of insertions
-                H[row-1][col-1] + substitutionCost * int(a != b),  # Cost of substitutions
+            costs[row, col] = min(
+                costs[row-1][col] + deletionCost,
+                costs[row][col-1] + insertionCost,
+                costs[row-1][col-1] + substitutionCost * int(a != b),
             )
 
-    return H[row, col]
+    return costs[row, col]
 
 
 def _filter_values(dct, value):
@@ -177,12 +177,12 @@ def find_item(dct, name):
         key: levenshtein(name, key, insertionCost=0) for key in dct
     }
     minDist = min(distances.values())
-    if minDist > 0.0:
+    if minDist > 0.:
         alternatives = _filter_values(distances, value=minDist)
         msg = 'Could not find %r! Did you mean: %s?' % (name, _listify(alternatives))
         raise ValueError(msg)
 
-    candidates = _filter_values(distances, value=0.0)
+    candidates = _filter_values(distances, value=0.)
     if len(candidates) > 1:
         msg = 'Ambiguous name %r! Did you mean: %s?' % (name, _listify(candidates))
         raise ValueError(msg)

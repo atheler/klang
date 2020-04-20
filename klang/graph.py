@@ -4,9 +4,9 @@ Graph helper functions. Graph is defined as an sparse adjacency matrix and a nod
 """
 import collections
 
-import matplotlib as mpl
 import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
 
 
@@ -66,7 +66,9 @@ def get_sources(graph):
     indices = (nIncoming == 0).nonzero()
     return indices[-1]
 
+
 def get_sinks(graph):
+    """Get all sink nodes from graph (no outgoing edges)."""
     return get_sources(graph.T)
 
 
