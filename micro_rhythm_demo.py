@@ -44,7 +44,7 @@ seq.sequences[1].connect_micro_rhythm(mr)
 hihat = HiHat()
 kick = Kick()
 mixer = Mixer(2, gains=[1, .2])
-lfo = Lfo(frequency=.05, shape=1, wave_func=triangle)
+lfo = Lfo(frequency=.05, wave_func=triangle)
 lfo.output.connect(mr.phrasing)  # Lfo controls phrasing factor
 
 

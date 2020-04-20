@@ -64,12 +64,12 @@ def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
 
 
 class Oscillator(Block):
-    def __init__(self, initialFrequency=440., wave_func=sine, startPhase=0.):
+    def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.wave_func = wave_func
         self.currentPhase = startPhase
         self.frequency, = self.inputs
-        self.frequency.set_value(initialFrequency)
+        self.frequency.set_value(frequency)
 
     def sample(self):
         """Get next samples of oscillator and step further."""
@@ -86,7 +86,7 @@ class Oscillator(Block):
 
     def __deepcopy__(self, memo):
         return type(self)(
-            initialFrequency=self.frequency.value,
+            frequency=self.frequency.value,
             wave_func=self.wave_func,
             startPhase=self.currentPhase,
         )
@@ -138,9 +138,9 @@ class FmOscillator(Oscillator):
 
     """Frequency modulation oscillator."""
 
-    def __init__(self, initialFrequency=440., intensity=1., modFrequency=10.,
+    def __init__(self, frequency=440., intensity=1., modFrequency=10.,
                  wave_func=sine, startPhase=0.):
-        super().__init__(initialFrequency, wave_func, startPhase)
+        super().__init__(frequency, wave_func, startPhase)
         self.intensity = intensity
         self.modulator = Oscillator(modFrequency, wave_func=wave_func)
 
@@ -158,7 +158,7 @@ class FmOscillator(Oscillator):
 
     def __deepcopy__(self, memo):
         return type(self)(
-            initialFrequency=self.frequency.value,
+            frequency=self.frequency.value,
             intensity=self.intensity,
             modFrequency=self.modulator.frequency.value,
             wave_func=self.wave_func,
