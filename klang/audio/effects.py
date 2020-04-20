@@ -56,6 +56,31 @@ def tanh_distortion(samples, drive=1.):
     return np.tanh(drive * samples)
 
 
+class Transformer(Block):
+
+    """Linear signal transformer (scale and offset)."""
+
+    def __init__(self, scale, offset):
+        """Args:
+            scale (float): Scale factor.
+            offset (float): Offset value.
+        """
+        super().__init__(nInputs=1, nOutputs=1)
+        self.scale = scale
+        self.offset = offset
+
+    @classmethod
+    def from_limits(cls, lower, upper):
+        """Create transformer instance from output value boundaries."""
+        assert lower < upper
+        width = upper - lower
+        return cls(scale=width, offset=lower)
+
+    def update(self):
+        transformed = self.scale * self.input.value + self.offset
+        self.output.set_value(transformed)
+
+
 class Tremolo(Block):
 
     """LFO controlled amplitude modulation (AM)."""
@@ -66,7 +91,7 @@ class Tremolo(Block):
         self.rate.set_value(rate)
         self.intensity.set_value(intensity)
 
-        self.lfo = Lfo(frequency=rate)
+        self.lfo = Lfo(initialFrequency=rate)
         self.lfo.currentPhase = TAU / 4.  # Start from zero
 
     def update(self):
