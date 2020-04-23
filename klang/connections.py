@@ -1,10 +1,61 @@
 """Connections.
 
 Connectable input and output objects.
+
+Two types of connections:
+  - Value: Propagate some values from output to inputs. Gets updated every tick.
+  - Message: Send discrete messages from an output to all connected inputs.
+
+Relays can be used for block composites and they connect with inputs and
+outputs.
 """
 import collections
 
 from klang.errors import KlangError
+
+
+__all__ = ['Output', 'Relay', 'Input', 'MessageOutput', 'MessageRelay', 'MessageInput']
+
+
+def is_valid_connection(output, input_):
+    """Check if connection types are connectable."""
+    validConnectionTypes = {
+        OutputBase: (RelayBase, InputBase),
+        RelayBase: (RelayBase, InputBase),
+        Output: (Relay, Input),
+        Relay: (Relay, Input),
+        MessageOutput: (MessageRelay, MessageInput),
+        MessageRelay: (MessageRelay, MessageInput),
+    }
+    validInputTypes = validConnectionTypes.get(type(output), ())
+    return type(input_) in validInputTypes
+
+
+def validate_connection(output, input_):
+    """Validate connection coupling tuple.
+
+    Raises:
+        IncompatibleError: When it is not possible to connect output with
+            input.
+    """
+    if not is_valid_connection(output, input_):
+        fmt = 'Can not connect %s with %s!'
+        msg = fmt % (type(output).__name__, type(input_).__name__)
+        raise IncompatibleError(msg)
+
+
+def validate_input_free(input_):
+    """Validate if input_ is connectable."""
+    if input_.connected:
+        msg = '%s is already connected to another output!' % input_
+        raise AlreadyConnectedError(msg)
+
+
+class NotConnectedError(KlangError):
+
+    """Connectable is not connected."""
+
+    pass
 
 
 class AlreadyConnectedError(KlangError):
@@ -14,87 +65,123 @@ class AlreadyConnectedError(KlangError):
     pass
 
 
-class NotConnectableError(KlangError):
+class IncompatibleError(KlangError):
 
     """The two components can not be connected with each other."""
 
     pass
 
 
-class Connectable:
+def make_connection(output, input_):
+    """Make directional connection from output -> input_."""
+    assert isinstance(output, OutputBase)
+    assert isinstance(input_, InputBase)
+    output.outgoingConnections.add(input_)
+    input_.incomingConnection = output
 
-    """Base class for connectable objects.
 
-    Attributes:
-        owner (object): Owner object of connectable.
-        singleConnection (bool): Maximum one connection possible.
-        connections (set): Connected connectables.
-    """
+def break_connection(output, input_):
+    """Break directional connection from output -> input_."""
+    assert isinstance(output, OutputBase)
+    assert isinstance(input_, InputBase)
+    output.outgoingConnections.remove(input_)
+    input_.incomingConnection = None
 
-    def __init__(self, owner=None, singleConnection=False):
+
+class OutputBase:
+
+    """Base class for all outputs."""
+
+    def __init__(self, owner=None):
         self.owner = owner
-        self.singleConnection = singleConnection
-        self.connections = set()
+        self.outgoingConnections = set()
 
     @property
     def connected(self):
-        """Is connected?"""
-        return bool(self.connections)
+        """Is connected to something?"""
+        return bool(self.outgoingConnections)
 
-    def connect(self, other):
-        """Make a connection to another connectable."""
-        if (self.singleConnection and self.connected)\
-            or (other.singleConnection and other.connected):
-            raise AlreadyConnectedError
+    def connect(self, input_):
+        """Connect with input."""
+        validate_connection(self, input_)
+        validate_input_free(input_)
+        make_connection(self, input_)
 
-        self.connections.add(other)
-        other.connections.add(self)
-
-    def disconnect(self, other):
-        """Disconnect from another connectable."""
-        self.connections.remove(other)
-        other.connections.remove(self)
+    def disconnect(self, input_):
+        """Disconnect input."""
+        break_connection(self, input_)
 
     def __str__(self):
-        return '%s(%s, %s)' % (
-            self.__class__.__name__,
-            self.owner,
+        return '%s(%s)' % (
+            type(self).__name__,
             'connected' if self.connected else 'not connected',
         )
 
 
-class _Input(Connectable):
+class InputBase:
 
-    """Input connection base class."""
+    """Base class for all inputs."""
 
     def __init__(self, owner=None):
-        super().__init__(owner, singleConnection=True)
+        self.owner = owner
+        self.incomingConnection = None
+
+    @property
+    def connected(self):
+        """Is connected to something?"""
+        return self.incomingConnection is not None
 
     def connect(self, output):
-        """Connect with an output."""
-        if not isinstance(output, _Output):
-            raise NotConnectableError('Input can only connect to a output!')
+        """Connect with output."""
+        validate_connection(output, self)
+        validate_input_free(self)
+        make_connection(output, self)
 
-        super().connect(output)
+    def disconnect(self, output):
+        """Disconnect output."""
+        break_connection(output, self)
+
+    def __str__(self):
+        return '%s(%s)' % (
+            type(self).__name__,
+            'connected' if self.connected else 'not connected',
+        )
 
 
-class _Output(Connectable):
+class RelayBase(InputBase, OutputBase):
 
-    """Output connection base class."""
+    """Relay base. Can be used as input or output."""
 
-    def connect(self, input):
-        """Connect with an input."""
-        if not isinstance(input, _Input):
-            raise NotConnectableError('Output can only connect to inputs!')
+    def __init__(self, owner=None):
+        super().__init__(owner)
+        self.outgoingConnections = set()
 
-        super().connect(input)
+    def connect(self, other):
+        if isinstance(other, InputBase):
+            OutputBase.connect(self, other)
+        else:
+            InputBase.connect(self, other)
+
+    def disconnect(self, other):
+        if isinstance(other, InputBase):
+            OutputBase.disconnect(self, other)
+        else:
+            InputBase.disconnect(self, other)
 
 
 class _ValueContainer:
 
-    """Value attribute mixin class."""
+    """Value attribute mixin class.
+
+    Can not decide between property/setter vs. conventional getters and setters.
+    With value fetching a property looks nice (data = input.value) with value
+    propagating a setter looks better (output.set_value(data)).
+    """
 
     def __init__(self, value=0.):
+        """Kwargs:
+            value (object): Initial value.
+        """
         self._value = value
 
     @property
@@ -108,58 +195,49 @@ class _ValueContainer:
         self._value = value
 
     def get_value(self):
-        """Set value."""
+        """Get value."""
         return self._value
 
     def set_value(self, value):
-        """Get value."""
+        """Set value."""
         self._value = value
 
 
-class Input(_Input, _ValueContainer):
+class Input(InputBase, _ValueContainer):
 
-    """Input slot.
-
-    Can be connected to only one output.
-    """
+    """Value input."""
 
     def __init__(self, owner=None, value=0.):
-        super().__init__(owner=owner)
-        _ValueContainer.__init__(self, value=value)
+        super().__init__(owner)
+        _ValueContainer.__init__(self, value)
 
     @property
     def value(self):
-        """Get value either from connected output or from this input itself."""
         if self.connected:
-            output, = self.connections
-            return output._value
+            return self.incomingConnection.value
 
         return self._value
-
-    @value.setter
-    def value(self, value):
-        # Needs to be overwritten. We do not inherit @value.setter from
-        # _ValueContainer!
-        self._value = value
 
     def get_value(self):
         if self.connected:
-            output, = self.connections
-            return output._value
+            return self.incomingConnection.value
 
         return self._value
 
 
-class Output(_Output, _ValueContainer):
+class Output(OutputBase, _ValueContainer):
 
-    """Output slot.
-
-    Holds the value. Can be connected to multiple inputs.
-    """
-
+    """Value output."""
     def __init__(self, owner=None, value=0.):
-        super().__init__(owner=owner)
-        _ValueContainer.__init__(self, value=value)
+        super().__init__(owner)
+        _ValueContainer.__init__(self, value)
+
+
+class Relay(RelayBase, Input):
+
+    """Value relay."""
+
+    pass
 
 
 class _MessageQueue:
@@ -176,15 +254,6 @@ class _MessageQueue:
         """Push message on the message queue."""
         self.queue.append(message)
 
-
-class MessageInput(_Input, _MessageQueue):
-
-    """Input for messages (Input where value attribute is a queue)."""
-
-    def __init__(self, owner=None):
-        super().__init__(owner=owner)
-        _MessageQueue.__init__(self)
-
     def receive(self):
         """Iterate over received messages."""
         while self.queue:
@@ -200,11 +269,27 @@ class MessageInput(_Input, _MessageQueue):
         return latestMsg
 
 
-class MessageOutput(_Output):
+class MessageInput(InputBase, _MessageQueue):
 
-    """Output for messages (Input where value attribute is a queue)."""
+    """Message input. Has message queue."""
+
+    def __init__(self, owner=None):
+        super().__init__(owner)
+        _MessageQueue.__init__(self)
+
+
+class MessageOutput(OutputBase):
+
+    """Message output. Sends messages to connected message inputs."""
 
     def send(self, message):
-        """Send message. No notificaiton."""
-        for con in self.connections:
+        """Send message to all connected message inputs."""
+        for con in self.outgoingConnections:
             con.push(message)
+
+
+class MessageRelay(RelayBase, MessageOutput):
+
+    """Message relay. Pass on all messages to connected inputs."""
+
+    push = MessageOutput.send
