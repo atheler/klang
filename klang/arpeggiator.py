@@ -1,6 +1,11 @@
+"""Arpeggiator and helpers."""
 import bisect
+import collections
 import functools
 import random
+
+from klang.block import Block
+from klang.connections import MessageInput, MessageRelay, MessageOutput
 
 
 def initial_arpeggio_state(length, order):
@@ -19,11 +24,13 @@ def initial_arpeggio_state(length, order):
     if order == 'down':
         return [last]
 
+    up = 1
+    down = -1
     if order == 'upDown':
-        return [first, 1]
+        return [first, up]
 
     if order == 'downUp':
-        return [last, -1]
+        return [last, down]
 
     if order == 'random':
         return [random.randint(first, last)]
@@ -91,7 +98,7 @@ def alternating_jump_sequence(length):
     table = length * [0]
     for i in range(length):
         src = alternate(i, length)
-        dst = alternate(i+1, length)
+        dst = alternate(i + 1, length)
         table[src] = dst
 
     return table
@@ -116,12 +123,13 @@ def step_arpeggio_state(state, length, order):
     position = state[0]
     if order == 'up':
         return [(position + 1) % length]
+
     if order == 'down':
         return [(position - 1) % length]
+
     if order == 'alternating':
-        position %= length
         jump = alternating_jump_sequence(length)
-        return [jump[position]]
+        return [jump[position % length]]
 
     first = 0
     last = length - 1
@@ -135,18 +143,25 @@ def step_arpeggio_state(state, length, order):
         return [(position + velocity) % length, velocity]
 
 
-class Arpeggio:
+class Arpeggio(Block):
     def __init__(self, order='up', initialNotes=[]):
+        super().__init__()
         assert order in {
             'up', 'down', 'upDown', 'downUp', 'random', 'alternating',
         }
         self.order = order
         self.notes = []
         self.state = initial_arpeggio_state(length=len(self.notes), order=order)
+        self.inputs = [MessageInput(owner=self), MessageInput(owner=self)]
+        self.trigger = self.inputs[1]
+        self.outputs = [MessageOutput(owner=self)]
         for note in initialNotes:
             self.add_note(note)
 
     def add_note(self, newNote):
+        """Add a new note to the arpeggio. Will be in-sorted accordingly. Should
+        be a note-on (but we do not assert).
+        """
         # Check if we already have pitch registered
         for note in self.notes:
             if note.pitch == newNote.pitch:
@@ -155,6 +170,7 @@ class Arpeggio:
         bisect.insort(self.notes, newNote)
 
     def remove_note(self, note):
+        """Remove / deactivate a note in the arpeggio."""
         for i, oldNote in enumerate(self.notes):
             if oldNote.pitch == note.pitch:
                 break
@@ -175,6 +191,22 @@ class Arpeggio:
         else:
             self.remove_note(note)
 
+    def process_notes(self, *notes):
+        for note in notes:
+            self.process_note(note)
+
+    def update(self):
+        for note in self.input.receive():
+            self.process_note(note)
+            print('Got note', note)
+
+        for nr in self.trigger.receive():
+            arpNote = next(self)
+            if arpNote is None:
+                continue
+
+            self.output.send(arpNote)
+
     def __next__(self):
         """Get next note to play from arpeggiator."""
         if not self.notes:
@@ -189,4 +221,138 @@ class Arpeggio:
         return currentNote
 
     def __str__(self):
-        return '%s(%d notes)' % (type(self).__name__, len(self))
+        return '%s(%d notes)' % (type(self).__name__, len(self.notes))
+
+
+from klang.audio import INTERVAL
+from klang.audio.sequencer import pizza_slice_number
+from klang.constants import TAU
+
+
+class Phasor(Block):
+    def __init__(self, frequency, initialPhase=0.):
+        super().__init__(nOutputs=1)
+        self.frequency = frequency
+        self.currentPhase = initialPhase
+
+    def update(self):
+        self.output.set_value(self.currentPhase)
+        delta = TAU * self.frequency * INTERVAL
+        self.currentPhase = (self.currentPhase + delta) % TAU
+
+
+class Pulsar(Block):
+    def __init__(self, frequency, nSteps, initialPhase=0.):
+        super().__init__()
+        self.nSteps = nSteps
+        self.currentNr = -1
+        self.outputs = [MessageOutput(owner=self)]
+        self.phasor = Phasor(frequency, initialPhase)
+
+    def increment(self):
+        self.currentNr = (self.currentNr + 1) % self.nSteps
+
+    def update(self):
+        self.phasor.update()
+        phase = self.phasor.output.value
+        nr = pizza_slice_number(phase, self.nSteps)
+        for _ in range(nr - self.currentNr):
+            self.increment()
+            self.output.send(self.currentNr)
+
+    def __str__(self):
+        return '%s(%.1f Hz, %d steps)' % (
+            type(self).__name__,
+            self.phasor.frequency,
+            self.nSteps,
+        )
+
+
+class CircularDiscretizer(Block):
+    def __init__(self, nSteps):
+        super().__init__(nInputs=1)
+        self.nSteps = nSteps
+        self.outputs = [MessageOutput(owner=self)]
+        self.currentNr = -1
+
+    def increment(self):
+        self.currentNr = (self.currentNr + 1) % self.nSteps
+
+    def update(self):
+        phase = self.input.value
+        nr = pizza_slice_number(phase, self.nSteps)
+        diff = (nr - self.currentNr) % self.nSteps
+        for _ in range(diff):
+            self.increment()
+            self.output.send(self.currentNr)
+
+
+import time
+
+
+class NoteLengthener(Block):
+
+    clock = time.time
+
+    def __init__(self, duration):
+        super().__init__()
+        self.duration = duration
+        self.activeNotes = collections.deque()
+        self.inputs = [MessageInput(owner=self)]
+        self.outputs = [MessageOutput(owner=self)]
+
+    def outdated_notes(self, now):
+        """Iterate over outdated notes."""
+        while self.activeNotes:
+            end, note = self.activeNotes[0]  # Peek
+            if now < end:
+                return
+
+            yield note
+            self.activeNotes.popleft()
+
+    def update(self):
+        now = self.clock()
+        for note in self.outdated_notes(now):
+            noteOff = note._replace(velocity=0.)
+            self.output.send(noteOff)
+
+        for note in self.input.receive():
+            if note.off:
+                continue
+
+            entry = (now + self.duration, note)
+            self.activeNotes.append(entry)
+            self.output.send(note)
+
+
+from klang.audio.klanggeber import determine_execution_order
+
+
+class Arpeggiator(Block):
+
+    """Note arpeggiator block."""
+
+    def __init__(self, frequency, nSteps, order='up', duration=.1):
+        super().__init__()
+        self.inputs = [MessageRelay(owner=self)]
+        self.outputs = [MessageRelay(owner=self)]
+
+        # Init internal blocks
+        phasor = Phasor(frequency)
+        discretizer = CircularDiscretizer(nSteps)
+        self.arpeggio = Arpeggio(order)
+        noteLengthener = NoteLengthener(duration)
+
+        # Make connections of internal notes
+        self.input.connect(self.arpeggio.input)
+        self.arpeggio.output.connect(noteLengthener.input)
+        noteLengthener.output.connect(self.output)
+        phasor.output.connect(discretizer.input)
+        discretizer.output.connect(self.arpeggio.trigger)
+
+        self.execOrder = [phasor, discretizer, self.arpeggio, noteLengthener]
+
+    def update(self):
+        for block in self.execOrder:
+            block.update()

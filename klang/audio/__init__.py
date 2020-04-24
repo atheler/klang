@@ -15,6 +15,8 @@ DT = 1. / SAMPLING_RATE
 NYQUIST_FREQUENCY = SAMPLING_RATE // 2
 """int: Nyquist frequency."""
 
+INTERVAL = DT * BUFFER_SIZE
+
 
 @functools.lru_cache()
 def get_silence(shape):

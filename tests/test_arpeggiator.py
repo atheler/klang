@@ -1,6 +1,7 @@
 import unittest
 
-from klang.arpeggiator import Arpeggio
+from klang.arpeggiator import Arpeggio, NoteLengthener
+from klang.connections import MessageInput
 from klang.messages import Note
 
 
@@ -95,6 +96,45 @@ class TestArpeggio(unittest.TestCase):
 
         self.assertEqual(next(arp), C)
         self.assertEqual(next(arp), E)
+
+
+class TestableNoteLengthener(NoteLengthener):
+    def __init__(self, duration=2):
+        super().__init__(duration)
+        self.currentTime = 0.
+
+    def clock(self):
+        return self.currentTime
+
+
+class TestNoteLengthener(unittest.TestCase):
+    def test_scenario(self):
+        nl = TestableNoteLengthener(duration=2)
+        recv = MessageInput()
+        nl.output.connect(recv)
+        nl.input.push(C)  # Add first note at time 0.
+        nl.update()
+
+        self.assertEqual(list(nl.activeNotes), [
+            (2, C),
+        ])
+
+        nl.currentTime = 1
+        nl.input.push(E)  # Add second note at time 1.
+        nl.update()
+
+        self.assertEqual(list(nl.activeNotes), [
+            (2, C),
+            (3, E),
+        ])
+
+        nl.currentTime = 2
+        nl.update()
+
+        self.assertEqual(list(nl.activeNotes), [
+            (3, E),
+        ])
+        self.assertEqual(recv.receive_latest(), C._replace(velocity=0.))
 
 
 if __name__ == '__main__':
