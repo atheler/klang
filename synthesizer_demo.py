@@ -22,6 +22,8 @@ voice = OscillatorVoice(env, osc)
 cls = MonophonicSynthesizer if MONOPHONIC else PolyphonicSynthesizer
 synthesizer = cls(voice)#, policy='new')
 
-with KlangGeber(nOutputs=1) as dac:
-    keyboard.output.connect(synthesizer.input)
-    synthesizer.output.connect(dac.input)
+
+if __name__ == '__main__':
+    with KlangGeber(nOutputs=1) as dac:
+        keyboard.output.connect(synthesizer.input)
+        synthesizer.output.connect(dac.input)

@@ -7,7 +7,7 @@ from klang.connections import Input, Output
 def output_neighbors(block):
     """Get output neighbors of block."""
     for output in block.outputs:
-        for input_ in output.connections:
+        for input_ in output.outgoingConnections:
             if input_.owner:
                 yield input_.owner
 
@@ -15,7 +15,8 @@ def output_neighbors(block):
 def input_neighbors(block):
     """Get input neighbors of block."""
     for input_ in block.inputs:
-        for output in input_.connections:
+        if input_.connected:
+            output = input_.incomingConnection
             if output.owner:
                 yield output.owner
 
@@ -61,7 +62,7 @@ class Block:
         """First output."""
         return self.outputs[0]
 
-    @abc.abstractmethod
+    @abc.abstractmethod  # No Block(metaclass=abc.ABCMeta) because of testability
     def update(self):
         """Block's update / run / tick method."""
         raise NotImplementedError('Abstract base method!')

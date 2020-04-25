@@ -1,0 +1,4 @@
+[BASIC]
+variable-naming-style=camelCase
+attr-naming-style=camelCase
+good-names= input_,

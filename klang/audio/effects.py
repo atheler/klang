@@ -355,3 +355,22 @@ class PitchShifter(Block):
         orig = self.input.value
         shifted = self.resampler.read(BUFFER_SIZE)
         self.output.set_value(blend(orig, shifted, self.dryWet))
+
+
+
+class Transformer(Block):
+    def __init__(self, scale, offset):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.scale = scale
+        self.offset = offset
+
+    @classmethod
+    def from_limits(cls, lower, upper):
+        assert lower < upper
+        width = upper - lower
+        return cls(scale=width, offset=lower)
+
+    def update(self):
+        x = self.input.value
+        y = self.scale * x + self.offset
+        self.output.set_value(y)
