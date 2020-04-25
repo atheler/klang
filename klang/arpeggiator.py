@@ -326,7 +326,7 @@ class NoteLengthener(Block):
             self.output.send(note)
 
 
-from klang.audio.klanggeber import determine_execution_order
+from klang.execution import determine_execution_order
 
 
 class Arpeggiator(Block):

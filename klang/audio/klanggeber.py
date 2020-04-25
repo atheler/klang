@@ -1,60 +1,15 @@
 """Klang sound engine object."""
-import collections
 import time
 
 import numpy as np
 import pyaudio
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.block import Block, output_neighbors, input_neighbors
+from klang.block import Block
 from klang.constants import MONO, STEREO
 from klang.errors import KlangError
-from klang.graph import graph_matrix, topological_sorting
+from klang.execution import determine_execution_order
 from klang.util import WavWriter
-
-
-def network_graph(blocks):
-    """Get network graph and mapping."""
-    block2idx = {}
-    idx2block = {}
-    queue = collections.deque(blocks)
-    visited = set()
-    edges = set()
-
-    def get_block_index(block):
-        """Get index for block."""
-        if block not in block2idx:
-            newId = len(block2idx)
-            block2idx[block] = newId
-            idx2block[newId] = block
-
-        return block2idx[block]
-
-    while queue:
-        block = queue.popleft()
-        if block in visited:
-            continue
-
-        visited.add(block)
-        here = get_block_index(block)
-        for child in output_neighbors(block):
-            there = get_block_index(child)
-            edges.add((here, there))
-            queue.append(child)
-
-        for parent in input_neighbors(block):
-            back = get_block_index(parent)
-            edges.add((back, here))
-            queue.append(parent)
-
-    return idx2block, graph_matrix(list(edges))
-
-
-def determine_execution_order(blocks):
-    """Get appropriate execution order for block network."""
-    idx2block, graph = network_graph(blocks)
-    order = topological_sorting(graph)
-    return [idx2block[idx] for idx in order]
 
 
 def pack_signals(signals, bufferSize):
