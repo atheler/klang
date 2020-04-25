@@ -59,8 +59,7 @@ def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
         phase[0] = startPhase
         phase[1:] = TAU * dt * np.cumsum(frequency) + startPhase
 
-    phase = phase % TAU
-    return phase[:-1], phase[-1]
+    return phase[:-1], phase[-1] % TAU
 
 
 class Oscillator(Block):

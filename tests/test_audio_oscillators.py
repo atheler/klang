@@ -3,8 +3,9 @@ import unittest
 import numpy as np
 
 from config import BUFFER_SIZE, SAMPLING_RATE
+from klang.arpeggiator import Phasor
 from klang.audio import DT
-from klang.audio.oscillators import Phasor, Oscillator, Lfo
+from klang.audio.oscillators import Oscillator, Lfo
 from klang.audio.oscillators import chirp_phase
 from klang.constants import TAU
 
