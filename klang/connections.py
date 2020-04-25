@@ -7,7 +7,7 @@ Two types of connections:
   - Message: Send discrete messages from an output to all connected inputs.
 
 Relays can be used for block composites and they connect with inputs and
-outputs.
+outputs. E.g. Output -> Relay -> Input.
 """
 import collections
 
@@ -28,6 +28,10 @@ def is_valid_connection(output, input_):
         MessageRelay: (MessageRelay, MessageInput),
     }
     validInputTypes = validConnectionTypes.get(type(output), ())
+    # pylint: disable=unidiomatic-typecheck
+    #
+    # isinstance(input_, validInputTypes) would also include parent classes. We
+    # do not want that (e.g. Connecting BaseOutput with a MessageInput)
     return type(input_) in validInputTypes
 
 
@@ -51,6 +55,22 @@ def validate_input_free(input_):
         raise AlreadyConnectedError(msg)
 
 
+def make_connection(output, input_):
+    """Make directional connection from output -> input_."""
+    assert isinstance(output, OutputBase)
+    assert isinstance(input_, InputBase)
+    output.outgoingConnections.add(input_)
+    input_.incomingConnection = output
+
+
+def break_connection(output, input_):
+    """Break directional connection from output -> input_."""
+    assert isinstance(output, OutputBase)
+    assert isinstance(input_, InputBase)
+    output.outgoingConnections.remove(input_)
+    input_.incomingConnection = None
+
+
 class NotConnectedError(KlangError):
 
     """Connectable is not connected."""
@@ -70,22 +90,6 @@ class IncompatibleError(KlangError):
     """The two components can not be connected with each other."""
 
     pass
-
-
-def make_connection(output, input_):
-    """Make directional connection from output -> input_."""
-    assert isinstance(output, OutputBase)
-    assert isinstance(input_, InputBase)
-    output.outgoingConnections.add(input_)
-    input_.incomingConnection = output
-
-
-def break_connection(output, input_):
-    """Break directional connection from output -> input_."""
-    assert isinstance(output, OutputBase)
-    assert isinstance(input_, InputBase)
-    output.outgoingConnections.remove(input_)
-    input_.incomingConnection = None
 
 
 class OutputBase:
@@ -205,7 +209,11 @@ class _ValueContainer:
 
 class Input(InputBase, _ValueContainer):
 
-    """Value input."""
+    """Value input.
+
+    Will fetch value from output when connected to one. Also has its own _value
+    attribute for developing purposes.
+    """
 
     def __init__(self, owner=None, value=0.):
         super().__init__(owner)
@@ -228,6 +236,7 @@ class Input(InputBase, _ValueContainer):
 class Output(OutputBase, _ValueContainer):
 
     """Value output."""
+
     def __init__(self, owner=None, value=0.):
         super().__init__(owner)
         _ValueContainer.__init__(self, value)
@@ -235,7 +244,10 @@ class Output(OutputBase, _ValueContainer):
 
 class Relay(RelayBase, Input):
 
-    """Value relay."""
+    """Value relay.
+
+    Will fetch value from connected outputs.
+    """
 
     pass
 
