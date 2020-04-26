@@ -142,8 +142,7 @@ def _node_is_ready(graph, node, order):
 
 
 def topological_sorting(graph):
-    """Find appropriate execution order in directed graph with cycles. Based on
-    original algorithm from Nico Neureiter.
+    """Find appropriate execution order in directed graph with cycles.
 
     Args:
         graph (array): Graph adjacency matrix.
