@@ -8,7 +8,7 @@ from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.block import Block
 from klang.constants import MONO, STEREO
 from klang.errors import KlangError
-from klang.execution import determine_execution_order
+from klang.execution import determine_execution_order, execute
 from klang.util import WavWriter
 
 
@@ -103,7 +103,7 @@ class KlangGeber:
 
     def start(self):
         silence = np.zeros((BUFFER_SIZE, self.nOutputs), dtype=np.float32)
-        executionOrder = determine_execution_order(blocks=[self.dac, self.adc])
+        execOrder = determine_execution_order(blocks=[self.dac, self.adc])
 
         def audio_callback(inData, frameCount, timeInfo, status):
             """Audio stream callback for pyaudio."""
@@ -112,9 +112,7 @@ class KlangGeber:
                 for samples, channel in zip(inData.T, self.adc.outputs):
                     channel.set_value(samples)
 
-            for block in executionOrder:
-                block.update()
-
+            execute(execOrder)
             channels = list(self.dac.get_channels(self.nOutputs))
             if len(channels) < self.nOutputs:
                 msg = 'Not enough channels %d' % len(channels)
