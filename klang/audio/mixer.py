@@ -2,6 +2,7 @@
 from klang.audio import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.panning import panning_amplitudes, CENTER
 from klang.block import Block
+from klang.connections import Input
 from klang.constants import MONO, STEREO
 from klang.math import clip
 
@@ -10,14 +11,21 @@ class Mixer(Block):
 
     """Mono mixer with channel gains."""
 
+    DEFAULT_GAIN = 1.
+
     def __init__(self, nInputs=2, nOutputs=MONO, gains=None):
         if gains is None:
-            gains = nInputs * [1.]
+            gains = nInputs * [self.DEFAULT_GAIN]
 
         assert nOutputs in {MONO, STEREO}
         assert len(gains) == nInputs
         super().__init__(nInputs=nInputs, nOutputs=nOutputs)
         self.gains = gains
+
+    def add_channel(self):
+        """Add a new channel to the mixer."""
+        self.inputs.append(Input(owner=self))
+        self.gains.append(self.DEFAULT_GAIN)
 
     def set_gain(self, channel, gain):
         """Set gain level for a given channel."""
@@ -26,7 +34,7 @@ class Mixer(Block):
     def update(self):
         signalSum = MONO_SILENCE.copy()
         for gain, channel in zip(self.gains, self.inputs):
-            signalSum += gain * channel.get_value()
+            signalSum += gain * channel.value
 
         if self.nInputs > 1:
             signalSum /= self.nInputs
