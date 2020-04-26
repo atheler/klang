@@ -6,7 +6,11 @@ from klang.music.tunings import EQUAL_TEMPERAMENT
 
 class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
 
-    """Music note. Pitch optional. Used for voice mapping in synthesizer."""
+    """Music note. Pitch optional. Used for voice mapping in synthesizer.
+
+    Note:
+      - pitch before velocity for lexicographical order.
+    """
 
     def __new__(cls, pitch, velocity=1.0, frequency=None,
                 temperament=EQUAL_TEMPERAMENT):
@@ -35,6 +39,10 @@ class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
     def off(self):
         """If note-off."""
         return self.velocity == 0.
+
+    def silence(self):
+        """Silence note. Get a copy with velocity set to zero."""
+        return self._replace(velocity=0.)
 
     def __str__(self):
         return 'Note(pitch=%d, velocity=%.1f, frequency=%.1f Hz)' % self

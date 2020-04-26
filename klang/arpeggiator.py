@@ -314,7 +314,7 @@ class NoteLengthener(Block):
     def update(self):
         now = self.clock()
         for note in self.outdated_notes(now):
-            noteOff = note._replace(velocity=0.)
+            noteOff = note.silence()
             self.output.send(noteOff)
 
         for note in self.input.receive():
