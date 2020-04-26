@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal.waveforms import _chirp_phase
 
 from config import BUFFER_SIZE
-from klang.audio import DT, get_time
+from klang.audio import DT, INTERVAL, get_time
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.constants import TAU
@@ -62,7 +62,30 @@ def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
     return phase[:-1], phase[-1] % TAU
 
 
+class Phasor(Block):
+
+    """Scalar phase oscillator. Outputs a scalar phase value per buffer."""
+
+    def __init__(self, frequency, initialPhase=0.):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.frequency, = self.inputs
+        self.frequency.set_value(frequency)
+        self.currentPhase = initialPhase
+
+    def sample(self):
+        phase = self.currentPhase
+        delta = TAU * self.frequency.value * INTERVAL
+        self.currentPhase = (self.currentPhase + delta) % TAU
+        return phase
+
+    def update(self):
+        self.output.set_value(self.sample())
+
+
 class Oscillator(Block):
+
+    """Audio signal oscillator. Generates an array of audio each buffer."""
+
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.wave_func = wave_func
@@ -72,13 +95,12 @@ class Oscillator(Block):
 
     def sample(self):
         """Get next samples of oscillator and step further."""
-        frequency = self.frequency.value
-        phase, self.currentPhase = sample_phase(frequency, startPhase=self.currentPhase)
+        freq = self.frequency.value
+        phase, self.currentPhase = sample_phase(freq, startPhase=self.currentPhase)
         return self.wave_func(phase)
 
     def update(self):
-        samples = self.sample()
-        self.output.set_value(samples)
+        self.output.set_value(self.sample())
 
     def __str__(self):
         return '%s(%.1f Hz)' % (type(self).__name__, self.frequency.value)
@@ -91,46 +113,20 @@ class Oscillator(Block):
         )
 
 
-class Chirper(Block):
+class Lfo(Phasor):
 
-    """Chirp oscillator. Frequency ascend or descend."""
-
-    def __init__(self, startFrequency, duration, endFrequency, method='linear',
-                 wave_func=sine):
-        super().__init__(nOutputs=1)
-        self.startFrequency = startFrequency
-        self.duration = duration
-        self.endFrequency = endFrequency
-        self.method = method
-        self.wave_func = wave_func
-        self.t = get_time(BUFFER_SIZE).copy()
-
-    def reset(self):
-        """Reset chirper to start state."""
-        self.t = get_time(BUFFER_SIZE).copy()
-
-    def update(self):
-        phase = chirp_phase(
-            self.t,
-            self.startFrequency,
-            self.duration,
-            self.endFrequency,
-            self.method,
-        )
-        values = self.wave_func(phase)
-        self.output.set_value(values)
-        self.t += DT * BUFFER_SIZE
-
-
-class Lfo(Oscillator):
-
-    """Simple low frequency oscillator (LFO). Same as Oscillator but output
-    value range is [0., 1.].
+    """Simple low frequency oscillator (LFO). Output value range [0., 1.].
+    Outputs scalar and not arrays like Oscillator.
     """
 
+    def __init__(self, frequency=1., wave_func=sine, startPhase=0.):
+        super().__init__(frequency, startPhase)
+        self.wave_func = wave_func
+
     def update(self):
-        samples = self.sample()
-        self.output.set_value(.5 * (samples + 1.))
+        phase = self.sample()
+        sample = self.wave_func(phase)
+        self.output.set_value(.5 * (sample + 1.))
 
 
 class FmOscillator(Oscillator):
@@ -173,3 +169,35 @@ class WavetableOscillator(Oscillator):
 class OvertoneOscillator(Oscillator):
     # TODO(atheler): Make me!
     pass
+
+
+class Chirper(Block):
+
+    """Chirp oscillator. Frequency ascend or descend."""
+
+    def __init__(self, startFrequency, duration, endFrequency, method='linear',
+                 wave_func=sine):
+        super().__init__(nOutputs=1)
+        self.startFrequency = startFrequency
+        self.duration = duration
+        self.endFrequency = endFrequency
+        self.method = method
+        self.wave_func = wave_func
+        self.t = get_time(BUFFER_SIZE).copy()
+
+    def reset(self):
+        """Reset chirper to start state."""
+        self.t = get_time(BUFFER_SIZE).copy()
+
+    def update(self):
+        phase = chirp_phase(
+            self.t,
+            self.startFrequency,
+            self.duration,
+            self.endFrequency,
+            self.method,
+        )
+        values = self.wave_func(phase)
+        self.output.set_value(values)
+        self.t += DT * BUFFER_SIZE
+

@@ -22,7 +22,7 @@ FILEPATH = None
 
 Alow = Note(pitch=57)
 C = Note(pitch=60)
-D = Note(pitch=64)
+D = Note(pitch=62)
 E = Note(pitch=64)
 F = Note(pitch=65)
 G = Note(pitch=67)
@@ -43,10 +43,10 @@ if __name__ == '__main__':
     arp = Arpeggiator(frequency=.2, nSteps=16, order='alternating')
     #arp.arpeggio.process_notes(C, D, F, G, A)
     #arp.arpeggio.process_notes(C, D, Alow, G, A, F)
-    arp.arpeggio.process_notes(Alow, C, D, F, G, A)
+    arp.arpeggio.process_notes(Alow, C, E, F, G, A)
     #arp.arpeggio.process_notes( Note(pitch=57), C, D, E, G, F,)
     delay = Delay(delay=0.76, feedback=.9)
-    lfo = Lfo(frequency=.1, wave_func=triangle, shape=1)
+    lfo = Lfo(frequency=.1, wave_func=triangle)
     trafo = Transformer.from_limits(100., 3000.)
     fil = Filter(frequency=220.)
 

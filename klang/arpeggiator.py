@@ -4,6 +4,7 @@ import collections
 import functools
 import random
 
+from klang.audio.oscillators import Phasor
 from klang.block import Block
 from klang.connections import MessageInput, MessageRelay, MessageOutput
 
@@ -224,21 +225,7 @@ class Arpeggio(Block):
         return '%s(%d notes)' % (type(self).__name__, len(self.notes))
 
 
-from klang.audio import INTERVAL
 from klang.audio.sequencer import pizza_slice_number
-from klang.constants import TAU
-
-
-class Phasor(Block):
-    def __init__(self, frequency, initialPhase=0.):
-        super().__init__(nOutputs=1)
-        self.frequency = frequency
-        self.currentPhase = initialPhase
-
-    def update(self):
-        self.output.set_value(self.currentPhase)
-        delta = TAU * self.frequency * INTERVAL
-        self.currentPhase = (self.currentPhase + delta) % TAU
 
 
 class Pulsar(Block):
@@ -324,9 +311,6 @@ class NoteLengthener(Block):
             entry = (now + self.duration, note)
             self.activeNotes.append(entry)
             self.output.send(note)
-
-
-from klang.execution import determine_execution_order
 
 
 class Arpeggiator(Block):

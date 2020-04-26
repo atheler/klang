@@ -3,14 +3,9 @@ import unittest
 import numpy as np
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.arpeggiator import Phasor
-from klang.audio import DT
-from klang.audio.oscillators import Oscillator, Lfo
-from klang.audio.oscillators import chirp_phase
+from klang.audio import DT, INTERVAL
+from klang.audio.oscillators import chirp_phase, Oscillator, Phasor
 from klang.constants import TAU
-
-
-DELTA = DT * BUFFER_SIZE
 
 
 class TestPhaseor(unittest.TestCase):
@@ -22,7 +17,7 @@ class TestPhaseor(unittest.TestCase):
 
         phasor.update()
 
-        self.assertEqual(phasor.currentPhase, TAU*freq*DELTA)
+        self.assertEqual(phasor.currentPhase, TAU*freq*INTERVAL)
 
     def test_phase_wrap(self):
         freq = 10.
@@ -31,7 +26,7 @@ class TestPhaseor(unittest.TestCase):
         for _ in range(atLeastOneCycle):
             phasor.update()
 
-        self.assertAlmostEqual(phasor.currentPhase, atLeastOneCycle*TAU*freq*DELTA % TAU)
+        self.assertAlmostEqual(phasor.currentPhase, atLeastOneCycle*TAU*freq*INTERVAL % TAU)
 
 
 class TestOscillator(unittest.TestCase):
@@ -44,19 +39,6 @@ class TestOscillator(unittest.TestCase):
         osc.update()
 
         np.testing.assert_equal(osc.output.value, ref)
-
-
-class TestLfo(unittest.TestCase):
-    def test_400_hz(self):
-        freq = 440.
-        lfo = Lfo(frequency=freq)
-
-        t = DT * np.arange(BUFFER_SIZE)
-        ref = np.sin(TAU * freq * t)
-        ref = (ref + 1.) / 2.
-        lfo.update()
-
-        np.testing.assert_equal(lfo.output.value, ref)
 
 
 class TestChirpPhase(unittest.TestCase):

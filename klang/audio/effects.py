@@ -91,7 +91,7 @@ class Tremolo(Block):
         self.rate.set_value(rate)
         self.intensity.set_value(intensity)
 
-        self.lfo = Lfo(initialFrequency=rate)
+        self.lfo = Lfo(frequency=rate)
         self.lfo.currentPhase = TAU / 4.  # Start from zero
 
     def update(self):

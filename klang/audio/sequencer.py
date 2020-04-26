@@ -4,7 +4,7 @@ import itertools
 import random
 import time
 
-from klang.audio import INTERVAL
+from klang.audio.oscillators import Phasor
 from klang.block import Block
 from klang.connections import MessageInput, MessageOutput
 from klang.constants import TAU
@@ -32,18 +32,6 @@ def random_pattern(length, period=None, minVal=60, maxVal=72):
 def pizza_slice_number(angle, nSlices):
     """Get slice number for a given angle and a total number of pieces."""
     return int((angle % TAU) / TAU * nSlices)
-
-
-class Phasor(Block):
-    def __init__(self, frequency=1.):
-        super().__init__(nOutputs=1)
-        self.frequency = frequency
-        self.currentPhase = 0.
-
-    def update(self):
-        phase = self.currentPhase
-        self.output.set_value(phase)
-        self.currentPhase = (TAU * self.frequency * INTERVAL + phase) % TAU
 
 
 class PizzaSlicer(Block):
