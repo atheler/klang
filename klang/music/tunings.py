@@ -5,9 +5,12 @@ Conversion functions, temperaments.
 Resources:
   - http://www.wolfgang-wiese.de/Historische%20Stimmungen-Schwebungen.pdf.
 """
+import os
+
 import numpy as np
 
-from config import KAMMERTON
+from config import KAMMERTON, TUNINGS_FILEPATH
+from klang import ROOT_DIR
 from klang.constants import DODE, REF_OCTAVE, CENT_PER_OCTAVE
 from klang.util import load_music_data_from_csv, find_item
 
@@ -69,7 +72,7 @@ class Temperament:
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
 
-def _init_temperaments(filepath='resources/tunings.csv'):
+def _init_temperaments(filepath=None):
     youngRatios = [
         1., 1.055730636, 1.119771437, 1.187696971, 1.253888072, 1.334745462,
         1.407640848, 1.496510232, 1.583595961, 1.675749414, 1.781545449,
@@ -90,12 +93,13 @@ def _init_temperaments(filepath='resources/tunings.csv'):
         'Random': Temperament(rnd, name='Random'),
     }
 
-    for name, cents in load_music_data_from_csv(filepath).items():
-        temperaments[name.title().strip()] = Temperament(cents, name=name)
+    if filepath is not None:
+        for name, cents in load_music_data_from_csv(filepath).items():
+            temperaments[name.title().strip()] = Temperament(cents, name=name)
 
     return temperaments
 
 
 EQUAL_TEMPERAMENT = Temperament(np.arange(DODE)*100, kammerton=KAMMERTON, name='Equal')
 TEMPERAMENTS['Equal'] = EQUAL_TEMPERAMENT
-TEMPERAMENTS.update(_init_temperaments())
+TEMPERAMENTS.update(_init_temperaments(os.path.join(ROOT_DIR, TUNINGS_FILEPATH)))

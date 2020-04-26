@@ -4,8 +4,10 @@ Resources:
   - http://huygens-fokker.org/docs/intervals.html
 """
 import fractions
+import os
 
 from config import INTERVALS_FILEPATH
+from klang import ROOT_DIR
 from klang.util import find_item
 from klang.util import load_music_data_from_csv
 
@@ -28,4 +30,6 @@ def _load_intervals_from_csv(filepath):
     return intervals
 
 
-INTERVALS = _load_intervals_from_csv(INTERVALS_FILEPATH)
+INTERVALS = _load_intervals_from_csv(
+    os.path.join(ROOT_DIR, INTERVALS_FILEPATH)
+)

@@ -24,3 +24,5 @@ SCALES_FILEPATH = 'resources/scales.csv'
 
 INTERVALS_FILEPATH = 'resources/intervals.csv'
 """str: Filepath to intervals CSV file."""
+
+TUNINGS_FILEPATH = 'resources/tunings.csv'

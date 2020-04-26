@@ -6,10 +6,13 @@ scale. A scale can be converted to pitches with cumsum. [0, 2, 4, 5, 7, 9, 11].
 Resources:
   - https://ianring.com/musictheory/scales/
 """
+import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 
 from config import SCALES_FILEPATH
+from klang import ROOT_DIR
 from klang.constants import DODE, TAU
 from klang.music.pitch import PITCH_CLASSES
 from klang.util import find_item, load_music_data_from_csv
@@ -81,7 +84,7 @@ ALL_POSSIBLE_SCALES = all_possible_scales()
 KNOWN_SCALES = {
     name: scale_2_code(scale)
     for name, scale
-    in load_music_data_from_csv(SCALES_FILEPATH).items()
+    in load_music_data_from_csv(os.path.join(ROOT_DIR, SCALES_FILEPATH)).items()
 }
 
 

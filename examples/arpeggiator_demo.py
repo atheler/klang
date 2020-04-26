@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Arpeggiator demonstration."""
-
 from klang.arpeggiator import Arpeggiator
 from klang.audio.effects import Delay, Filter, Transformer
 from klang.audio.envelope import ADSR
