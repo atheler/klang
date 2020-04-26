@@ -66,7 +66,7 @@ class Phasor(Block):
 
     """Scalar phase oscillator. Outputs a scalar phase value per buffer."""
 
-    def __init__(self, frequency, initialPhase=0.):
+    def __init__(self, frequency=1., initialPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
         self.frequency.set_value(frequency)

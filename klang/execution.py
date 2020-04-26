@@ -23,6 +23,7 @@ def network_graph(blocks):
 
         return block2idx[block]
 
+    # Collect all blocks
     while queue:
         block = queue.popleft()
         if block in visited:
@@ -59,5 +60,6 @@ def determine_execution_order(blocks):
 
 
 def execute(blocks):
+    """Execute blocks."""
     for block in blocks:
         block.update()
