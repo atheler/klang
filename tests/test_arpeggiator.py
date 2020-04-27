@@ -1,6 +1,7 @@
 import unittest
 
-from klang.arpeggiator import Arpeggio, NoteLengthener
+from klang.arpeggiator import Arpeggio
+from klang.note_effects import NoteLengthener
 from klang.connections import MessageInput
 from klang.messages import Note
 

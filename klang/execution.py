@@ -49,3 +49,8 @@ def execute(blocks):
     """Execute blocks."""
     for block in blocks:
         block.update()
+
+
+def print_exec_order(execOrder):
+    for iblock in enumerate(execOrder, 1):
+        print('%d) %s' % iblock)

@@ -1,15 +1,14 @@
 """Arpeggiator and helpers."""
 import bisect
-import collections
 import functools
 import random
-import time
 
 from klang.audio.oscillators import Phasor
 from klang.audio.sequencer import pizza_slice_number
 from klang.block import Block
 from klang.composite import Composite
 from klang.connections import MessageInput, MessageRelay, MessageOutput
+from klang.note_effects import NoteLengthener
 
 
 def initial_arpeggio_state(length, order):
@@ -272,42 +271,6 @@ class CircularDiscretizer(Block):
         for _ in range(diff):
             self.increment()
             self.output.send(self.currentNr)
-
-
-class NoteLengthener(Block):
-
-    clock = time.time
-
-    def __init__(self, duration):
-        super().__init__()
-        self.duration = duration
-        self.activeNotes = collections.deque()
-        self.inputs = [MessageInput(owner=self)]
-        self.outputs = [MessageOutput(owner=self)]
-
-    def outdated_notes(self, now):
-        """Iterate over outdated notes."""
-        while self.activeNotes:
-            end, note = self.activeNotes[0]  # Peek
-            if now < end:
-                return
-
-            yield note
-            self.activeNotes.popleft()
-
-    def update(self):
-        now = self.clock()
-        for note in self.outdated_notes(now):
-            noteOff = note.silence()
-            self.output.send(noteOff)
-
-        for note in self.input.receive():
-            if note.off:
-                continue
-
-            entry = (now + self.duration, note)
-            self.activeNotes.append(entry)
-            self.output.send(note)
 
 
 class Arpeggiator(Composite):
