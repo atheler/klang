@@ -3,9 +3,12 @@ import bisect
 import collections
 import functools
 import random
+import time
 
 from klang.audio.oscillators import Phasor
+from klang.audio.sequencer import pizza_slice_number
 from klang.block import Block
+from klang.composite import Composite
 from klang.connections import MessageInput, MessageRelay, MessageOutput
 
 
@@ -225,9 +228,6 @@ class Arpeggio(Block):
         return '%s(%d notes)' % (type(self).__name__, len(self.notes))
 
 
-from klang.audio.sequencer import pizza_slice_number
-
-
 class Pulsar(Block):
     def __init__(self, frequency, nSteps, initialPhase=0.):
         super().__init__()
@@ -274,9 +274,6 @@ class CircularDiscretizer(Block):
             self.output.send(self.currentNr)
 
 
-import time
-
-
 class NoteLengthener(Block):
 
     clock = time.time
@@ -313,7 +310,7 @@ class NoteLengthener(Block):
             self.output.send(note)
 
 
-class Arpeggiator(Block):
+class Arpeggiator(Composite):
 
     """Note arpeggiator block."""
 
@@ -335,8 +332,4 @@ class Arpeggiator(Block):
         phasor.output.connect(discretizer.input)
         discretizer.output.connect(self.arpeggio.trigger)
 
-        self.execOrder = [phasor, discretizer, self.arpeggio, noteLengthener]
-
-    def update(self):
-        for block in self.execOrder:
-            block.update()
+        self.update_internal_exec_order()

@@ -106,6 +106,7 @@ def find_back_edges(graph):
         for child in get_successors(graph, parent):
             if child in black:
                 continue
+
             if child in gray:
                 backEdges.append((parent, child))
                 continue
@@ -154,18 +155,16 @@ def topological_sorting(graph):
     nNodes, _ = dag.shape
     allNodes = range(nNodes)
     queue = collections.deque(allNodes)
-    visited = set()
     order = []
     while queue:
         node = queue.popleft()
         if node in order:
             continue
 
-        visited.add(node)
         successors = get_successors(dag, node)
         if _node_is_ready(dag, node, order):
-            order.append(node)
             queue.extendleft(successors)
+            order.append(node)
         else:
             queue.extend(successors)
 
