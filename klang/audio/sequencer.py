@@ -63,9 +63,9 @@ class PizzaSlicer(Block):
 class PatternLookup(Block):
     def __init__(self, pattern):
         super().__init__()
-        self.pattern = pattern
         self.inputs = [MessageInput(owner=self)]
         self.outputs = [MessageOutput(owner=self)]
+        self.pattern = pattern
 
     def update(self):
         for nr in self.input.receive():
@@ -83,12 +83,11 @@ class Sequence(Composite):
             metre=FOUR_FOUR_METRE, beatValue=None, microRhythm=None):
         self.validate_pattern(pattern, metre, beatValue)
         super().__init__()
+        self.inputs = self.phaseIn, = [Relay(owner=self)]
+        self.outputs = _, self.phaseOut = [MessageRelay(owner=self), Relay(owner=self)]
         self.sequencer = sequencer
         self.pattern = pattern
         self.microRhythm = microRhythm
-
-        self.inputs = self.phaseIn, = [Relay(owner=self)]
-        self.outputs = _, self.phaseOut = [MessageRelay(owner=self), Relay(owner=self)]
 
         barPeriod = bar_period(tempo, metre, beatValue)
         phasor = Phasor(frequency=1. / barPeriod)

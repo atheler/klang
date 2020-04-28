@@ -102,7 +102,7 @@ class OutputBase:
 
     @property
     def connected(self):
-        """Is connected to something?"""
+        """Is connected to at least one input?"""
         return bool(self.outgoingConnections)
 
     def connect(self, input_):
@@ -132,7 +132,7 @@ class InputBase:
 
     @property
     def connected(self):
-        """Is connected to something?"""
+        """Is connected to an output?"""
         return self.incomingConnection is not None
 
     def connect(self, output):
@@ -158,7 +158,7 @@ class RelayBase(InputBase, OutputBase):
 
     def __init__(self, owner=None):
         super().__init__(owner)
-        self.outgoingConnections = set()
+        OutputBase.__init__(self, owner)
 
     def connect(self, other):
         if isinstance(other, InputBase):

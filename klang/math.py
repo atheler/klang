@@ -14,6 +14,7 @@ def normalize_values(array):
     """Normalize array values to [-1., 1.]."""
     maxAmplitude = np.abs(array).max()
     if maxAmplitude == 0:
+        # TODO(atheler): Or just return array?
         raise ValueError('Zero amplitude! Can not normalize!')
 
     return array / maxAmplitude

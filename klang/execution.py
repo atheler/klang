@@ -1,5 +1,4 @@
 import collections
-import itertools
 
 from klang.block import input_neighbors, output_neighbors
 from klang.graph import graph_matrix, topological_sorting

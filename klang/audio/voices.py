@@ -20,12 +20,11 @@ import copy
 from klang.audio import MONO_SILENCE
 from klang.block import Block
 from klang.connections import MessageInput
-from klang.math import clip
 
 
 class Voice(Block):
 
-    """Base class for single syntehsizer voice. This is atest"""
+    """Base class for single syntehsizer voice."""
 
     def __init__(self, envelope):
         super().__init__(nInputs=0, nOutputs=1)

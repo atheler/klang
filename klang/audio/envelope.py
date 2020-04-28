@@ -7,7 +7,7 @@ import numpy as np
 import scipy.signal
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.audio import DT, MONO_SILENCE, T, T1, ONES
+from klang.audio import DT, MONO_SILENCE, T, ONES
 from klang.block import Block
 from klang.connections import MessageInput
 from klang.constants import PI

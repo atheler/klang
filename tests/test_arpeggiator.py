@@ -1,6 +1,6 @@
 import unittest
 
-from klang.arpeggiator import Arpeggio
+from klang.arpeggiator import alternate, Arpeggio
 from klang.note_effects import NoteLengthener
 from klang.connections import MessageInput
 from klang.messages import Note
@@ -11,6 +11,24 @@ D = Note(pitch=62)
 E = Note(pitch=64)
 G = Note(pitch=67)
 A = Note(pitch=69)
+
+
+class TestAlternate(unittest.TestCase):
+    def test_alternate(self):
+        self.assertEqual(alternate(-1, length=5), 2)
+        self.assertEqual(alternate(0, length=5), 0)
+        self.assertEqual(alternate(1, length=5), 4)
+        self.assertEqual(alternate(2, length=5), 1)
+        self.assertEqual(alternate(3, length=5), 3)
+        self.assertEqual(alternate(4, length=5), 2)
+        self.assertEqual(alternate(5, length=5), 0)
+
+        self.assertEqual(alternate(-1, length=4), 2)
+        self.assertEqual(alternate(0, length=4), 0)
+        self.assertEqual(alternate(1, length=4), 3)
+        self.assertEqual(alternate(2, length=4), 1)
+        self.assertEqual(alternate(3, length=4), 2)
+        self.assertEqual(alternate(4, length=4), 0)
 
 
 class TestArpeggio(unittest.TestCase):

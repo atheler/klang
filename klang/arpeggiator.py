@@ -4,7 +4,7 @@ import functools
 import random
 
 from klang.audio.oscillators import Phasor
-from klang.audio.sequencer import pizza_slice_number
+from klang.audio.sequencer import pizza_slice_number, PizzaSlicer
 from klang.block import Block
 from klang.composite import Composite
 from klang.connections import MessageInput, MessageRelay, MessageOutput
@@ -78,23 +78,6 @@ def alternate(n, length):
         return (-n // 2) % length
 
 
-assert alternate(-1, length=5) == 2
-assert alternate(0, length=5) == 0
-assert alternate(1, length=5) == 4
-assert alternate(2, length=5) == 1
-assert alternate(3, length=5) == 3
-assert alternate(4, length=5) == 2
-assert alternate(5, length=5) == 0
-
-
-assert alternate(-1, length=4) == 2
-assert alternate(0, length=4) == 0
-assert alternate(1, length=4) == 3
-assert alternate(2, length=4) == 1
-assert alternate(3, length=4) == 2
-assert alternate(4, length=4) == 0
-
-
 @functools.lru_cache()
 def alternating_jump_sequence(length):
     """Get jump index array for alternating pattern."""
@@ -145,19 +128,18 @@ def step_arpeggio_state(state, length, order):
             velocity *= -1  # Turn around
         return [(position + velocity) % length, velocity]
 
+    raise ValueError('Unknown arpeggio note order %r!' % order)
+
 
 class Arpeggio(Block):
     def __init__(self, order='up', initialNotes=[]):
+        assert order in {'up', 'down', 'upDown', 'downUp', 'random', 'alternating'}
         super().__init__()
-        assert order in {
-            'up', 'down', 'upDown', 'downUp', 'random', 'alternating',
-        }
+        self.inputs = _, self.trigger = [MessageInput(owner=self), MessageInput(owner=self)]
+        self.outputs = [MessageOutput(owner=self)]
         self.order = order
         self.notes = []
         self.state = initial_arpeggio_state(length=len(self.notes), order=order)
-        self.inputs = [MessageInput(owner=self), MessageInput(owner=self)]
-        self.trigger = self.inputs[1]
-        self.outputs = [MessageOutput(owner=self)]
         for note in initialNotes:
             self.add_note(note)
 
@@ -201,14 +183,11 @@ class Arpeggio(Block):
     def update(self):
         for note in self.input.receive():
             self.process_note(note)
-            print('Got note', note)
 
-        for nr in self.trigger.receive():
+        for _ in self.trigger.receive():
             arpNote = next(self)
-            if arpNote is None:
-                continue
-
-            self.output.send(arpNote)
+            if arpNote:
+                self.output.send(arpNote)
 
     def __next__(self):
         """Get next note to play from arpeggiator."""
@@ -254,25 +233,6 @@ class Pulsar(Block):
         )
 
 
-class CircularDiscretizer(Block):
-    def __init__(self, nSteps):
-        super().__init__(nInputs=1)
-        self.nSteps = nSteps
-        self.outputs = [MessageOutput(owner=self)]
-        self.currentNr = -1
-
-    def increment(self):
-        self.currentNr = (self.currentNr + 1) % self.nSteps
-
-    def update(self):
-        phase = self.input.value
-        nr = pizza_slice_number(phase, self.nSteps)
-        diff = (nr - self.currentNr) % self.nSteps
-        for _ in range(diff):
-            self.increment()
-            self.output.send(self.currentNr)
-
-
 class Arpeggiator(Composite):
 
     """Note arpeggiator block."""
@@ -284,7 +244,7 @@ class Arpeggiator(Composite):
 
         # Init internal blocks
         phasor = Phasor(frequency)
-        discretizer = CircularDiscretizer(nSteps)
+        pizzaSlicer = PizzaSlicer(nSteps)
         self.arpeggio = Arpeggio(order)
         noteLengthener = NoteLengthener(duration)
 
@@ -292,7 +252,7 @@ class Arpeggiator(Composite):
         self.input.connect(self.arpeggio.input)
         self.arpeggio.output.connect(noteLengthener.input)
         noteLengthener.output.connect(self.output)
-        phasor.output.connect(discretizer.input)
-        discretizer.output.connect(self.arpeggio.trigger)
+        phasor.output.connect(pizzaSlicer.input)
+        pizzaSlicer.output.connect(self.arpeggio.trigger)
 
         self.update_internal_exec_order()

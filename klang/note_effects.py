@@ -8,14 +8,18 @@ from klang.connections import MessageInput, MessageOutput
 
 class NoteLengthener(Block):
 
+    """Convert note-ons to actual notes (note-on followed by a note-off later
+    on).
+    """
+
     clock = time.time
 
     def __init__(self, duration):
         super().__init__()
-        self.duration = duration
-        self.activeNotes = collections.deque()
         self.inputs = [MessageInput(owner=self)]
         self.outputs = [MessageOutput(owner=self)]
+        self.duration = duration
+        self.activeNotes = collections.deque()
 
     def outdated_notes(self, now):
         """Iterate over outdated notes."""

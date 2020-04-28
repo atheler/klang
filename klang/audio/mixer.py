@@ -1,6 +1,6 @@
 """Mixer"""
 from klang.audio import MONO_SILENCE, STEREO_SILENCE
-from klang.audio.panning import panning_amplitudes, CENTER
+from klang.audio.panning import CENTER, panning_amplitudes
 from klang.block import Block
 from klang.constants import MONO, STEREO
 from klang.math import clip

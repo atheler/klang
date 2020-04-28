@@ -60,7 +60,7 @@ class NoteScheduler:
     def __init__(self, policy='newest'):
         assert policy in {'newest', 'oldest', 'lowest', 'highest'}
         self.policy = policy
-        self.couter = itertools.count()
+        self.counter = itertools.count()
         self.notes = list()
         heapq.heapify(self.notes)
 
@@ -69,9 +69,9 @@ class NoteScheduler:
         policy.
         """
         if self.policy == 'newest':
-            key = next(self.couter)
+            key = next(self.counter)
         elif self.policy == 'oldest':
-            key = -next(self.couter)
+            key = -next(self.counter)
         elif self.policy == 'highest':
             key = note.pitch
         elif self.policy == 'lowest':

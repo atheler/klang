@@ -88,10 +88,10 @@ class Oscillator(Block):
 
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
-        self.wave_func = wave_func
-        self.currentPhase = startPhase
         self.frequency, = self.inputs
         self.frequency.set_value(frequency)
+        self.wave_func = wave_func
+        self.currentPhase = startPhase
 
     def sample(self):
         """Get next samples of oscillator and step further."""
@@ -200,4 +200,3 @@ class Chirper(Block):
         values = self.wave_func(phase)
         self.output.set_value(values)
         self.t += DT * BUFFER_SIZE
-
