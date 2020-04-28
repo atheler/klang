@@ -1,5 +1,6 @@
 """Messages passed around in the system."""
 import collections
+import json
 
 from klang.music.tunings import EQUAL_TEMPERAMENT
 
@@ -30,6 +31,13 @@ class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
         assert frequency > 0
         return super().__new__(cls, pitch, velocity, frequency)
 
+    @classmethod
+    def from_json(cls, string):
+        """Construct Note from JSON string."""
+        dct = json.loads(string)
+        assert dct.pop('type') == cls.__name__
+        return cls(**dct)
+
     @property
     def on(self):
         """If note-on."""
@@ -43,6 +51,12 @@ class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
     def silence(self):
         """Silence note. Get a copy with velocity set to zero."""
         return self._replace(velocity=0.)
+
+    def to_json(self):
+        """Serialize as JSON string."""
+        dct = dict(zip(self._fields, self))
+        dct['type'] = type(self).__name__
+        return json.dumps(dct)
 
     def __str__(self):
         return 'Note(pitch=%d, velocity=%.1f, frequency=%.1f Hz)' % self
