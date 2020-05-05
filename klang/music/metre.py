@@ -32,7 +32,7 @@ def create_metre(numerator, denominator=None):
     Returns:
         Fraction: Metre / time signature.
     """
-    #if not isinstance(numerator, int):  # Fractional rhythms? 
+    #if not isinstance(numerator, int):  # Fractional rhythms?
     #    numerator = fractions.Fraction.from_float(numerator)
     return fractions.Fraction(numerator, denominator, _normalize=False)
 
@@ -108,7 +108,7 @@ def default_beat_value(metre):
         Fraction(1, 4)
 
         >>> waltz = create_metre(3, 4)
-        ...default_beat_value(waltz)
+        ... default_beat_value(waltz)
         Fraction(1, 4)
 
         >>> compound = create_metre(6, 8)

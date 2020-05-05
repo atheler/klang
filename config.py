@@ -1,3 +1,6 @@
+import fractions
+
+
 ATTACK_RELEASE = 0.002
 """float: Attack / release time for primitive linear fade in/out envelope."""
 
@@ -26,3 +29,11 @@ INTERVALS_FILEPATH = 'resources/intervals.csv'
 """str: Filepath to intervals CSV file."""
 
 TUNINGS_FILEPATH = 'resources/tunings.csv'
+"""str: Filepath to tunings CSV file."""
+
+
+TEMPO = 120.
+"""float: Tempo in beats per minute."""
+
+METRE = fractions.Fraction(4, 4, _normalize=False)
+"""Fraction: Time signature."""

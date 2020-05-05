@@ -1,14 +1,11 @@
 """Tempo of music."""
+from config import TEMPO, METRE
 from klang.constants import TAU
-from klang.music.metre import (
-    FOUR_FOUR_METRE,
-    create_metre,
-    default_beat_value,
-)
+from klang.music.metre import default_beat_value
 
 
 def tempo_2_frequency(tempo):
-    """Convert beats per minute (BPM) to frequency.
+    """Convert beats per minute (BPM) to beat frequency.
 
     Args:
         tempo (float): Beats per minute.
@@ -20,7 +17,19 @@ def tempo_2_frequency(tempo):
     return tempo / minute
 
 
-def bar_period(tempo, metre=FOUR_FOUR_METRE, beatValue=None):
+def tempo_2_period(tempo):
+    """Convert beats per minute (BPM) to beat period.
+
+    Args:
+        tempo (float): Beats per minute.
+
+    Returns:
+        float: Period.
+    """
+    return 1. / tempo_2_frequency(tempo)
+
+
+def bar_period(tempo, metre=METRE, beatValue=None):
     """Duration of a single bar for a given tempo.
 
     Args:
@@ -39,12 +48,28 @@ def bar_period(tempo, metre=FOUR_FOUR_METRE, beatValue=None):
     return metre / tempo_2_frequency(tempo) / beatValue
 
 
-assert bar_period(120) == 2.0
-assert bar_period(100) == 2.4
-assert bar_period(120, create_metre(3, 4)) == 1.5
-assert bar_period(80, create_metre(6, 8)) == 1.5
-
-
-def angular_velocity(tempo, metre=FOUR_FOUR_METRE, beatValue=None):
+def angular_velocity(tempo, metre=METRE, beatValue=None):
     """Calculate angular bar velocity for given tempo in BPM."""
     return TAU / bar_period(tempo, metre, beatValue)
+
+
+def note_duration(note, tempo=TEMPO, metre=METRE, beatValue=None):
+    """Note duration relative to tempo, metre or beat value.
+
+    Args:
+        note (Fraction): Note value.
+
+    Kwargs:
+        tempo (float): Beats per minute.
+        metre (Fraction): Time signature.
+        beatValue (Fraction): Note beat value.
+
+    Returns:
+        float: Note duration relative to tempo / beat value.
+    """
+    if beatValue is None:
+        beatValue = default_beat_value(metre)
+
+    beatFrequency = tempo_2_frequency(tempo)
+    beatPeriod = 1. / beatFrequency
+    return beatPeriod / beatValue * note
