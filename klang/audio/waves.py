@@ -19,8 +19,8 @@ def sine(phase):
 
 
 def square(phase):
-    """Sqaure wave function."""
-    return 2. * (wrap(phase) >= 0).astype(float) - 1.
+    """Square wave function."""
+    return 2. * (wrap(phase) >= 0) - 1.
 
 
 def sawtooth(phase):

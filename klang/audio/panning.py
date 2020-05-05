@@ -4,6 +4,7 @@ Resources:
   - http://www.cs.cmu.edu/~music/icm-online/readings/panlaws/
 """
 import math
+import functools
 
 import numpy as np
 
@@ -27,6 +28,7 @@ def pan_law_exponent(panLaw, centerAmplitude):
     return (panLaw - 20. * math.log10(2.)) / (2. * 20. * math.log10(centerAmplitude))
 
 
+@functools.lru_cache()
 def panning_amplitudes(panLevel, mode='constant_power', panLaw=None):
     """Calculate left / right panning amplitudes depending on calculation method
     and pan law.

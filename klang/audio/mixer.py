@@ -39,23 +39,22 @@ class StereoMixer(Mixer):
 
     """Stereo mixer with panning."""
 
-    def __init__(self, nInputs=2, gains=None, mode='constant_power', panLaw=None):
-        super().__init__(nInputs, nOutputs=STEREO, gains=gains)
+    def __init__(self, nInputs=2, gains=None, pannings=None,
+                 mode='constant_power', panLaw=None):
+        if pannings is None:
+            pannings = nInputs * [CENTER]
+
+        assert len(pannings) == nInputs
+        super().__init__(nInputs, nOutputs=1, gains=gains)
         self.mode = mode
         self.panLaw = panLaw
-        self.panning = [
-            panning_amplitudes(CENTER, self.mode, self.panLaw)
-            for _ in range(nInputs)
-        ]
-
-    def set_pan_level(self, channel, panLevel):
-        """Set pan level for a channel."""
-        self.panning[channel] = panning_amplitudes(panLevel, self.mode, self.panLaw)
+        self.pannings = pannings
 
     def update(self):
         signalSum = STEREO_SILENCE.copy()
-        for gain, panning, channel in zip(self.gains, self.panning, self.inputs):
-            signalSum += gain * panning * channel.get_value()
+        for gain, panning, channel in zip(self.gains, self.pannings, self.inputs):
+            pan = panning_amplitudes(panning, self.mode, self.panLaw)
+            signalSum += gain * pan * channel.get_value()
 
         if self.nInputs > 1:
             signalSum /= self.nInputs

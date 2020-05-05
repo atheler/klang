@@ -24,7 +24,7 @@ filter_ = Filter()
 #fx = Bitcrusher(nBits=11)
 #fx = Delay(delay=.001, feedback=.7, drywet=.7)
 #fx = tremolo
-delay = Delay(delay=.8, feedback=.9, drywet=.5)
+delay = Delay(time=.8, feedback=.9, drywet=.5)
 
 
 lfo = Lfo(frequency=.1, shape=1, wave_func=triangle)

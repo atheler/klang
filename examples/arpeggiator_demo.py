@@ -44,7 +44,7 @@ if __name__ == '__main__':
     #arp.arpeggio.process_notes(C, D, Alow, G, A, F)
     arp.arpeggio.process_notes(Alow, C, E, F, G, A)
     #arp.arpeggio.process_notes( Note(pitch=57), C, D, E, G, F,)
-    delay = Delay(delay=0.76, feedback=.9)
+    delay = Delay(time=0.76, feedback=.9)
     lfo = Lfo(frequency=.1, wave_func=triangle)
     trafo = Transformer.from_limits(100., 3000.)
     fil = Filter(frequency=220.)

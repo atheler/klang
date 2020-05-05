@@ -7,6 +7,7 @@ from klang.audio import DT, INTERVAL, get_time
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.constants import TAU
+from klang.music.tempo import compute_rate
 
 
 def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
@@ -69,7 +70,8 @@ class Phasor(Block):
     def __init__(self, frequency=1., initialPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
-        self.frequency.set_value(frequency)
+        rate = compute_rate(frequency)
+        self.frequency.set_value(rate)
         self.currentPhase = initialPhase
 
     def sample(self):
@@ -89,7 +91,8 @@ class Oscillator(Block):
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
-        self.frequency.set_value(frequency)
+        rate = compute_rate(frequency)
+        self.frequency.set_value(rate)
         self.wave_func = wave_func
         self.currentPhase = startPhase
 

@@ -24,7 +24,6 @@ SOME_MICRO_RHYHTMS = [
     MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE], name='Gnawa Triplet'),
     MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE], name='Gnawa'),
     MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE, SIXTEENTH_NOTE], name='Mad Professor Braff'),
-        
 ]
 
 

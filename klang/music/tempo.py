@@ -1,4 +1,6 @@
 """Tempo of music."""
+import fractions
+
 from config import TEMPO, METRE
 from klang.constants import TAU
 from klang.music.metre import default_beat_value
@@ -73,3 +75,21 @@ def note_duration(note, tempo=TEMPO, metre=METRE, beatValue=None):
     beatFrequency = tempo_2_frequency(tempo)
     beatPeriod = 1. / beatFrequency
     return beatPeriod / beatValue * note
+
+
+def compute_duration(duration, *args, **kwargs):
+    """Tempo aware duration."""
+    if isinstance(duration, fractions.Fraction):
+        return note_duration(duration, *args, **kwargs)
+
+    return duration
+
+
+def compute_rate(rate, *args, **kwargs):
+    """Tempo aware rate. Convert note value to frequency (relative to tempo and
+    beat value). Pass through float.
+    """
+    if isinstance(rate, fractions.Fraction):
+        return 1. / note_duration(rate, *args, **kwargs)
+
+    return rate

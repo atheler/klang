@@ -36,7 +36,7 @@ env = AR(attack=.1, release=.02)
 voice = OscillatorVoice(envelope=env, oscillator=osc)
 synthesizer = PolyphonicSynthesizer(voice)
 
-fx = Delay(delay=.25, feedback=.25)
+fx = Delay(time=.25, feedback=.25)
 mixer = Mixer(nInputs=3, gains=[.7, .1, 1.])
 
 with KlangGeber(nOutputs=1, filepath=FILEPATH) as dac:

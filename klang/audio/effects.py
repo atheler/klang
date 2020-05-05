@@ -7,12 +7,15 @@ import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.audio import NYQUIST_FREQUENCY
+from klang.audio.oscillators import Oscillator
+from klang.audio.waves import sine
 from klang.block import Block
+from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
-from klang.audio.oscillators import Lfo
-from klang.util import convert_samples_to_int, convert_samples_to_float
+from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
+from klang.util import convert_samples_to_int, convert_samples_to_float
 
 
 def blend(a, b, x):
@@ -56,35 +59,51 @@ def tanh_distortion(samples, drive=1.):
     return np.tanh(drive * samples)
 
 
+class Gain(Block):
+
+    """Simple gain block."""
+
+    def __init__(self, gain=1.):
+        super().__init__(nInputs=1, nOutputs=1)
+        self.gain = gain
+
+    def update(self):
+        samples = self.input.value
+        self.output.set_value(self.gain * samples)
+
 
 class Tremolo(Block):
 
     """LFO controlled amplitude modulation (AM)."""
 
-    def __init__(self, rate=5., intensity=1.):
-        super().__init__(nInputs=3, nOutputs=1)
-        _, self.rate, self.intensity = self.inputs
-        self.rate.set_value(rate)
+    def __init__(self, rate=5., intensity=1., wave_func=sine):
+        """Kwargs:
+            rate (float): Effect rate / frequency.
+            intensity (float): Effect intensity.
+            wave_func (function): Wave form function.
+        """
+        super().__init__(nOutputs=1)
+        _, self.rate, self.intensity = self.inputs = [
+            Input(owner=self),
+            Relay(owner=self),
+            Input(owner=self),
+        ]
         self.intensity.set_value(intensity)
-
-        self.lfo = Lfo(frequency=rate)
-        self.lfo.currentPhase = TAU / 4.  # Start from zero
+        self.lfo = Oscillator(
+            frequency=rate,
+            wave_func=wave_func,
+            startPhase=TAU / 4., # Start from zero
+        )
 
     def update(self):
-        # Fetch inputs
-        samples = self.input.get_value()
-        rate = self.rate.get_value()
-        intensity = self.intensity.get_value()
-
-        # Update LFO
-        self.lfo.frequency.set_value(rate)
         self.lfo.update()
 
         # Calculate tremolo envelope in [0., 1.].
+        intensity = self.intensity.get_value()
         mod = self.lfo.output.get_value()
         env = 1. - clip(intensity, 0., 1.) * mod
 
-        # Set output
+        samples = self.input.get_value()
         self.output.value = env * samples
 
 
@@ -92,17 +111,18 @@ class Delay(Block):
 
     """Simple digital delay."""
 
-    MAX_DELAY = 2.
-    """float: Max delay duration / max buffer size."""
+    MAX_TIME = 2.
+    """float: Max delay time / max buffer size."""
 
-    def __init__(self, delay=1., feedback=.1, drywet=.5):
-        assert delay <= self.MAX_DELAY
+    def __init__(self, time=1., feedback=.1, drywet=.5):
+        assert time <= self.MAX_TIME
         super().__init__(nInputs=1, nOutputs=1)
         self.feedback = feedback
         self.drywet = drywet
 
-        maxlen = int(self.MAX_DELAY * SAMPLING_RATE)
-        delayOffset = int(delay * SAMPLING_RATE)
+        maxlen = int(self.MAX_TIME * SAMPLING_RATE)
+        time = compute_duration(time)
+        delayOffset = int(time * SAMPLING_RATE)
         self.buffers = {
             MONO: RingBuffer.from_shape(maxlen, offset=delayOffset),
             STEREO: RingBuffer.from_shape((maxlen, STEREO), offset=delayOffset),
@@ -211,7 +231,11 @@ class Observer:
 
 class Filter(Block):
 
-    """Butterworth filter block."""
+    """Butterworth filter block.
+
+    TODO:
+      - Possible to use lfilter for multi channel audio?
+    """
 
     MAX_CHANNELS = STEREO
     """int: Maximum number of channels (for filter initialization)."""
