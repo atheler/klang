@@ -3,6 +3,7 @@ from klang.audio import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.panning import CENTER, panning_amplitudes
 from klang.block import Block
 from klang.connections import Input
+from klang.operations import mix
 
 
 DEFAULT_GAIN = 1.
@@ -43,6 +44,9 @@ class Mixer(Block):
             signalSum = signalSum / self.nInputs
 
         self.output.set_value(signalSum)
+
+    def __iadd__(self, other):
+        return mix(self, other)
 
 
 class StereoMixer(Mixer):
