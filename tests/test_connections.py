@@ -341,8 +341,6 @@ class TestOperatorOverloading(unittest.TestCase):
 
         self.assert_connected(a, b)
 
-        pass
-
     def test_adding(self):
         a = Output()
         b = Input()
