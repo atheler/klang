@@ -79,3 +79,21 @@ class Block:
             infos.append('%d outputs' % self.nOutputs)
 
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
+
+    def __or__(self, other):
+        """Chain block together with another one. Pipe it through."""
+        self.output.connect(other.input)
+        return other
+
+    def __add__(self, other):
+        """Mix blocks together."""
+        from klang.audio.mixer import Mixer  # Circular import for comforts!
+        if isinstance(self, Mixer):
+            mixer = self
+        else:
+            mixer = Mixer(nInputs=1)
+            self.output.connect(mixer.inputs[0])
+
+        mixer.add_channel()
+        other.output.connect(mixer.inputs[-1])
+        return mixer
