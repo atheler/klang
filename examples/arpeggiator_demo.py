@@ -53,10 +53,12 @@ if __name__ == '__main__':
     )
     bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
 
-    mixer = Mixer(gains=[1., .3])
 
     klang = Klang(nOutputs=1)
 
+    # Old style
+    """
+    mixer = Mixer(gains=[1., .3])
     arp.output.connect(synthesizer.input)
     synthesizer.output.connect(fil.input)
     lfo.output.connect(trafo.input)
@@ -69,5 +71,11 @@ if __name__ == '__main__':
     bass.output.connect(mixer.inputs[1])
 
     mixer.output.connect(klang.dac.input)
+    """
+
+    # New style
+    mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
+    mixer.gains = [1., .3]
+    mixer | klang.dac
 
     klang.start()

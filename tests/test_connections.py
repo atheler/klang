@@ -1,3 +1,6 @@
+"""Test various connection types. Result of multiple development iterations
+therefore some duplicated tests.
+"""
 import unittest
 
 from klang.connections import (
@@ -5,17 +8,15 @@ from klang.connections import (
     AlreadyConnectedError,
     IncompatibleError,
     Input,
+    InputBase,
     MessageInput,
     MessageOutput,
+    MessageRelay,
     Output,
     OutputBase,
-    IncompatibleError,
-    InputBase,
-    MessageRelay,
     Relay,
     RelayBase,
 )
-from klang.operations import NotPipeable, NotMixable
 
 
 class TestConnectables(unittest.TestCase):
@@ -318,44 +319,6 @@ class TestIncompatibleConnections(unittest.TestCase):
 
         with self.assertRaises(IncompatibleError):
             MessageOutput().connect(Input())
-
-
-class TestOperatorOverloading(unittest.TestCase):
-    def assert_connected(self, a, b):
-        self.assertIs(a, b.incomingConnection)
-        self.assertIn(b, a.outgoingConnections)
-
-    def test_pipeing(self):
-        with self.assertRaises(IncompatibleError):
-            Input() | Input()
-
-        with self.assertRaises(IncompatibleError):
-            Output() | Output()
-
-        with self.assertRaises(IncompatibleError):
-            Input() | Output()
-
-        a = Output()
-        b = Input()
-        a | b
-
-        self.assert_connected(a, b)
-
-    def test_adding(self):
-        a = Output()
-        b = Input()
-        c = Output()
-
-        with self.assertRaises(TypeError):
-            b + b
-
-        with self.assertRaises(IncompatibleError):
-            a + b
-
-        mixer = a + c
-
-        self.assert_connected(a, mixer.inputs[0])
-        self.assert_connected(c, mixer.inputs[1])
 
 
 if __name__ == '__main__':

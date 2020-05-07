@@ -12,7 +12,6 @@ outputs. E.g. Output -> Relay -> Input.
 import collections
 
 from klang.errors import KlangError
-from klang.operations import pipe, mix
 
 
 __all__ = ['Output', 'Relay', 'Input', 'MessageOutput', 'MessageRelay', 'MessageInput']
@@ -122,8 +121,6 @@ class OutputBase:
             'connected' if self.connected else 'not connected',
         )
 
-    __or__ = pipe
-
 
 class InputBase:
 
@@ -153,10 +150,6 @@ class InputBase:
             type(self).__name__,
             'connected' if self.connected else 'not connected',
         )
-
-    def __or__(self, other):
-        # Reverse order. output -> input (self)
-        return pipe(other, self)
 
 
 class RelayBase(InputBase, OutputBase):
@@ -247,8 +240,6 @@ class Output(OutputBase, _ValueContainer):
     def __init__(self, owner=None, value=0.):
         super().__init__(owner)
         _ValueContainer.__init__(self, value)
-
-    __add__ = mix
 
 
 class Relay(RelayBase, Input):

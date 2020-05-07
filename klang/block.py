@@ -1,6 +1,6 @@
 """Audio blocks."""
-from klang.connections import Input, Output
-from klang.operations import pipe, mix
+from klang.connections import Input, Output, OutputBase
+from klang.errors import KlangError
 
 
 def output_neighbors(block):
@@ -57,11 +57,17 @@ class Block:
     @property
     def input(self):
         """First input."""
+        if not self.inputs:
+            raise AttributeError('Block has no inputs!')
+
         return self.inputs[0]
 
     @property
     def output(self):
         """First output."""
+        if not self.outputs:
+            raise AttributeError('Block has no outputs!')
+
         return self.outputs[0]
 
     def update(self):
@@ -81,5 +87,54 @@ class Block:
 
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
-    __or__ = pipe
-    __add__ = mix
+    def __or__(self, other):
+        """Connect block with other block or input connection."""
+        if isinstance(other, Block):
+            input_ = other.input
+        else:
+            input_ = other
+
+        self.output.connect(input_)
+        return input_.owner
+
+    def __ror__(self, output):
+        """Connect output with block."""
+        if not isinstance(output, OutputBase):
+            raise TypeError('Can not pipe %s to %s' % (output, self))
+
+        output.connect(self.input)
+        return self
+
+    def __add__(self, other):
+        """Mix two blocks together."""
+        from klang.audio.mixer import Mixer  # Circular import for comforts
+        if isinstance(self, Mixer):
+            mixer = self
+        else:
+            mixer = Mixer(nInputs=1)
+            self.output.connect(mixer.inputs[0])
+
+        if isinstance(other, Block):
+            output = other.output
+        else:
+            output = other
+
+        mixer.add_channel()
+        output.connect(mixer.inputs[-1])
+        return mixer
+
+    def __radd__(self, output):
+        """Mix output and block."""
+        if not isinstance(output, Output):
+            raise TypeError('Can not mix %s with %s' % (self, output))
+
+        from klang.audio.mixer import Mixer  # Circular import for comforts
+        if isinstance(self, Mixer):
+            mixer = self
+        else:
+            mixer = Mixer(nInputs=1)
+            output.connect(mixer.inputs[0])
+
+        mixer.add_channel()
+        self.output.connect(mixer.inputs[-1])
+        return mixer
