@@ -1,6 +1,5 @@
 """Audio blocks."""
 from klang.connections import Input, Output, OutputBase
-from klang.errors import KlangError
 
 
 def output_neighbors(block):
