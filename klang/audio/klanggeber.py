@@ -1,32 +1,37 @@
 """Klang sound engine object."""
+import logging
 import time
 
 import numpy as np
 import pyaudio
 
 from config import BUFFER_SIZE, SAMPLING_RATE
+from klang.audio import get_silence
 from klang.block import Block
 from klang.constants import MONO, STEREO
 from klang.errors import KlangError
-from klang.execution import determine_execution_order, execute
 from klang.util import WavWriter
 
 
-def pack_signals(signals, bufferSize):
-    """Interleave samples from multiple mono signals. C contiguous for audio
-    card.
+D_TYPE = np.float32
+"""type: Numpy audio sample datatype (compatible with pyaudio.paFloat32)."""
 
-    Format:
+
+def pack_signals(signals):
+    """Interleave samples from multiple mono signals. C contiguous for audio
+    card (transposing signals does not work).
+
+    Packed format:
         [[L0, R0]
          [L1, R1]
          [L2, R3]
             ...
          [LN, RN]]
     """
-    shape = (bufferSize, len(signals))
-    ret = np.empty(shape)
-    for i, samples in enumerate(signals):
-        ret[:, i] = samples
+    shape = (BUFFER_SIZE, len(signals))
+    ret = np.empty(shape, dtype=D_TYPE)
+    for col, samples in enumerate(signals):
+        ret[:, col] = samples
 
     return ret
 
@@ -40,106 +45,185 @@ class ChannelMismatchError(KlangError):
 
 class Adc(Block):
 
-    """Dummy block to inject audio into the block network."""
+    """Sound card audio input."""
 
-    def __init__(self, nOutputs):
-        super().__init__(nOutputs=nOutputs)
+    def __init__(self, nChannels):
+        super().__init__(nOutputs=nChannels)
+        self.nChannels = nChannels
+        self.mute_outputs()
 
-    def update(self):
-        pass
+    def mute_outputs(self):
+        """Mute all output connections."""
+        silence = get_silence(BUFFER_SIZE)
+        for output in self.outputs:
+            output.set_value(silence)
+
+    def inject_samples(self, samples):
+        """Inject audio samples into network."""
+        for signal, output in zip(samples.T, self.outputs):
+            output.set_value(signal)
 
 
 class Dac(Block):
 
-    """Dummy block to skim off audio from block network."""
+    """Sound card audio output."""
 
-    def __init__(self, nInputs):
-        super().__init__(nInputs=nInputs)
+    def __init__(self, nChannels):
+        super().__init__(nInputs=nChannels)
+        self.nChannels = nChannels
+        self.mute_inputs()
 
-    def update(self):
-        pass
+    def mute_inputs(self):
+        """Mute all input connections."""
+        silence = get_silence(BUFFER_SIZE)
+        for input_ in self.inputs:
+            input_.set_value(silence)
 
-    def get_channels(self, nChannels):
-        """Get signal from each active channel."""
+    def iterate_channels(self):
+        """Iterate over all incoming audio channels (no matter if value
+        connections provides a MONO, STEREO or multichannel signal).
+        """
+        # ndim check implementation is a little faster than iterating over
+        # np.atleast_2d(...)
         counter = 0
-        for input in self.inputs:
-            signal = input.get_value()
-            ndim = np.ndim(signal)
-            if ndim == 0:
-                return
-
+        for input_ in self.inputs:
+            val = input_.get_value()
+            ndim = np.ndim(val)
             if ndim == MONO:
-                yield signal
+                yield val
                 counter += 1
-                if counter >= nChannels:
+                if counter == self.nChannels:
                     return
 
-            else:
-                for channel in signal:
+            elif ndim > MONO:
+                for channel in val:
                     yield channel
                     counter += 1
-                    if counter >= nChannels:
+                    if counter == self.nChannels:
                         return
+
+    def collect_samples(self):
+        """Collect audio samples from all incoming connections. Pack them
+        together for audio card.
+
+        Returns:
+            array: Audio samples (BUFFER_SIZE, nChannels) shaped.
+        """
+        signals = list(self.iterate_channels())
+        if len(signals) != self.nChannels:
+            msg = 'Got %d channels. Need %d!' % (len(signals), self.nChannels)
+            raise ChannelMismatchError(msg)
+
+        return pack_signals(signals)
 
 
 class KlangGeber:
 
-    """Sound engine block executor."""
+    """Audio card interface.
 
-    def __init__(self, nInputs=0, nOutputs=STEREO, filepath=None):
+    PyAudio / Portaudio sound engine. Callback argument in order to propagate
+    audio stream callback upwards.
+    """
+
+    def __init__(self, nInputs=0, nOutputs=STEREO, callback=None, filepath=''):
         """Kwargs:
-            nInputs (int): Number of audio inputs.
-            nOutputs (int): Number of audio outputs.
-            filepath (str): WAV file output filepath.
+            nInputs (int): Number of audio input channels.
+            nOutputs (int): Number of audio output channels.
+            callback (function): Block execution callback function.
         """
-        self.nInputs = nInputs
-        self.nOutputs = nOutputs
-        self.adc = Adc(nOutputs=nInputs)
-        self.dac = Dac(nInputs=nOutputs)
-        if filepath:
-            self.wavWriter = WavWriter(filepath, nChannels=nOutputs)
-        else:
-            self.wavWriter = None
+        self.adc = Adc(nChannels=nInputs)
+        self.dac = Dac(nChannels=nOutputs)
+        self.logger = logging.getLogger(type(self).__name__)
+        if callback is None:
+            self.logger.warning('No callback defined!')
+            callback = lambda: None  # Callback placeholder
+
+        self.callback = callback
+        self.capturedFrames = []
+        self.filepath = filepath
+
+    @property
+    def nInputs(self):
+        """Number of audio input channels."""
+        return self.adc.nChannels
+
+    @property
+    def nOutputs(self):
+        """Number of audio output channels."""
+        return self.dac.nChannels
+
+    def stream_callback(self, in_data, frame_count, time_info, status):
+        """Audio stream callback for PyAudio."""
+        if status is not pyaudio.paContinue:
+            self.logger.warning('Status changed to %s', status)
+
+        # Process input audio samples
+        if in_data:
+            # TODO: Make me, test me
+            raw = np.frombuffer(in_data, dtype=D_TYPE)
+            samples = raw.reshape((frame_count, self.adc.nChannels))
+            self.adc.inject_samples(raw)
+
+        # Trigger global block execution / propgate audio stream callback upwards
+        self.callback()
+
+        # Fetch output audio samples from block network
+        try:
+            outData = self.dac.collect_samples()
+        except ChannelMismatchError as err:
+            self.logger.error(err, exc_info=True)
+            silence = get_silence((frame_count, self.dac.nChannels), D_TYPE)
+            return silence, pyaudio.paAbort
+
+        if self.filepath:
+            self.capturedFrames.append(outData)
+
+        return (outData, pyaudio.paContinue)
+
+    def validate_sound_card_channels(self, pa):
+        """Validate number of audio inputs / outputs with default audio
+        devices.
+
+        Args:
+            pa (PyAudio): PyAudio instance.
+
+        Raises:
+            AssertionError: If we do not have enough audio channels on the sound
+                card.
+        """
+        inputDeviceInfo = pa.get_default_input_device_info()
+        assert self.nInputs <= inputDeviceInfo['maxInputChannels'], 'Not enough sound card inputs!'
+        outputDeviceInfo = pa.get_default_output_device_info()
+        assert self.nOutputs <= outputDeviceInfo['maxOutputChannels'], 'Not enough sound card outputs!'
+
+    def dump_audio_to_wav(self):
+        """Dumpy captured audio frames to WAV file."""
+        self.logger.info('Writing audio dump to WAV file %r', self.filepath)
+        wavWriter = WavWriter(self.filepath, self.nOutputs, SAMPLING_RATE)
+        for frame in self.capturedFrames:
+            wavWriter.write(frame)
+
+        wavWriter.close()
 
     def start(self):
-        silence = np.zeros((BUFFER_SIZE, self.nOutputs), dtype=np.float32)
-        execOrder = determine_execution_order(blocks=[self.dac, self.adc])
-
-        def audio_callback(inData, frameCount, timeInfo, status):
-            """Audio stream callback for pyaudio."""
-            if inData is not None:
-                # TODO(atheler): How to stereo signals?
-                for samples, channel in zip(inData.T, self.adc.outputs):
-                    channel.set_value(samples)
-
-            execute(execOrder)
-            channels = list(self.dac.get_channels(self.nOutputs))
-            if len(channels) < self.nOutputs:
-                msg = 'Not enough channels %d' % len(channels)
-                error = ChannelMismatchError(msg)
-                print(error)
-                return silence, pyaudio.paAbort
-
-            outData = pack_signals(channels, BUFFER_SIZE)
-            assert outData.shape == (BUFFER_SIZE, self.nOutputs)
-
-            if self.wavWriter:
-                self.wavWriter.write(outData)
-
-            return outData.astype(np.float32), pyaudio.paContinue
+        """Start audio engine main loop."""
+        pa = pyaudio.PyAudio()
+        self.validate_sound_card_channels(pa)
+        assert D_TYPE is np.float32
 
         # Example: Callback Mode Audio I/O from
         # https://people.csail.mit.edu/hubert/pyaudio/docs/
-        pa = pyaudio.PyAudio()
         stream = pa.open(
             rate=SAMPLING_RATE,
-            channels=self.nOutputs,
+            frames_per_buffer=BUFFER_SIZE,
+            channels=self.nOutputs,  # TODO: How to 1x input, 2x outputs?
             format=pyaudio.paFloat32,
             input=(self.nInputs > 0),
             output=(self.nOutputs > 0),
-            frames_per_buffer=BUFFER_SIZE,
-            stream_callback=audio_callback,
+            stream_callback=self.stream_callback,
         )
+
+        self.logger.info('Starting up audio engine with default devices')
         stream.start_stream()
 
         try:
@@ -147,25 +231,9 @@ class KlangGeber:
                 time.sleep(0.1)
 
         finally:
+            self.logger.info('Shutting down audio engine')
             stream.stop_stream()
             stream.close()
             pa.terminate()
-            if self.wavWriter:
-                self.wavWriter.close()
-
-    def __enter__(self):
-        if self.nInputs == 0:
-            return self.dac
-
-        if self.nOutputs == 0:
-            return self.adc
-
-        return self.adc, self.dac
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        """Start klang execution."""
-        anErrorOccured = exception_type or exception_value or traceback
-        if anErrorOccured:
-            return
-
-        self.start()
+            if self.filepath:
+                self.dump_audio_to_wav()

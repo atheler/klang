@@ -22,9 +22,9 @@ INTERVAL = DT * BUFFER_SIZE
 
 
 @functools.lru_cache()
-def get_silence(shape):
+def get_silence(shape, dtype=float):
     """Get some silence. All zero array. Cached."""
-    arr = np.zeros(shape)
+    arr = np.zeros(shape, dtype)
     arr.setflags(write=False)
     return arr
 

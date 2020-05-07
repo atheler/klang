@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Micro rhythm demo."""
-from klang.audio.klanggeber import KlangGeber
+from klang.klang import Klang
 from klang.audio.mixer import Mixer
 from klang.audio.oscillators import Lfo
 from klang.audio.sequencer import Sequencer
@@ -16,8 +16,8 @@ PATTERN = [
     [60, 0, 0, 0, 60, 0, 0, 0, 60, 0, 0, 0, 60, 0, 0, 60],  # Kick drum
     4 * [60, 60, 60, 60],  # Hi-Hat
 ]
-#FILENAME = 'micro_rhythm.wav'
-FILENAME = None
+FILEPATH = 'micro_rhythm.wav'
+#FILEPATH = None
 SOME_MICRO_RHYHTMS = [
     MicroRhyhtm([QUARTER_NOTE, EIGHT_NOTE], name='Swing'),
     MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE], name='Afro-Cuban Triplet'),
@@ -47,9 +47,10 @@ lfo.output.connect(mr.phrasing)  # Lfo controls phrasing factor
 seq.sequences[1].connect_micro_rhythm(mr)
 
 
-with KlangGeber(nOutputs=1, filepath=FILENAME) as dac:
-    seq.outputs[0].connect(kick.input)
-    seq.outputs[1].connect(hihat.input)
-    kick.output.connect(mixer.inputs[0])
-    hihat.output.connect(mixer.inputs[1])
-    mixer.output.connect(dac.input)
+klang = Klang(nOutputs=1, filepath=FILEPATH)
+seq.outputs[0].connect(kick.input)
+seq.outputs[1].connect(hihat.input)
+kick.output.connect(mixer.inputs[0])
+hihat.output.connect(mixer.inputs[1])
+mixer.output.connect(klang.dac.input)
+klang.start()

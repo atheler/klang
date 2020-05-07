@@ -4,7 +4,7 @@
 from klang.arpeggiator import Arpeggiator
 from klang.audio.effects import Delay, Filter, Transformer
 from klang.audio.envelope import ADSR
-from klang.audio.klanggeber import KlangGeber
+from klang.klang import Klang
 from klang.audio.oscillators import Lfo
 from klang.audio.oscillators import Oscillator
 from klang.audio.synthesizer import MonophonicSynthesizer
@@ -13,10 +13,6 @@ from klang.audio.waves import sawtooth, triangle, sine
 from klang.messages import Note
 from klang.audio.sequencer import Sequencer
 from klang.audio.mixer import Mixer
-
-
-#FILEPATH = 'arp_demo.wav'
-FILEPATH = None
 
 
 Alow = Note(pitch=57)
@@ -59,16 +55,19 @@ if __name__ == '__main__':
 
     mixer = Mixer(gains=[1., .3])
 
-    with KlangGeber(nOutputs=1, filepath=FILEPATH) as dac:
-        arp.output.connect(synthesizer.input)
-        synthesizer.output.connect(fil.input)
-        lfo.output.connect(trafo.input)
-        trafo.output.connect(fil.frequency)
-        fil.output.connect(delay.input)
-        delay.output.connect(mixer.inputs[0])
+    klang = Klang(nOutputs=1)
 
-        # Bass
-        sequencer.outputs[0].connect(bass.input)
-        bass.output.connect(mixer.inputs[1])
+    arp.output.connect(synthesizer.input)
+    synthesizer.output.connect(fil.input)
+    lfo.output.connect(trafo.input)
+    trafo.output.connect(fil.frequency)
+    fil.output.connect(delay.input)
+    delay.output.connect(mixer.inputs[0])
 
-        mixer.output.connect(dac.input)
+    # Bass
+    sequencer.outputs[0].connect(bass.input)
+    bass.output.connect(mixer.inputs[1])
+
+    mixer.output.connect(klang.dac.input)
+
+    klang.start()

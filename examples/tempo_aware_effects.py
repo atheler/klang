@@ -1,10 +1,12 @@
+import os
+os.system('clear')
 from klang.audio.effects import Tremolo, Delay, Filter, Transformer
-from klang.audio.klanggeber import KlangGeber
 from klang.audio.mixer import StereoMixer
 from klang.audio.oscillators import Oscillator, Lfo
 from klang.audio.panning import LEFT, RIGHT
 from klang.audio.waves import square, triangle, random
 from klang.constants import STEREO
+from klang.klang import Klang
 from klang.music.note_values import (
     LARGE_NOTE, WHOLE_NOTE, QUARTER_NOTE, DOTTED_QUARTER_NOTE,
     DOUBLE_DOTTED_QUARTER_NOTE
@@ -30,13 +32,14 @@ rightDelay = Delay(time=DOTTED_QUARTER_NOTE, feedback=FEEDBACK, drywet=DRY_WET)
 mixer = StereoMixer(nInputs=STEREO, pannings=[LEFT, RIGHT])
 
 
-with KlangGeber(nOutputs=STEREO, filepath=FILEPATH) as dac:
-    osc.output.connect(tremolo.input)
-    tremolo.output.connect(fil.input)
-    lfo.output.connect(trafo.input)
-    trafo.output.connect(fil.frequency)
-    fil.output.connect(leftDelay.input)
-    fil.output.connect(rightDelay.input)
-    leftDelay.output.connect(mixer.inputs[0])
-    rightDelay.output.connect(mixer.inputs[1])
-    mixer.output.connect(dac.input)
+klang = Klang(nOutputs=STEREO, filepath=FILEPATH)
+osc.output.connect(tremolo.input)
+tremolo.output.connect(fil.input)
+lfo.output.connect(trafo.input)
+trafo.output.connect(fil.frequency)
+fil.output.connect(leftDelay.input)
+fil.output.connect(rightDelay.input)
+leftDelay.output.connect(mixer.inputs[0])
+rightDelay.output.connect(mixer.inputs[1])
+mixer.output.connect(klang.dac.input)
+klang.start()

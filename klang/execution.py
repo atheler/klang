@@ -53,3 +53,40 @@ def execute(blocks):
 def print_exec_order(execOrder):
     for iblock in enumerate(execOrder, 1):
         print('%d) %s' % iblock)
+
+
+class Executor:
+
+    """Block executor.
+
+    Manages entry blocks into the network and the global execution order.
+
+    Attributes:
+        blocks (list): Entry blocks into the network to observe. Start blocks
+            for determining execution order.
+        execOrder (list): Current execution order.
+    """
+
+    def __init__(self, blocks=None):
+        if blocks is None:
+            blocks = set()
+
+        self.blocks = blocks
+        self.execOrder = []
+
+    """
+    def add_block(self, block):
+        self.blocks.add(block)
+        self.update_exec_order()
+
+    def add_blocks(self, blocks):
+        self.blocks.update(blocks)
+        self.update_exec_order()
+    """
+
+    def update_exec_order(self):
+        """Update block execution order."""
+        self.execOrder = determine_execution_order(self.blocks)
+
+    def execute(self):
+        execute(self.execOrder)

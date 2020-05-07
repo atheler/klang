@@ -1,6 +1,4 @@
 """Audio blocks."""
-import abc
-
 from klang.connections import Input, Output
 
 
@@ -24,6 +22,9 @@ def input_neighbors(block):
 class Block:
 
     """Block base class.
+
+    Child classes have to override the update() method. This will be called once
+    per audio buffer.
 
     Attributes:
         inputs (list of klang.connections.Input): Input connection.
@@ -62,10 +63,9 @@ class Block:
         """First output."""
         return self.outputs[0]
 
-    @abc.abstractmethod  # No Block(metaclass=abc.ABCMeta) because of testability
     def update(self):
         """Block's update / run / tick method."""
-        raise NotImplementedError('Abstract base method!')
+        pass
 
     def __str__(self):
         infos = []

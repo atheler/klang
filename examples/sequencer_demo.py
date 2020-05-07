@@ -1,13 +1,12 @@
 """Sequencer drum kit demo."""
 from klang.audio.effects import Delay
-from klang.audio.klanggeber import KlangGeber
+from klang.audio.envelope import AR
 from klang.audio.mixer import Mixer
+from klang.audio.oscillators import Oscillator
 from klang.audio.sequencer import Sequencer
 from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer, MonophonicSynthesizer
-
-from klang.audio.oscillators import Oscillator
-from klang.audio.envelope import AR
 from klang.audio.voices import OscillatorVoice
+from klang.klang import Klang
 
 
 # Params
@@ -39,12 +38,13 @@ synthesizer = PolyphonicSynthesizer(voice)
 fx = Delay(time=.25, feedback=.25)
 mixer = Mixer(nInputs=3, gains=[.7, .1, 1.])
 
-with KlangGeber(nOutputs=1, filepath=FILEPATH) as dac:
-    seq.output.connect(kick.input)
-    seq.outputs[1].connect(hihat.input)
-    seq.outputs[2].connect(synthesizer.input)
-    kick.output.connect(mixer.inputs[0])
-    hihat.output.connect(mixer.inputs[1])
-    synthesizer.output.connect(fx.input)
-    fx.output.connect(mixer.inputs[2])
-    mixer.output.connect(dac.input)
+klang = Klang(nOutputs=1, filepath=FILEPATH)
+seq.output.connect(kick.input)
+seq.outputs[1].connect(hihat.input)
+seq.outputs[2].connect(synthesizer.input)
+kick.output.connect(mixer.inputs[0])
+hihat.output.connect(mixer.inputs[1])
+synthesizer.output.connect(fx.input)
+fx.output.connect(mixer.inputs[2])
+mixer.output.connect(klang.dac.input)
+klang.start()
