@@ -15,6 +15,7 @@ from klang.connections import (
     Relay,
     RelayBase,
 )
+from klang.operations import NotPipeable, NotMixable
 
 
 class TestConnectables(unittest.TestCase):
@@ -116,16 +117,11 @@ class TestInputOutput(unittest.TestCase):
         self.assertEqual(dst.get_value(), 42)
 
     def test_only_input_to_output_connections(self):
-        a = Output(None)
-        b = Output(None)
-        c = Input(None)
-        d = Input(None)
+        with self.assertRaises(IncompatibleError):
+            Output().connect(Output())
 
         with self.assertRaises(IncompatibleError):
-            a.connect(b)
-
-        with self.assertRaises(IncompatibleError):
-            c.connect(d)
+            Input().connect(Input())
 
 
 class TestMessageInputOutput(unittest.TestCase):
@@ -313,6 +309,55 @@ class TestNewConnections(unittest.TestCase):
 
         with self.assertRaises(AlreadyConnectedError):
             b.connect(r)
+
+
+class TestIncompatibleConnections(unittest.TestCase):
+    def test_some_incompatible_connections(self):
+        with self.assertRaises(IncompatibleError):
+            Output().connect(MessageInput())
+
+        with self.assertRaises(IncompatibleError):
+            MessageOutput().connect(Input())
+
+
+class TestOperatorOverloading(unittest.TestCase):
+    def assert_connected(self, a, b):
+        self.assertIs(a, b.incomingConnection)
+        self.assertIn(b, a.outgoingConnections)
+
+    def test_pipeing(self):
+        with self.assertRaises(IncompatibleError):
+            Input() | Input()
+
+        with self.assertRaises(IncompatibleError):
+            Output() | Output()
+
+        with self.assertRaises(IncompatibleError):
+            Input() | Output()
+
+        a = Output()
+        b = Input()
+        a | b
+
+        self.assert_connected(a, b)
+
+        pass
+
+    def test_adding(self):
+        a = Output()
+        b = Input()
+        c = Output()
+
+        with self.assertRaises(TypeError):
+            b + b
+
+        with self.assertRaises(IncompatibleError):
+            a + b
+
+        mixer = a + c
+
+        self.assert_connected(a, mixer.inputs[0])
+        self.assert_connected(c, mixer.inputs[1])
 
 
 if __name__ == '__main__':

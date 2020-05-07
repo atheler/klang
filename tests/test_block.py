@@ -1,15 +1,27 @@
+"""Test Block class."""
 import unittest
 
 from klang.block import Block
 from klang.audio.mixer import Mixer
 
 
-class TestBlock(unittest.TestCase):
+class TestOperatorOverloading(unittest.TestCase):
     def assert_is_connected(self, a, b):
-        self.assertIs(a.output, b.input.incomingConnection)
-        self.assertIn(b.input, a.output.outgoingConnections)
+        """Assert that a is connected with b (directional)."""
+        if isinstance(a, Block):
+            output = a.output
+        else:
+            output = a
 
-    def test_operator_or(self):
+        if isinstance(b, Block):
+            input_ = b.input
+        else:
+            input_ = b
+
+        self.assertIs(output, input_.incomingConnection)
+        self.assertIn(input_, output.outgoingConnections)
+
+    def test_piping_muliple_blocks(self):
         a = Block(nInputs=1, nOutputs=1)
         b = Block(nInputs=1, nOutputs=1)
         c = Block(nInputs=1, nOutputs=1)
@@ -19,22 +31,31 @@ class TestBlock(unittest.TestCase):
         self.assert_is_connected(a, b)
         self.assert_is_connected(b, c)
 
-    def test_operator_and(self):
+    def test_adding_multiple_blocks(self):
         a = Block(nInputs=1, nOutputs=1)
         b = Block(nInputs=1, nOutputs=1)
         c = Block(nInputs=1, nOutputs=1)
         mixer = a + b + c
 
-        self.assertIs(type(mixer), Mixer)
+        self.assertTrue(isinstance(mixer, Mixer))
+        self.assert_is_connected(a, mixer.inputs[0])
+        self.assert_is_connected(b, mixer.inputs[1])
+        self.assert_is_connected(c, mixer.inputs[2])
 
-        self.assertIs(a.output, mixer.inputs[0].incomingConnection)
-        self.assertIn(mixer.inputs[0], a.output.outgoingConnections)
+    def test_piping_with_connections(self):
+        a = Block(nOutputs=1)
+        b = Block(nInputs=1)
 
-        self.assertIs(b.output, mixer.inputs[1].incomingConnection)
-        self.assertIn(mixer.inputs[1], b.output.outgoingConnections)
+        self.assertIs(a | b.input, b)
+        self.assert_is_connected(a, b)
 
-        self.assertIs(c.output, mixer.inputs[2].incomingConnection)
-        self.assertIn(mixer.inputs[2], c.output.outgoingConnections)
+    def test_adding_with_connections(self):
+        a = Block(nOutputs=1)
+        b = Block(nOutputs=1)
+
+        mixer = a + b.output
+        self.assert_is_connected(a, mixer.inputs[0])
+        self.assert_is_connected(b, mixer.inputs[1])
 
 
 if __name__ == '__main__':
