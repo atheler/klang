@@ -1,8 +1,8 @@
 from klang.audio.sampling import AudioFile
 from klang.audio.effects import Delay, Tremolo, Filter, Transformer
-from klang.audio.klanggeber import KlangGeber
 from klang.audio.oscillators import Lfo
 from klang.audio.waves import triangle
+from klang.klang import Klang
 
 #FILEPATH = '/Users/sasha/Downloads/file_example_WAV_1MG.wav'
 FILEPATH = '/Users/sasha/Downloads/a2002011001-e02.wav'
@@ -27,7 +27,7 @@ filter_ = Filter()
 delay = Delay(time=.8, feedback=.9, drywet=.5)
 
 
-lfo = Lfo(frequency=.1, shape=1, wave_func=triangle)
+lfo = Lfo(frequency=.1, wave_func=triangle)
 #lfo.output.connect(fx.intensity)
 
 
@@ -42,12 +42,13 @@ delay.output.connect(filter_.input)
 
 
 if __name__ == '__main__':
-    with KlangGeber(nOutputs=1, filepath='filter_sweep.wav') as dac:
-        #audioFile.output.connect(delay.input)
-        #delay.output.connect(tremolo.input)
-        #tremolo.output.connect(dac.input)
-        #audioFile.output.connect(dac.input)
-        #fx.output.connect(dac.input)
-        #subsampler.output.connect(dac.input)
+    klang = Klang(nOutputs=1, filepath='filter_sweep.wav')
+    #audioFile.output.connect(delay.input)
+    #delay.output.connect(tremolo.input)
+    #tremolo.output.connect(dac.input)
+    #audioFile.output.connect(dac.input)
+    #fx.output.connect(dac.input)
+    #subsampler.output.connect(dac.input)
 
-        filter_.output.connect(dac.input)
+    filter_.output.connect(klang.dac.input)
+    klang.start()
