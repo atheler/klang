@@ -31,7 +31,6 @@ INTERVALS_FILEPATH = 'resources/intervals.csv'
 TUNINGS_FILEPATH = 'resources/tunings.csv'
 """str: Filepath to tunings CSV file."""
 
-
 TEMPO = 120.
 """float: Tempo in beats per minute."""
 

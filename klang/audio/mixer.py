@@ -1,27 +1,28 @@
-"""Mixer"""
+"""Mono and stereo audio signal mixer."""
 from klang.audio import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.panning import CENTER, panning_amplitudes
 from klang.block import Block
-from klang.constants import MONO, STEREO
-from klang.math import clip
 
 
 class Mixer(Block):
 
-    """Mono mixer with channel gains."""
+    """Mono mixer with channel gains.
 
-    def __init__(self, nInputs=2, nOutputs=MONO, gains=None):
+    Attributes:
+        gains (list): Gain levels.
+    """
+
+    def __init__(self, nInputs=2, gains=None):
+        """Kwargs:
+            nInputs (int): Number of inputs.
+            gains (list): Gain values. nInputs length.
+        """
         if gains is None:
             gains = nInputs * [1.]
 
-        assert nOutputs in {MONO, STEREO}
         assert len(gains) == nInputs
-        super().__init__(nInputs=nInputs, nOutputs=nOutputs)
+        super().__init__(nInputs=nInputs, nOutputs=1)
         self.gains = gains
-
-    def set_gain(self, channel, gain):
-        """Set gain level for a given channel."""
-        self.gains[channel] = clip(gain, 0., 1.)
 
     def update(self):
         signalSum = MONO_SILENCE.copy()
@@ -29,23 +30,33 @@ class Mixer(Block):
             signalSum += gain * channel.get_value()
 
         if self.nInputs > 1:
-            signalSum /= self.nInputs
+            signalSum = signalSum / self.nInputs
 
-        for output in self.outputs:
-            output.set_value(signalSum)
+        self.output.set_value(signalSum)
 
 
 class StereoMixer(Mixer):
 
-    """Stereo mixer with panning."""
+    """Stereo mixer with panning.
+
+    Attributes:
+        pannings (list): Panning levels.
+    """
 
     def __init__(self, nInputs=2, gains=None, pannings=None,
                  mode='constant_power', panLaw=None):
+        """Kwargs:
+            nInputs (int): Number of inputs.
+            gains (list): Gain values. nInputs length.
+            pannings (list): Pan levels.
+            mode (str): Panning mode.
+            panLaw (int): Pan law.
+        """
         if pannings is None:
             pannings = nInputs * [CENTER]
 
         assert len(pannings) == nInputs
-        super().__init__(nInputs, nOutputs=1, gains=gains)
+        super().__init__(nInputs, gains=gains)
         self.mode = mode
         self.panLaw = panLaw
         self.pannings = pannings
@@ -57,7 +68,6 @@ class StereoMixer(Mixer):
             signalSum += gain * pan * channel.get_value()
 
         if self.nInputs > 1:
-            signalSum /= self.nInputs
+            signalSum = signalSum / self.nInputs
 
-        for output in self.outputs:
-            output.set_value(signalSum)
+        self.output.set_value(signalSum)

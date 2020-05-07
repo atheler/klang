@@ -78,8 +78,8 @@ class Tremolo(Block):
 
     def __init__(self, rate=5., intensity=1., wave_func=sine):
         """Kwargs:
-            rate (float): Effect rate / frequency.
-            intensity (float): Effect intensity.
+            rate (float): Initial effect frequency.
+            intensity (float): Initial effect intensity.
             wave_func (function): Wave form function.
         """
         super().__init__(nOutputs=1)
@@ -336,7 +336,10 @@ class TanhDistortion(Block):
 
 class PitchShifter(Block):
 
+    """Simple resampler based pitch shifter."""
+
     WINDOW = np.hanning(BUFFER_SIZE)
+    """array: Window samples."""
 
     def __init__(self, shift=2., dryWet=.5, mode='sinc_fastest'):
         super().__init__(nInputs=1, nOutputs=1)
@@ -349,6 +352,7 @@ class PitchShifter(Block):
         )
 
     def callback(self):
+        """Resampler callback function."""
         return self.input.value * self.WINDOW
 
     def update(self):

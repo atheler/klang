@@ -54,7 +54,6 @@ def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
     if constFrequency:
         t = get_time(length + 1, dt)
         phase = TAU * frequency * t + startPhase
-
     else:
         phase = np.empty(length + 1)
         phase[0] = startPhase
@@ -86,7 +85,10 @@ class Phasor(Block):
 
 class Oscillator(Block):
 
-    """Audio signal oscillator. Generates an array of audio each buffer."""
+    """Audio signal oscillator. Generates an array of audio each buffer. Also
+    supports an array as frequency input for varying frequencies (has to be
+    BUFFER_SIZE long).
+    """
 
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)

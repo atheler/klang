@@ -15,7 +15,19 @@ from klang.note_effects import NoteLengthener
 
 
 def random_pattern(length, period=None, minVal=60, maxVal=72):
-    """Generate random sequence for given length with cycle period."""
+    """Generate random sequence for given length with cycle period.
+
+    Args:
+        length (int): Pattern length.
+
+    Kwargs:
+        period (int): Repetition cycle inside the patter (<length).
+        minVal (int): Minimum pattern value.
+        maxVal (int): Maximum pattern value.
+
+    Returns:
+        list: Random pattern.
+    """
     if period is None:
         period = length
 
@@ -30,7 +42,15 @@ def random_pattern(length, period=None, minVal=60, maxVal=72):
 
 
 def pizza_slice_number(angle, nSlices):
-    """Get slice number for a given angle and a total number of pieces."""
+    """Get slice number for a given angle and a total number of pieces.
+
+    Args:
+        angle (float): Phase value.
+        nSlices (int): Number of pizza slice.
+
+    Returns:
+        int: Pizza slice number.
+    """
     return int((angle % TAU) / TAU * nSlices)
 
 
@@ -79,6 +99,9 @@ class PatternLookup(Block):
 
 
 class Sequence(Composite):
+
+    """Single channel sequencer."""
+
     def __init__(self, sequencer, pattern, tempo=120., relNoteDuration=.5,
             metre=FOUR_FOUR_METRE, beatValue=None, microRhythm=None):
         self.validate_pattern(pattern, metre, beatValue)
