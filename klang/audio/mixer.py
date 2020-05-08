@@ -1,7 +1,7 @@
 """Mono and stereo audio signal mixer."""
 from klang.audio import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.panning import CENTER, panning_amplitudes
-from klang.block import Block
+from klang.block import fetch_output, Block
 from klang.connections import Input
 
 
@@ -29,8 +29,8 @@ class Mixer(Block):
         super().__init__(nInputs=nInputs, nOutputs=1)
         self.gains = gains
 
-    def add_channel(self, gain=DEFAULT_GAIN):
-        """Add a new channel to the mixer."""
+    def add_new_channel(self, gain=DEFAULT_GAIN):
+        """Add a new input channel to the mixer."""
         self.inputs.append(Input(owner=self))
         self.gains.append(gain)
 
@@ -43,6 +43,18 @@ class Mixer(Block):
             signalSum = signalSum / self.nInputs
 
         self.output.set_value(signalSum)
+
+    def __iadd__(self, other):
+        """Inplace add a new block.output or output to the mixer. Return mixer
+        for concatenation.
+        """
+        self.add_new_channel()
+        output = fetch_output(other)
+        output.connect(self.inputs[-1])
+        return self
+
+    __add__ = __iadd__
+    __radd__ = __iadd__
 
 
 class StereoMixer(Mixer):
@@ -71,9 +83,8 @@ class StereoMixer(Mixer):
         self.panLaw = panLaw
         self.pannings = pannings
 
-    def add_channel(self, gain=DEFAULT_GAIN, panning=CENTER):
-        """Add a new channel to the mixer."""
-        super().add_channel(gain)
+    def add_new_channel(self, gain=DEFAULT_GAIN, panning=CENTER):
+        super().add_new_channel(gain)
         self.pannings.append(panning)
 
     def update(self):

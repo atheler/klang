@@ -78,5 +78,4 @@ if __name__ == '__main__':
     mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
     mixer.gains = [1., .3]
     mixer | klang.dac
-
     klang.start()

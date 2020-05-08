@@ -71,6 +71,16 @@ def break_connection(output, input_):
     input_.incomingConnection = None
 
 
+def str_function(connection):
+    """__str__ function for OutputBase and InputBase."""
+    infos = []
+    if connection.owner:
+        infos.append('owner: %s' % connection.owner)
+
+    infos.append('connected' if connection.connected else 'not connected')
+    return '%s(%s)' % (type(connection).__name__, ', '.join(infos))
+
+
 class NotConnectedError(KlangError):
 
     """Connectable is not connected."""
@@ -115,11 +125,7 @@ class OutputBase:
         """Disconnect input."""
         break_connection(self, input_)
 
-    def __str__(self):
-        return '%s(%s)' % (
-            type(self).__name__,
-            'connected' if self.connected else 'not connected',
-        )
+    __str__ = str_function
 
 
 class InputBase:
@@ -145,11 +151,7 @@ class InputBase:
         """Disconnect output."""
         break_connection(output, self)
 
-    def __str__(self):
-        return '%s(%s)' % (
-            type(self).__name__,
-            'connected' if self.connected else 'not connected',
-        )
+    __str__ = str_function
 
 
 class RelayBase(InputBase, OutputBase):

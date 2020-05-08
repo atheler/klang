@@ -1,5 +1,5 @@
 """Audio blocks."""
-from klang.connections import Input, Output, OutputBase
+from klang.connections import OutputBase, InputBase, Output, Input
 
 
 def output_neighbors(block):
@@ -17,6 +17,53 @@ def input_neighbors(block):
             output = input_.incomingConnection
             if output.owner:
                 yield output.owner
+
+
+def fetch_input(other):
+    """Fetch input from other."""
+    if isinstance(other, Block):
+        return other.input
+
+    return other
+
+
+def fetch_output(other):
+    """Fetch output from other."""
+    if isinstance(other, Block):
+        return other.output
+
+    return other
+
+
+def pipe_operator(left, right):
+    """Pipe blocks or connections together. Left to right. Return rightmost
+    block for concatenation.
+    """
+    output = fetch_output(left)
+    input_ = fetch_input(right)
+    if not isinstance(output, OutputBase)\
+        or not isinstance(input_, InputBase):
+        raise TypeError('Can not pipe from %s to %s' % (left, right))
+
+    output.connect(input_)
+    return input_.owner
+
+
+def mix_operator(left, right):
+    """Mix blocks or outputs together with a new Mixer. Return this mixer for
+    concatenation. Only audio outputs can be mixed!
+    """
+    leftOutput = fetch_output(left)
+    rightOutput = fetch_output(right)
+    if not isinstance(leftOutput, Output)\
+        or not isinstance(rightOutput, Output):
+        raise TypeError('Can not mix %s with %s' % (left, right))
+
+    from klang.audio.mixer import Mixer  # Circular import for comforts
+    mixer = Mixer(nInputs=0)
+    mixer += left
+    mixer += right
+    return mixer
 
 
 class Block:
@@ -86,54 +133,16 @@ class Block:
 
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
-    def __or__(self, other):
-        """Connect block with other block or input connection."""
-        if isinstance(other, Block):
-            input_ = other.input
-        else:
-            input_ = other
-
-        self.output.connect(input_)
-        return input_.owner
+    __or__ = pipe_operator
 
     def __ror__(self, output):
         """Connect output with block."""
-        if not isinstance(output, OutputBase):
-            raise TypeError('Can not pipe %s to %s' % (output, self))
+        # Reverse operands. Maintain order.
+        return pipe_operator(output, self)
 
-        output.connect(self.input)
-        return self
-
-    def __add__(self, other):
-        """Mix two blocks together."""
-        from klang.audio.mixer import Mixer  # Circular import for comforts
-        if isinstance(self, Mixer):
-            mixer = self
-        else:
-            mixer = Mixer(nInputs=1)
-            self.output.connect(mixer.inputs[0])
-
-        if isinstance(other, Block):
-            output = other.output
-        else:
-            output = other
-
-        mixer.add_channel()
-        output.connect(mixer.inputs[-1])
-        return mixer
+    __add__ = mix_operator
 
     def __radd__(self, output):
         """Mix output and block."""
-        if not isinstance(output, Output):
-            raise TypeError('Can not mix %s with %s' % (self, output))
-
-        from klang.audio.mixer import Mixer  # Circular import for comforts
-        if isinstance(self, Mixer):
-            mixer = self
-        else:
-            mixer = Mixer(nInputs=1)
-            output.connect(mixer.inputs[0])
-
-        mixer.add_channel()
-        self.output.connect(mixer.inputs[-1])
-        return mixer
+        # Reverse operands. Maintain order.
+        return mix_operator(output, self)
