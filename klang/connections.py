@@ -163,12 +163,14 @@ class RelayBase(InputBase, OutputBase):
         OutputBase.__init__(self, owner)
 
     def connect(self, other):
+        # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
             OutputBase.connect(self, other)
         else:
             InputBase.connect(self, other)
 
     def disconnect(self, other):
+        # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
             OutputBase.disconnect(self, other)
         else:

@@ -17,7 +17,7 @@ class Mixer(Block):
         gains (list): Gain levels.
     """
 
-    def __init__(self, nInputs=2, gains=None):
+    def __init__(self, nInputs=0, gains=None):
         """Kwargs:
             nInputs (int): Number of inputs.
             gains (list): Gain values. nInputs length.
@@ -31,6 +31,7 @@ class Mixer(Block):
 
     def add_new_channel(self, gain=DEFAULT_GAIN):
         """Add a new input channel to the mixer."""
+        # pylint: disable=arguments-differ
         self.inputs.append(Input(owner=self))
         self.gains.append(gain)
 
@@ -65,7 +66,7 @@ class StereoMixer(Mixer):
         pannings (list): Panning levels.
     """
 
-    def __init__(self, nInputs=2, gains=None, pannings=None,
+    def __init__(self, nInputs=0, gains=None, pannings=None,
                  mode='constant_power', panLaw=None):
         """Kwargs:
             nInputs (int): Number of inputs.
@@ -84,6 +85,7 @@ class StereoMixer(Mixer):
         self.pannings = pannings
 
     def add_new_channel(self, gain=DEFAULT_GAIN, panning=CENTER):
+        # pylint: disable=arguments-differ
         super().add_new_channel(gain)
         self.pannings.append(panning)
 
