@@ -28,8 +28,7 @@ o-->o-->o
 """
 
 GRAPH = graph_matrix(EDGES)
-"""csr_matrix: Graph adjacency matrix."""
-
+"""ndarray: Graph adjacency matrix."""
 
 
 SOURCE_DAG = graph_matrix([
@@ -66,7 +65,7 @@ class TestGraphMatrix(unittest.TestCase):
     def test_graph_matrix_with_refence_dag(self):
         """Test graph_matrix() with reference dag."""
         graph = graph_matrix(EDGES)
-        np.testing.assert_equal(graph.toarray(), [
+        np.testing.assert_equal(graph, [
             [0, 1, 1, 1, 0],
             [0, 0, 0, 0, 1],
             [0, 0, 0, 0, 1],
@@ -97,7 +96,7 @@ class TestActiveEdges(unittest.TestCase):
 
     def test_with_matrix(self):
         """Test active_edges() with dense matrix input."""
-        matrix = GRAPH.todense()
+        matrix = GRAPH
 
         assert_equal(active_edges(matrix, 0), [1, 2, 3])
         assert_equal(active_edges(matrix, 1), [4])
@@ -107,7 +106,7 @@ class TestActiveEdges(unittest.TestCase):
 
     def test_with_array(self):
         """Test active_edges() with dense array input."""
-        array = GRAPH.toarray()
+        array = GRAPH
 
         assert_equal(active_edges(array, 0), [1, 2, 3])
         assert_equal(active_edges(array, 1), [4])

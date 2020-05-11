@@ -7,7 +7,6 @@ import collections
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_matrix
 
 
 def graph_matrix(edges, directed=True):
@@ -22,7 +21,7 @@ def graph_matrix(edges, directed=True):
     edges = np.asarray(edges)
     nNodes = edges.max() + 1
     shape = (nNodes, nNodes)
-    graph = csr_matrix(shape, dtype=int)
+    graph = np.zeros(shape, dtype=int)
     indices = tuple(edges.T)
     graph[indices] = 1
     if not directed:
