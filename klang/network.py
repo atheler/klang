@@ -2,6 +2,9 @@
 import json
 import logging
 import socket
+import base64
+
+import numpy as np
 
 from klang.block import Block
 from klang.connections import MessageOutput, MessageInput
@@ -38,14 +41,6 @@ def create_socket_from_address(address):
     return sock
 
 
-def klang_object_hook(obj):
-    """Object hook with support for Klang objects."""
-    if obj.get('type') == 'Note':
-        return Note.from_dict(obj)
-
-    return obj
-
-
 def receive_all_from(sock, bufsize=NETWORK_BUFFER_SIZE):
     """Receive all data from a socket and yield raw bytes.
 
@@ -69,6 +64,36 @@ def receive_all_from(sock, bufsize=NETWORK_BUFFER_SIZE):
         return
 
 
+def array_to_dict(arr):
+    """Convert numpy array to JSON compatible dictionary using base 64
+    encoding.
+    """
+    raw = base64.b64encode(arr.data)
+    return {
+        'type': 'ndarray',
+        'dtype': str(arr.dtype),
+        'shape': arr.shape,
+        'data': raw.decode(),
+    }
+
+def array_from_dict(dct):
+    """Reconstruct numpy array from base 64 dictionary representation."""
+    data = base64.b64decode(dct['data'])
+    return np.frombuffer(data, dct['dtype']).reshape(dct['shape'])
+
+
+def klang_object_hook(obj):
+    """Object hook with support for Klang objects."""
+    type_ = obj.get('type')
+    if type_ == 'Note':
+        return Note.from_dict(obj)
+
+    if type_ == 'ndarray':
+        return array_from_dict(obj)
+
+    return obj
+
+
 class KlangJSONEncoder(json.JSONEncoder):
 
     """JSONEncoder with support for Klang objects.
@@ -83,6 +108,10 @@ class KlangJSONEncoder(json.JSONEncoder):
     def encode(self, o):
         if isinstance(o, Note):
             return o.to_json()
+
+        if isinstance(o, np.ndarray):
+            dct = array_to_dict(o)
+            return super().encode(dct)
 
         return super().encode(o)
 
@@ -111,7 +140,7 @@ class JsonCourier:
             self.sock.bind(self.address)
 
     def receive_objects(self):
-        """Yield all received objects."""
+        """Yields all JSON decoded objects."""
         for data in receive_all_from(self.sock):
             string = data.decode()
             while string:
@@ -127,7 +156,7 @@ class JsonCourier:
         """Send object to address as JSON."""
         string = self.encoder.encode(obj)
         data = string.encode()
-        print('Sending', data)
+        #print('Sending', data)
         return self.sock.sendto(data, self.address)
 
     def __del__(self):
