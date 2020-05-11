@@ -23,18 +23,24 @@ class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
             frequency (float): Frequency value.
             temperament (Temperament): Tuning for default frequency.
         """
-        assert 0 <= pitch < 128
-        assert 0 <= velocity <= 1.
+        if not 0 <= pitch < 128:
+            raise ValueError('Invalid pitch %s!' % pitch)
+        if not 0 <= velocity <= 1.:
+            raise ValueError('Invalid velocity %s!' % velocity)
         if frequency is None:
             frequency = temperament.pitch_2_frequency(pitch)
+        if frequency < 0:
+            raise ValueError('Invalid frequency %s!' % frequency)
 
-        assert frequency > 0
         return super().__new__(cls, pitch, velocity, frequency)
 
     @classmethod
     def from_dict(cls, dct):
         """Construct Note from dct."""
-        assert dct.pop('type') == cls.__name__
+        if dct.pop('type') != cls.__name__:
+            fmt = 'Can not construct Note from dict %s'
+            raise ValueError(fmt % dct)
+
         return cls(**dct)
 
     @classmethod
