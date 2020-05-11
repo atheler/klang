@@ -1,12 +1,15 @@
+"""Main entry point function."""
+import time
+import logging
+
 from klang.audio import INTERVAL
-from klang.audio.klanggeber import KlangGeber
-from klang.constants import STEREO
-from klang.execution import Executor
+from klang.audio.klanggeber import look_for_audio_blocks, run_audio_engine, Dac, Adc
+from klang.execution import determine_execution_order
 
 
 class Clock:
 
-    """Clock giver."""
+    """Pocket watch. Clock giver."""
 
     def __init__(self, startTime=0.):
         self.currentTime = startTime
@@ -15,37 +18,30 @@ class Clock:
         return self.currentTime
 
     def step(self, dt):
+        """Move clock forward in time."""
         self.currentTime += dt
 
 
-class Klang:
+def run_klang(*blocks, filepath=''):
+    """Run klang block network."""
+    if not blocks:
+        raise ValueError('No blocks to run specified!')
 
-    """Main klang object."""
+    execOrder = determine_execution_order(blocks)
 
-    def __init__(self, nInputs=0, nOutputs=STEREO, filepath=''):
-        self.geber = KlangGeber(nInputs, nOutputs, self.callback, filepath)
-        self.executor = Executor(blocks=[
-            self.geber.adc,
-            self.geber.dac,
-        ])
-        self.clock = Clock()
+    def callback():
+        for block in execOrder:
+            block.update()
 
-        # TODO: How to do message inputs / outputs?
+    adc, dac = look_for_audio_blocks(execOrder)
+    if adc.nChannels > 0 or dac.nChannels > 0:
+        return run_audio_engine(adc, dac, callback, filepath)
 
-    @property
-    def adc(self):
-        """Audio input block from KlangGeber."""
-        return self.geber.adc
-
-    @property
-    def dac(self):
-        """Audio output block from KlangGeber."""
-        return self.geber.dac
-
-    def callback(self):
-        self.executor.execute()
-        self.clock.step(dt=INTERVAL)
-
-    def start(self):
-        self.executor.update_exec_order()
-        self.geber.start()
+    logger = logging.getLogger('Klang')
+    logger.warning('Did not find any audio activity')
+    logger.info('Starting non-audio main loop')
+    while True:
+        start = time.time()
+        callback()
+        end = time.time()
+        time.sleep(max(0, INTERVAL - (end - start)))

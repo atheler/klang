@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Micro rhythm demo."""
-from klang.klang import Klang
+from klang.audio.klanggeber import Dac
 from klang.audio.mixer import Mixer
 from klang.audio.oscillators import Lfo
 from klang.audio.sequencer import Sequencer
 from klang.audio.synthesizer import Kick, HiHat
 from klang.audio.waves import triangle
+from klang.constants import MONO
+from klang.klang import run_klang
 from klang.music.note_values import QUARTER_NOTE, EIGHT_NOTE, SIXTEENTH_NOTE
 from klang.music.rhythm import MicroRhyhtm
 
@@ -47,10 +49,10 @@ lfo.output.connect(mr.phrasing)  # Lfo controls phrasing factor
 seq.sequences[1].connect_micro_rhythm(mr)
 
 
-klang = Klang(nOutputs=1, filepath=FILEPATH)
 seq.outputs[0].connect(kick.input)
 seq.outputs[1].connect(hihat.input)
 kick.output.connect(mixer.inputs[0])
 hihat.output.connect(mixer.inputs[1])
-mixer.output.connect(klang.dac.input)
-klang.start()
+dac = Dac(nChannels=MONO)
+mixer.output.connect(dac.input)
+run_klang(dac, filepath=FILEPATH)

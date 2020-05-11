@@ -6,7 +6,8 @@ from klang.audio.oscillators import Oscillator
 from klang.audio.sequencer import Sequencer
 from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer, MonophonicSynthesizer
 from klang.audio.voices import OscillatorVoice
-from klang.klang import Klang
+from klang.audio.klanggeber import Dac
+from klang.klang import run_klang
 
 
 # Params
@@ -37,8 +38,8 @@ synthesizer = PolyphonicSynthesizer(voice)
 
 fx = Delay(time=.25, feedback=.25)
 mixer = Mixer(nInputs=3, gains=[.7, .1, 1.])
+dac = Dac(nChannels=1)
 
-klang = Klang(nOutputs=1, filepath=FILEPATH)
 seq.output.connect(kick.input)
 seq.outputs[1].connect(hihat.input)
 seq.outputs[2].connect(synthesizer.input)
@@ -46,5 +47,7 @@ kick.output.connect(mixer.inputs[0])
 hihat.output.connect(mixer.inputs[1])
 synthesizer.output.connect(fx.input)
 fx.output.connect(mixer.inputs[2])
-mixer.output.connect(klang.dac.input)
-klang.start()
+mixer.output.connect(dac.input)
+
+if __name__ == '__main__':
+    run_klang(dac)

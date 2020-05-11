@@ -8,13 +8,15 @@ import pyaudio
 from config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio import get_silence
 from klang.block import Block
-from klang.constants import MONO, STEREO
+from klang.constants import MONO
 from klang.errors import KlangError
-from klang.util import WavWriter
+from klang.util import write_wave
 
 
 D_TYPE = np.float32
-"""type: Numpy audio sample datatype (compatible with pyaudio.paFloat32)."""
+"""type: Numpy audio sample datatype (has to be compatible with
+pyaudio.paFloat32 otherwise bad things will happen!).
+"""
 
 
 def pack_signals(signals):
@@ -117,123 +119,107 @@ class Dac(Block):
         return pack_signals(signals)
 
 
-class KlangGeber:
+def look_for_audio_blocks(blocks):
+    """Get the first best Adc and Dac blocks."""
+    for block in blocks:
+        if isinstance(block, Adc):
+            adc = block
+            break
+    else:
+        adc = Adc(nChannels=0)
 
-    """Audio card interface.
+    for block in blocks:
+        if isinstance(block, Dac):
+            dac = block
+            break
+    else:
+        dac = Dac(nChannels=0)
 
-    PyAudio / Portaudio sound engine. Callback argument in order to propagate
-    audio stream callback upwards.
+    return adc, dac
+
+
+def validate_sound_card_channels(pa, adc, dac):
+    """Given the audio input and output blocks determine if we have enough audio
+    channels on the default devices.
+
+    Args:
+        pa (pyaudio): PyAudio instance.
+        adc (Adc): Audio input block.
+        dac (dac): Audio output block.
     """
+    inputDeviceInfo = pa.get_default_input_device_info()
+    if adc.nChannels > inputDeviceInfo['maxInputChannels']:
+        raise ValueError('Not enough sound card inputs!')
 
-    def __init__(self, nInputs=0, nOutputs=STEREO, callback=None, filepath=''):
-        """Kwargs:
-            nInputs (int): Number of audio input channels.
-            nOutputs (int): Number of audio output channels.
-            callback (function): Block execution callback function.
-        """
-        self.adc = Adc(nChannels=nInputs)
-        self.dac = Dac(nChannels=nOutputs)
-        self.logger = logging.getLogger(type(self).__name__)
-        if callback is None:
-            self.logger.warning('No callback defined!')
-            callback = lambda: None  # Callback placeholder
+    outputDeviceInfo = pa.get_default_output_device_info()
+    if dac.nChannels > outputDeviceInfo['maxOutputChannels']:
+        raise ValueError('Not enough sound card outputs!')
 
-        self.callback = callback
-        self.capturedFrames = []
-        self.filepath = filepath
 
-    @property
-    def nInputs(self):
-        """Number of audio input channels."""
-        return self.adc.nChannels
+def run_audio_engine(adc, dac, callback, filepath=''):
+    """Run klang audio engine from adc / dac blocks. Ex-KlangGeber."""
+    logger = logging.getLogger('KlangGeber')
+    pa = pyaudio.PyAudio()
+    validate_sound_card_channels(pa, adc, dac)
 
-    @property
-    def nOutputs(self):
-        """Number of audio output channels."""
-        return self.dac.nChannels
+    # Example: Callback Mode Audio I/O from
+    # https://people.csail.mit.edu/hubert/pyaudio/docs/
+    assert D_TYPE is np.float32
+    capturedFrames = []
 
-    def stream_callback(self, in_data, frame_count, time_info, status):
+    def stream_callback(in_data, frame_count, time_info, status):
         """Audio stream callback for PyAudio."""
         if status is not pyaudio.paContinue:
-            self.logger.warning('Status changed to %s', status)
+            logger.warning('PyAudio status changed to %s', status)
 
         # Process input audio samples
         if in_data:
             # TODO: Make me, test me
             raw = np.frombuffer(in_data, dtype=D_TYPE)
-            samples = raw.reshape((frame_count, self.adc.nChannels))
-            self.adc.inject_samples(raw)
+            samples = raw.reshape((frame_count, adc.nChannels))
+            adc.inject_samples(samples)
 
-        # Trigger global block execution / propgate audio stream callback upwards
-        self.callback()
+        # Trigger global block execution / propagate audio stream callback upwards
+        callback()
 
         # Fetch output audio samples from block network
         try:
-            outData = self.dac.collect_samples()
+            outData = dac.collect_samples()
         except ChannelMismatchError as err:
-            self.logger.error(err, exc_info=True)
-            silence = get_silence((frame_count, self.dac.nChannels), D_TYPE)
+            logger.error(err, exc_info=True)
+            silence = get_silence((frame_count, dac.nChannels), D_TYPE)
             return silence, pyaudio.paAbort
 
-        if self.filepath:
-            self.capturedFrames.append(outData)
+        if filepath:
+            capturedFrames.append(outData)
 
         return (outData, pyaudio.paContinue)
 
-    def validate_sound_card_channels(self, pa):
-        """Validate number of audio inputs / outputs with default audio
-        devices.
+    stream = pa.open(
+        rate=SAMPLING_RATE,
+        frames_per_buffer=BUFFER_SIZE,
+        channels=dac.nChannels,  # TODO: How to 1x input, 2x outputs?
+        format=pyaudio.paFloat32,
+        input=(adc.nChannels > 0),
+        output=(dac.nChannels > 0),
+        stream_callback=stream_callback,
+    )
 
-        Args:
-            pa (PyAudio): PyAudio instance.
+    logger.info('Starting up audio engine with default devices')
+    stream.start_stream()
 
-        Raises:
-            AssertionError: If we do not have enough audio channels on the sound
-                card.
-        """
-        inputDeviceInfo = pa.get_default_input_device_info()
-        assert self.nInputs <= inputDeviceInfo['maxInputChannels'], 'Not enough sound card inputs!'
-        outputDeviceInfo = pa.get_default_output_device_info()
-        assert self.nOutputs <= outputDeviceInfo['maxOutputChannels'], 'Not enough sound card outputs!'
+    try:
+        while stream.is_active():
+            time.sleep(0.1)
 
-    def dump_audio_to_wav(self):
-        """Dumpy captured audio frames to WAV file."""
-        self.logger.info('Writing audio dump to WAV file %r', self.filepath)
-        wavWriter = WavWriter(self.filepath, self.nOutputs, SAMPLING_RATE)
-        for frame in self.capturedFrames:
-            wavWriter.write(frame)
+    except KeyboardInterrupt:
+        if filepath:
+            samples = np.concatenate(capturedFrames)
+            logger.info('Writing audio dump to WAV file %r', filepath)
+            write_wave(samples, filepath)
 
-        wavWriter.close()
-
-    def start(self):
-        """Start audio engine main loop."""
-        pa = pyaudio.PyAudio()
-        self.validate_sound_card_channels(pa)
-        assert D_TYPE is np.float32
-
-        # Example: Callback Mode Audio I/O from
-        # https://people.csail.mit.edu/hubert/pyaudio/docs/
-        stream = pa.open(
-            rate=SAMPLING_RATE,
-            frames_per_buffer=BUFFER_SIZE,
-            channels=self.nOutputs,  # TODO: How to 1x input, 2x outputs?
-            format=pyaudio.paFloat32,
-            input=(self.nInputs > 0),
-            output=(self.nOutputs > 0),
-            stream_callback=self.stream_callback,
-        )
-
-        self.logger.info('Starting up audio engine with default devices')
-        stream.start_stream()
-
-        try:
-            while stream.is_active():
-                time.sleep(0.1)
-
-        finally:
-            self.logger.info('Shutting down audio engine')
-            stream.stop_stream()
-            stream.close()
-            pa.terminate()
-            if self.filepath:
-                self.dump_audio_to_wav()
+    finally:
+        logger.info('Shutting down audio engine')
+        stream.stop_stream()
+        stream.close()
+        pa.terminate()

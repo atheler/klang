@@ -4,15 +4,14 @@
 from klang.arpeggiator import Arpeggiator
 from klang.audio.effects import Delay, Filter, Transformer
 from klang.audio.envelope import ADSR
-from klang.klang import Klang
 from klang.audio.oscillators import Lfo
 from klang.audio.oscillators import Oscillator
+from klang.audio.sequencer import Sequencer
 from klang.audio.synthesizer import MonophonicSynthesizer
 from klang.audio.voices import OscillatorVoice
 from klang.audio.waves import sawtooth, triangle, sine
+from klang.klang import run_klang, Dac
 from klang.messages import Note
-from klang.audio.sequencer import Sequencer
-from klang.audio.mixer import Mixer
 
 
 Alow = Note(pitch=57)
@@ -44,6 +43,7 @@ if __name__ == '__main__':
     lfo = Lfo(frequency=.1, wave_func=triangle)
     trafo = Transformer.from_limits(100., 3000.)
     fil = Filter(frequency=220.)
+    dac = Dac(nChannels=1)
 
     # Bass
     sequencer = Sequencer(
@@ -53,11 +53,9 @@ if __name__ == '__main__':
     )
     bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
 
-
-    klang = Klang(nOutputs=1)
-
     # Old style
     """
+    klang = Klang(nOutputs=1)
     mixer = Mixer(gains=[1., .3])
     arp.output.connect(synthesizer.input)
     synthesizer.output.connect(fil.input)
@@ -71,11 +69,12 @@ if __name__ == '__main__':
     bass.output.connect(mixer.inputs[1])
 
     mixer.output.connect(klang.dac.input)
+    klang.start()
     """
 
     # New style
     lfo | trafo | fil.frequency
     mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
     mixer.gains = [1., .3]
-    mixer | klang.dac
-    klang.start()
+    mixer | dac
+    run_klang(dac, filepath='test.wav')

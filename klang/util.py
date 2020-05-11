@@ -1,6 +1,5 @@
 """This and that."""
 import json
-import wave
 
 import numpy as np
 import scipy.io.wavfile
@@ -189,17 +188,3 @@ def find_item(dct, name):
 
     key, = candidates
     return dct[key]
-
-
-class WavWriter:
-    def __init__(self, filepath, nChannels=2, fs=44100):
-        self.file = wave.open(filepath, mode='wb')
-        self.file.setnchannels(nChannels)
-        self.file.setsampwidth(2)
-        self.file.setframerate(fs)
-
-    def write(self, data):
-        self.file.writeframes(convert_samples_to_int(data))
-
-    def close(self):
-        self.file.close()
