@@ -94,6 +94,7 @@ class Tremolo(Block):
             wave_func=wave_func,
             startPhase=TAU / 4., # Start from zero
         )
+        self.rate.connect(self.lfo.frequency)
 
     def update(self):
         self.lfo.update()
@@ -376,10 +377,21 @@ class Transformer(Block):
 
     @classmethod
     def from_limits(cls, lower, upper):
-        """Create transformer instance from output value boundaries."""
+        """Create transformer instance from output value boundaries assuming
+        input ranges from [0., 1.].
+        """
         assert lower < upper
         width = upper - lower
         return cls(scale=width, offset=lower)
+
+    @classmethod
+    def from_limits_2(cls, lower, upper):
+        """Create transformer instance from output value boundaries assuming
+        input ranges from [-1., 1.].
+        """
+        assert lower < upper
+        width = upper - lower
+        return cls(scale=.5 * width, offset=lower + .5 * width)
 
     def update(self):
         x = self.input.value
