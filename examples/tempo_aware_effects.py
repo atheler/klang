@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Demonstration of tempo aware effects."""
 from klang.audio.effects import Tremolo, Delay, Filter, Transformer
 from klang.audio.mixer import StereoMixer
 from klang.audio.oscillators import Oscillator, Lfo
@@ -17,7 +20,7 @@ DRY_WET = .4
 FILEPATH = 'waterfall.wav'
 FILEPATH = None
 
-
+# Init blocks
 osc = Oscillator(wave_func=random)
 tremolo = Tremolo(rate=QUARTER_NOTE, intensity=1., wave_func=square)
 lfo = Lfo(LARGE_NOTE, wave_func=triangle)
@@ -30,15 +33,12 @@ leftDelay = Delay(time=DOUBLE_DOTTED_QUARTER_NOTE, feedback=FEEDBACK, drywet=DRY
 rightDelay = Delay(time=DOTTED_QUARTER_NOTE, feedback=FEEDBACK, drywet=DRY_WET)
 mixer = StereoMixer(nInputs=STEREO, pannings=[LEFT, RIGHT])
 
+# Connect blocks
+osc | tremolo | fil.input
+lfo | trafo | fil.frequency
+fil | leftDelay | mixer.inputs[0]
+fil | rightDelay | mixer.inputs[1]
+mixer | dac
 
-osc.output.connect(tremolo.input)
-tremolo.output.connect(fil.input)
-lfo.output.connect(trafo.input)
-trafo.output.connect(fil.frequency)
-fil.output.connect(leftDelay.input)
-fil.output.connect(rightDelay.input)
-leftDelay.output.connect(mixer.inputs[0])
-rightDelay.output.connect(mixer.inputs[1])
-mixer.output.connect(dac.input)
-
-run_klang(dac, filepath=FILEPATH)
+if __name__ == '__main__':
+    run_klang(dac, filepath=FILEPATH)

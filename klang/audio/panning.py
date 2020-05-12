@@ -32,10 +32,21 @@ def pan_law_exponent(panLaw, centerAmplitude):
 def panning_amplitudes(panLevel, mode='constant_power', panLaw=None):
     """Calculate left / right panning amplitudes depending on calculation method
     and pan law.
+
+    Args:
+        panLevel (float): Panning level.
+
+    Kwargs:
+        mode (str): Panning mode. 'linear', 'constant_power' or 'mixture'.
+        panLaw (float): Pan law in (negative) decibel.
+
+    Returns:
+        array: Left / right panning amplitudes.
     """
-    assert mode in {'linear', 'constant_power', 'mixture'}
-    if panLaw is not None:
-        assert panLaw <= 0
+    if not mode in {'linear', 'constant_power', 'mixture'}:
+        raise ValueError('Invalid panning mode %r!' % mode)
+    if panLaw is not None and panLaw > 0:
+        raise ValueError('Pan law has to be negative!')
 
     panLevel = np.clip(panLevel, LEFT, RIGHT)
     panAngle = TAU / 8 * (1. + panLevel)
@@ -64,13 +75,24 @@ def panning_amplitudes(panLevel, mode='constant_power', panLaw=None):
     return np.array([
         [left ** alpha],
         [right ** alpha],
-    ])#.squeeze()
+    ])
 
 
-def pan_signal(signal, panLevel, *args, **kwargs):
-    """Pan signal left to right stereo."""
-    signal = np.asarray(signal)
-    amplitudes = panning_amplitudes(panLevel, *args, **kwargs)
+def pan_signal(signal, panLevel, mode='constant_power', panLaw=None):
+    """Pan signal left to right stereo.
+
+    Args:
+        signal (array): Signal to pan. Either MONO or multiple channels.
+        panLevel (float): Panning level.
+
+    Kwargs:
+        mode (str): Panning mode. 'linear', 'constant_power' or 'mixture'.
+        panLaw (float): Pan law in (negative) decibel.
+
+    Returns:
+        array:
+    """
+    amplitudes = panning_amplitudes(panLevel, mode, panLaw)
     return amplitudes * signal
 
 

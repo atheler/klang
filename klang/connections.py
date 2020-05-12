@@ -77,7 +77,11 @@ def str_function(connection):
     if connection.owner:
         infos.append('owner: %s' % connection.owner)
 
-    infos.append('connected' if connection.connected else 'not connected')
+    if connection.connected:
+        infos.append('connected')
+    else:
+        infos.append('not connected')
+
     return '%s(%s)' % (type(connection).__name__, ', '.join(infos))
 
 
@@ -104,7 +108,12 @@ class IncompatibleError(KlangError):
 
 class OutputBase:
 
-    """Base class for all outputs."""
+    """Base class for all outputs.
+
+    Attributes:
+        owner (Block): Parent block owning connection.
+        outgoingConnections (set): All connected InputBases.
+    """
 
     def __init__(self, owner=None):
         self.owner = owner
@@ -130,7 +139,12 @@ class OutputBase:
 
 class InputBase:
 
-    """Base class for all inputs."""
+    """Base class for all inputs.
+
+    Attributes:
+        owner (Block): Parent block owning connection.
+        incomingConnection (OutputBase): Connected OutputBase.
+    """
 
     def __init__(self, owner=None):
         self.owner = owner
@@ -156,7 +170,12 @@ class InputBase:
 
 class RelayBase(InputBase, OutputBase):
 
-    """Relay base. Can be used as input or output."""
+    """Relay base.
+
+    Connection type for composite blocks. Connects the outside world with the
+    internal composite blocks. Kind of like an input and output at the same time
+    depending on the perspective.
+    """
 
     def __init__(self, owner=None):
         super().__init__(owner)

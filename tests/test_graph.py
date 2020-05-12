@@ -62,7 +62,7 @@ class TestGraphMatrix(unittest.TestCase):
 
     """Test graph_matrix() function."""
 
-    def test_graph_matrix_with_refence_dag(self):
+    def test_graph_matrix_with_reference_dag(self):
         """Test graph_matrix() with reference dag."""
         graph = graph_matrix(EDGES)
         np.testing.assert_equal(graph, [

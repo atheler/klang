@@ -7,6 +7,8 @@ class RingBuffer:
     """Numpy ring buffer.
 
     Accessing the buffer over the turnaround point will result in a copy.
+
+    TODO(atheler): Reimplement as double buffer?
     """
 
     def __init__(self, data, offset=0, copy=True):

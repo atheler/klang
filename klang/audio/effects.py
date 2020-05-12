@@ -10,6 +10,7 @@ from klang.audio import NYQUIST_FREQUENCY
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
 from klang.block import Block
+from klang.composite import Composite
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
@@ -72,7 +73,7 @@ class Gain(Block):
         self.output.set_value(self.gain * samples)
 
 
-class Tremolo(Block):
+class Tremolo(Composite):
 
     """LFO controlled amplitude modulation (AM)."""
 
@@ -88,6 +89,7 @@ class Tremolo(Block):
             Relay(owner=self),
             Input(owner=self),
         ]
+        self.rate.set_value(rate),
         self.intensity.set_value(intensity)
         self.lfo = Oscillator(
             frequency=rate,

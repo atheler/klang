@@ -36,8 +36,16 @@ def fetch_output(other):
 
 
 def pipe_operator(left, right):
-    """Pipe blocks or connections together. Left to right. Return rightmost
-    block for concatenation.
+    """Pipe blocks or connections together. pipe_operator(a, b) is the same as
+    a.output.connect(b). Left to right. Return rightmost block for
+    concatenation.
+
+    Args:
+        left (Block or OutputBase): Left operand.
+        right (Block or InputBase): Right operand.
+
+    Returns:
+        Block: Owner of incoming connection.
     """
     output = fetch_output(left)
     input_ = fetch_input(right)
@@ -50,8 +58,15 @@ def pipe_operator(left, right):
 
 
 def mix_operator(left, right):
-    """Mix blocks or outputs together with a new Mixer. Return this mixer for
-    concatenation. Only audio outputs can be mixed!
+    """Mix two audio blocks (or outputs) together with a new Mixer instance.
+    Returns this mixer for concatenation. Only audio outputs can be mixed!
+
+    Args:
+        left (Block or Output or Mixer): Left operand.
+        right (Block or Output): Right operand.
+
+    Returns:
+        Mixer: Mixer instance.
     """
     leftOutput = fetch_output(left)
     rightOutput = fetch_output(right)

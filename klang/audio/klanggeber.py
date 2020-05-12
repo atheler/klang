@@ -87,21 +87,21 @@ class Dac(Block):
         """
         # ndim check implementation is a little faster than iterating over
         # np.atleast_2d(...)
-        counter = 0
+        channelCount = 0
         for input_ in self.inputs:
             val = input_.get_value()
             ndim = np.ndim(val)
             if ndim == MONO:
                 yield val
-                counter += 1
-                if counter == self.nChannels:
+                channelCount += 1
+                if channelCount == self.nChannels:
                     return
 
             elif ndim > MONO:
                 for channel in val:
                     yield channel
-                    counter += 1
-                    if counter == self.nChannels:
+                    channelCount += 1
+                    if channelCount == self.nChannels:
                         return
 
     def collect_samples(self):
@@ -160,6 +160,7 @@ def run_audio_engine(adc, dac, callback, filepath=''):
     """Run klang audio engine from adc / dac blocks. Ex-KlangGeber."""
     logger = logging.getLogger('KlangGeber')
     pa = pyaudio.PyAudio()
+
     validate_sound_card_channels(pa, adc, dac)
 
     # Example: Callback Mode Audio I/O from
@@ -179,7 +180,8 @@ def run_audio_engine(adc, dac, callback, filepath=''):
             samples = raw.reshape((frame_count, adc.nChannels))
             adc.inject_samples(samples)
 
-        # Trigger global block execution / propagate audio stream callback upwards
+        # Trigger global block execution / propagate audio stream callback
+        # upwards
         callback()
 
         # Fetch output audio samples from block network
@@ -193,7 +195,7 @@ def run_audio_engine(adc, dac, callback, filepath=''):
         if filepath:
             capturedFrames.append(outData)
 
-        return (outData, pyaudio.paContinue)
+        return outData, pyaudio.paContinue
 
     stream = pa.open(
         rate=SAMPLING_RATE,

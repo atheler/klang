@@ -1,3 +1,4 @@
+"""Block execution."""
 import collections
 
 from klang.block import input_neighbors, output_neighbors
@@ -51,5 +52,6 @@ def execute(blocks):
 
 
 def print_exec_order(execOrder):
+    """Print numbered execution order."""
     for iblock in enumerate(execOrder, 1):
         print('%d) %s' % iblock)

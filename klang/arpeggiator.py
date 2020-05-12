@@ -132,10 +132,25 @@ def step_arpeggio_state(state, length, order):
 
 
 class Arpeggio(Block):
+
+    """Arpeggio container. Can receive new notes in trigger the next arpeggio
+    note when triggered.
+
+    Attributes:
+        order (str): Arpeggio order.
+        notes (list): Current note in the arpeggio.
+        state (list): Current arpeggio state.
+    """
+
     def __init__(self, order='up', initialNotes=[]):
-        assert order in {'up', 'down', 'upDown', 'downUp', 'random', 'alternating'}
+        if order not in {'up', 'down', 'upDown', 'downUp', 'random', 'alternating'}:
+            raise ValueError('Invalid order %r!' % order)
+
         super().__init__()
-        self.inputs = _, self.trigger = [MessageInput(owner=self), MessageInput(owner=self)]
+        self.inputs = _, self.trigger = [
+            MessageInput(owner=self),
+            MessageInput(owner=self),
+        ]
         self.outputs = [MessageOutput(owner=self)]
         self.order = order
         self.notes = []
@@ -171,12 +186,14 @@ class Arpeggio(Block):
         self.state[0] %= len(self.notes)
 
     def process_note(self, note):
+        """Process single note."""
         if note.on:
             self.add_note(note)
         else:
             self.remove_note(note)
 
     def process_notes(self, *notes):
+        """Process multiple notes at once."""
         for note in notes:
             self.process_note(note)
 
@@ -196,7 +213,7 @@ class Arpeggio(Block):
 
         currentNote = self.notes[self.state[0]]
         self.state = step_arpeggio_state(
-            state=self.state,
+            self.state,
             length=len(self.notes),
             order=self.order
         )

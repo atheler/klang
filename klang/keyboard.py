@@ -56,10 +56,6 @@ class Keyboard(Block):
         """Stop keyboard worker thread."""
         self.keyWorker.stop()
 
-    def update(self):
-        pass
-        # Dummy. Override abstract base method
-
     def __str__(self):
         return '%s(%s)' % (
             self.__class__.__name__,
@@ -180,5 +176,3 @@ class MusicalKeyboard(Keyboard):
 
         if self.others:
             return self.bypass_other_keys(key)
-
-        return None

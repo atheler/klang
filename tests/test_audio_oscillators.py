@@ -30,7 +30,7 @@ class TestPhaseor(unittest.TestCase):
 
 
 class TestOscillator(unittest.TestCase):
-    def test_400_hz(self):
+    def test_440_hz(self):
         freq = 440.
         osc = Oscillator(frequency=freq)
 

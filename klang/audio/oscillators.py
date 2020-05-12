@@ -69,13 +69,13 @@ class Phasor(Block):
     def __init__(self, frequency=1., initialPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
-        rate = compute_rate(frequency)
-        self.frequency.set_value(rate)
+        self.frequency.set_value(frequency)
         self.currentPhase = initialPhase
 
     def sample(self):
         phase = self.currentPhase
-        delta = TAU * self.frequency.value * INTERVAL
+        freq = compute_rate(self.frequency.value)
+        delta = TAU * freq * INTERVAL
         self.currentPhase = (self.currentPhase + delta) % TAU
         return phase
 
@@ -93,14 +93,13 @@ class Oscillator(Block):
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
-        rate = compute_rate(frequency)
-        self.frequency.set_value(rate)
+        self.frequency.set_value(frequency)
         self.wave_func = wave_func
         self.currentPhase = startPhase
 
     def sample(self):
         """Get next samples of oscillator and step further."""
-        freq = self.frequency.value
+        freq = compute_rate(self.frequency.value)
         phase, self.currentPhase = sample_phase(freq, startPhase=self.currentPhase)
         return self.wave_func(phase)
 

@@ -76,6 +76,7 @@ def array_to_dict(arr):
         'data': raw.decode(),
     }
 
+
 def array_from_dict(dct):
     """Reconstruct numpy array from base 64 dictionary representation."""
     data = base64.b64decode(dct['data'])
@@ -142,6 +143,7 @@ class JsonCourier:
     def receive_objects(self):
         """Yields all JSON decoded objects."""
         for data in receive_all_from(self.sock):
+            #print('Received:', data)
             string = data.decode()
             while string:
                 try:

@@ -1,3 +1,4 @@
+"""General mathematical helper functions."""
 import math
 
 import numpy as np
@@ -42,6 +43,7 @@ def is_dyadic(fraction):
 
 
 def is_divisible(number, denominator):
+    """Check if number is divisible by denominator."""
     return number % denominator == 0
 
 
