@@ -34,9 +34,16 @@ static const double LOWER = 0.;  /// Lower bound of envelope signal.
 
 
 /**
- * Clip value between interval [lower, upper].
+ * Clip value to interval [lower, upper].
+ *
+ * Aka clamp(). No lower < upper check.
+ *
+ * @param value Number to clip.
+ * @param lower Lower bound.
+ * @param upper Upper bound.
  */
-double clip(const double value, const double lower, const double upper)
+static double
+clip(const double value, const double lower, const double upper)
 {
     return fmin(fmax(value, lower), upper);
 }
@@ -119,12 +126,12 @@ typedef struct {
      * @name Attributes
      */
     /*@{*/
-    //double attack;
-    //double decay;
+    double attack;
+    double decay;
     double sustain;
-    //double release;
-    //double dt;
-    //double overshoot;
+    double release;
+    double dt;
+    double overshoot;
     bool retrigger;
     bool loop;
     /*@}*/
@@ -155,15 +162,233 @@ typedef struct {
 static PyMemberDef Envelope_members[] = {
     //{"attack", T_DOUBLE, offsetof(Envelope, attack), 0, "Attack time"},
     //{"decay", T_DOUBLE, offsetof(Envelope, decay), 0, "Decay time"},
-    {
-        "sustain",  /* name */
-        T_DOUBLE,  /* type */
-        offsetof(Envelope, sustain),  /* offset */
-        0,  /* flags */
-        "Sustain time",  /* docstring */
-    },
     //{"release", T_DOUBLE, offsetof(Envelope, release), 0, "Release time"},
     //{"dt", T_DOUBLE, offsetof(Envelope, dt), 0, "Sampling interval"},
+    //
+    {
+        "retrigger",  /* name */
+        T_BOOL,  /* type */
+        offsetof(Envelope, retrigger),  /* offset */
+        0,  /* flags */
+        "Retrigger enabled",  /* docstring */
+    },
+    {
+        "loop",  /* name */
+        T_BOOL,  /* type */
+        offsetof(Envelope, loop),  /* offset */
+        0,  /* flags */
+        "Loop enabled",  /* docstring */
+    },
+    {NULL}  /* Sentinel */
+};
+
+
+/**
+ * Compute base value and coefficient values for attack, decay and release stage.
+ */
+static void
+Envelope_compute_base_values_and_coefficients(Envelope *self)
+{
+    self->attackCoef = calculate_exponential_coefficient(self->attack / self->dt, self->overshoot);
+    self->attackBase = (UPPER + self->overshoot) * (1. - self->attackCoef);
+
+    self->decayCoef = calculate_exponential_coefficient(self->decay / self->dt, self->overshoot);
+    self->decayBase = (self->sustain - self->overshoot) * (1. - self->decayCoef);
+
+    self->releaseCoef = calculate_exponential_coefficient(self->release / self->dt, self->overshoot);
+    self->releaseBase = (LOWER - self->overshoot) * (1. - self->releaseCoef);
+}
+
+
+// Note: Getters and setters for attack, decay, sustain and release. Via
+// PyGetSetDef because we need to recompute the base values and coefficients.
+
+
+/**
+ * Attack time getter.
+ */
+static PyObject*
+Envelope_get_attack(Envelope *self, void *closure)
+{
+    return PyFloat_FromDouble(self->attack);
+}
+
+
+/**
+ * Attack time setter.
+ *
+ * Also recomputes base values and coefficients.
+ */
+static int
+Envelope_set_attack(Envelope *self, PyObject *value, void *closure)
+{
+    double attack = PyFloat_AsDouble(value);
+    if (PyErr_Occurred())
+        return -1;
+
+    if (attack < 0) {
+        PyErr_SetString(PyExc_ValueError, "attack must be positive!");
+        return -1;
+    }
+
+    self->attack = attack;
+    Envelope_compute_base_values_and_coefficients(self);
+    return 0;
+}
+
+
+/**
+ * Decay time getter.
+ */
+static PyObject*
+Envelope_get_decay(Envelope *self, void *closure)
+{
+    return PyFloat_FromDouble(self->decay);
+}
+
+
+/**
+ * Decay time setter.
+ *
+ * Also recomputes base values and coefficients.
+ */
+static int
+Envelope_set_decay(Envelope *self, PyObject *value, void *closure)
+{
+    double decay = PyFloat_AsDouble(value);
+    if (PyErr_Occurred())
+        return -1;
+
+    if (decay < 0) {
+        PyErr_SetString(PyExc_ValueError, "decay must be positive!");
+        return -1;
+    }
+
+    self->decay = decay;
+    Envelope_compute_base_values_and_coefficients(self);
+    return 0;
+}
+
+
+/**
+ * Sustain value getter.
+ */
+static PyObject*
+Envelope_get_sustain(Envelope *self, void *closure)
+{
+    return PyFloat_FromDouble(self->sustain);
+}
+
+
+/**
+ * Sustain value setter.
+ *
+ * Also recomputes base values and coefficients.
+ */
+static int
+Envelope_set_sustain(Envelope *self, PyObject *value, void *closure)
+{
+    double sustain  = PyFloat_AsDouble(value);
+    if (PyErr_Occurred())
+        return -1;
+
+    if (!(LOWER <= sustain && sustain <= UPPER)) {
+        PyErr_SetString(PyExc_ValueError, "sustain not within bounds!");
+        return -1;
+    }
+
+    self->sustain = sustain;
+    Envelope_compute_base_values_and_coefficients(self);
+    return 0;
+}
+
+
+/**
+ * Release time getter.
+ */
+static PyObject*
+Envelope_get_release(Envelope *self, void *closure)
+{
+    return PyFloat_FromDouble(self->release);
+}
+
+
+/**
+ * Release time setter.
+ *
+ * Also recomputes base values and coefficients.
+ */
+static int
+Envelope_set_release(Envelope *self, PyObject *value, void *closure)
+{
+    double release = PyFloat_AsDouble(value);
+    if (PyErr_Occurred())
+        return -1;
+
+    if (release < 0) {
+        PyErr_SetString(PyExc_ValueError, "release must be positive!");
+        return -1;
+    }
+
+    self->release = release;
+    Envelope_compute_base_values_and_coefficients(self);
+    return 0;
+}
+
+
+// TODO: overshoot getter and setter.
+
+/**
+ * Envelope active state.
+ *
+ * Is envelope active? Get active state of envelope.
+ */
+static PyObject*
+Envelope_get_active(Envelope* self, void* closure)
+{
+    if (self->stage)
+        return Py_True;
+
+    return Py_False;
+}
+
+
+PyGetSetDef Envelope_getset[] = {
+    {
+        "attack",  /* name */
+         (getter) Envelope_get_attack,  /* getter */
+         (setter) Envelope_set_attack,  /* setter */
+         "Attack time",  /* doc */
+         NULL /* closure */
+    },
+    {
+        "decay",  /* name */
+         (getter) Envelope_get_decay,  /* getter */
+         (setter) Envelope_set_decay,  /* setter */
+         "Decay time",  /* doc */
+         NULL /* closure */
+    },
+    {
+        "sustain",  /* name */
+         (getter) Envelope_get_sustain,  /* getter */
+         (setter) Envelope_set_sustain,  /* setter */
+         "Sustain level",  /* doc */
+         NULL /* closure */
+    },
+    {
+        "release",  /* name */
+         (getter) Envelope_get_release,  /* getter */
+         (setter) Envelope_set_release,  /* setter */
+         "Release time",  /* doc */
+         NULL /* closure */
+    },
+    {
+        "active",  /* name */
+         (getter) Envelope_get_active,  /* getter */
+         NULL,  /* setter */
+         "Is envelope active?",  /* doc */
+         NULL /* closure */
+    },
     {NULL}  /* Sentinel */
 };
 
@@ -171,7 +396,6 @@ static PyMemberDef Envelope_members[] = {
 /**
  * Envelope de-allocater.
  *
- * TODO: Do we need this?
  */
 static void
 Envelope_dealloc(Envelope* self)
@@ -183,7 +407,7 @@ Envelope_dealloc(Envelope* self)
 /**
  * Envelope.__new__().
  *
- * Constructor.
+ * Python constructor method.
  */
 static PyObject *
 Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -193,13 +417,13 @@ Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     self = (Envelope *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
-        //self->attack = 0.;
-        //self->decay = 0.;
+        self->attack = 0.;
+        self->decay = 0.;
         self->sustain = 0.;
-        //self->release = 0.;
-        //self->dt = 0.;
+        self->release = 0.;
+        self->dt = 0.;
 
-        //self->overshoot = .5;
+        self->overshoot = 1e-3;
         self->retrigger = false;
         self->loop = false;
 
@@ -238,54 +462,47 @@ Envelope_change_stage(Envelope *self, const Stage stage)
 /**
  * Envelope.__init__().
  *
- * Initializer.
+ * Python initializer method.
  */
 static int
 Envelope_init(Envelope *self, PyObject *args, PyObject *kwargs)
 {
     //printf("Envelope_init()\n");
-    double attack, decay, release, dt, overshoot;
     static char *kwlist[] = {
         "attack", "decay", "sustain", "release", "dt", "overshoot", "retrigger",
         "loop", NULL
     };
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ddddd|dpp", kwlist, &attack,
-                &decay, &self->sustain, &release, &dt, &overshoot,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ddddd|dpp", kwlist, &self->attack,
+                &self->decay, &self->sustain, &self->release, &self->dt, &self->overshoot,
                 &self->retrigger, &self->loop)
     )
         return -1;
 
-    overshoot = clip(overshoot, 1e-9, 1e9);  // Headroom
+    self->overshoot = clip(self->overshoot, 1e-9, 1e9);  // Headroom
+    Envelope_compute_base_values_and_coefficients(self);
     if (self->loop)
         Envelope_change_stage(self, ATTACKING);
 
-    // Calculate coefficients and base values
-    self->attackCoef = calculate_exponential_coefficient(attack / dt, overshoot);
-    self->attackBase = (UPPER + overshoot) * (1. - self->attackCoef);
-
-    self->decayCoef = calculate_exponential_coefficient(decay / dt, overshoot);
-    self->decayBase = (self->sustain - overshoot) * (1. - self->decayCoef);
-
-    self->releaseCoef = calculate_exponential_coefficient(release / dt, overshoot);
-    self->releaseBase = (LOWER - overshoot) * (1. - self->releaseCoef);
     return 0;
 }
 
 
-
 /**
- * Trigger envelope (on / off).
+ * Gate envelope (on / off).
  *
  * Change trigger state of envelope.
+ *
+ * Note: gate() instead of trigger() because we want to use the name trigger
+ * within the Klang blocks.
  *
  * @param self Envelope instance.
  * @param args Trigger state (Python bool).
  */
 static PyObject *
-Envelope_trigger(Envelope *self, PyObject *args)
+Envelope_gate(Envelope *self, PyObject *args)
 {
     bool trigger = PyObject_IsTrue(args);
-    //printf("Envelope_trigger(%i)\n", trigger);
+    //printf("Envelope_gate(%i)\n", trigger);
     if (!self->loop) {
         Stage stage = self->stage;
         if (trigger) {
@@ -299,7 +516,7 @@ Envelope_trigger(Envelope *self, PyObject *args)
         }
     }
 
-    return Py_BuildValue("");
+    return Py_BuildValue("");  // Python None value
 }
 
 
@@ -317,7 +534,10 @@ Envelope_single_sample(Envelope *self)
     double newValue = 0.;
     switch(self->stage) {
         case OFF:
-            newValue = self->value;
+            newValue = LOWER;
+            if (self->loop)
+                Envelope_change_stage(self, ATTACKING);
+
             break;
         case ATTACKING:
             newValue = self->attackBase + self->value * self->attackCoef;
@@ -325,6 +545,7 @@ Envelope_single_sample(Envelope *self)
                 newValue = UPPER;
                 Envelope_change_stage(self, DECAYING);
             }
+
             break;
         case DECAYING:
             newValue = self->decayBase + self->value * self->decayCoef;
@@ -332,11 +553,13 @@ Envelope_single_sample(Envelope *self)
                 newValue = self->sustain;
                 Envelope_change_stage(self, SUSTAINING);
             }
+
             break;
         case SUSTAINING:
-            newValue = self->value;
+            newValue = self->sustain;
             if (self->loop)
                 Envelope_change_stage(self, RELEASING);
+
             break;
         case RELEASING:
             newValue = self->releaseBase + self->value * self->releaseCoef;
@@ -390,8 +613,18 @@ Envelope_sample(Envelope *self, PyObject *args)
 
 
 PyMethodDef Envelope_methods[] = {
-    {"trigger", (PyCFunction)Envelope_trigger, METH_O, "Trigger envelope"},
-    {"sample", (PyCFunction)Envelope_sample, METH_VARARGS, "Get the next bufferSize many envelope samples"},
+    {
+        "gate",  /* name */
+        (PyCFunction)Envelope_gate,
+        METH_O,  /* flags */
+        "Trigger envelope",  /* docstring */
+    },
+    {
+        "sample",  /* name */
+        (PyCFunction)Envelope_sample,
+        METH_VARARGS,  /* flags */
+        "Get the next bufferSize many envelope samples",  /* docstring */
+    },
     {NULL}  /* Sentinel */
 };
 
@@ -402,23 +635,24 @@ PyMethodDef Envelope_methods[] = {
 static PyTypeObject EnvelopeType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "klang.audio._envelope.Envelope",
-    .tp_doc = "Envelope extension type",
-
-    .tp_members = Envelope_members,
-    .tp_methods = Envelope_methods,
-
-    .tp_new = Envelope_new,
-    .tp_init = (initproc)Envelope_init,
-
     .tp_basicsize = sizeof(Envelope),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     .tp_dealloc = (destructor)Envelope_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_doc = "Envelope extension type",
+    .tp_methods = Envelope_methods,
+    .tp_members = Envelope_members,
+    .tp_getset = Envelope_getset,
+    .tp_init = (initproc)Envelope_init,
+    .tp_new = Envelope_new,
 };
 
 
 static PyModuleDef envelopeModuleDef = {
-    PyModuleDef_HEAD_INIT, "_envelope", "Example module that creates an extension type.", -1,
-    NULL, NULL, NULL, NULL, NULL  /* Sentinel */
+    PyModuleDef_HEAD_INIT,
+    "_envelope",  /* name */
+    "Example module that creates an extension type.", /* docstring */
+    -1,
+    NULL  /* Sentinel */
 };
 
 
@@ -444,6 +678,6 @@ PyInit__envelope(void)
         Py_DECREF(module);
         return NULL;
     }
+
     return module;
 }
-
