@@ -6,11 +6,13 @@ from klang.block import Block
 from klang.connections import MessageInput
 
 
-class EnvelopeBase(Block):
-    def __init__(self, attack, decay, sustain, release, overshoot, retrigger=False, loop=False):
+class EnvelopeBase(Block, _CEnvelope):
+    def __init__(self, attack, decay, sustain, release, overshoot=1e-3,
+                 retrigger=False, loop=False):
         super().__init__(nOutputs=1)
         self.inputs = self.trigger, = [MessageInput(owner=self)]
-        self._envelope = _CEnvelope(
+        _CEnvelope.__init__(
+            self,
             attack=attack,
             decay=decay,
             sustain=sustain,
@@ -26,38 +28,58 @@ class EnvelopeBase(Block):
         """Get current / latest envelope level."""
         return self.output.get_value()[-1]
 
-    @property
-    def active(self):
-        """Check if envelope is active."""
-        #TODO: Get active state from envelope
-        if self.triggered:
-            return True
-        
-        return self.current_level > 0.
-
     def update(self):
-        for msg in self.input.receive():
-            self._envelope.trigger(bool(msg))
+        for note in self.input.receive():
+            self.gate(note.on)
 
-        samples = self._env.sample(BUFFER_SIZE)
+        samples = self.sample(BUFFER_SIZE)
         self.output.set_value(samples)
+
+    def __str__(self):
+        infos = []
+        for name in ['attack', 'decay', 'sustain', 'release', 'retrigger', 'loop']:
+            val = getattr(self, name)
+            if val:
+                infos.append('%s=%s' % (name, val))
+
+        return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
 
 class ADSR(EnvelopeBase):
-    #TODO: Make me!
-    pass
+
+    """Attack-decay-sustain-release envelope."""
+
+    def __init__(self, attack=.1, decay=.2, sustain=.8, release=1., *args, **kwargs):
+        super().__init__(attack, decay, sustain, release, *args, **kwargs)
 
 
 class AR(EnvelopeBase):
-    #TODO: Make me!
-    pass
+
+    """Attack-release only envelope.
+
+    Sustain is fixed to 1.
+    """
+
+    def __init__(self, attack=.1, release=1., *args, **kwargs):
+        super().__init__(attack, decay=0., sustain=1., release=release, *args, **kwargs)
 
 
 class D(EnvelopeBase):
-    #TODO: Make me!
-    pass
+
+    """Decay only envelope.
+
+    No sustain / release phase.
+
+    TODO: How to link decay with sustain for continuation?
+    """
+
+    def __init__(self, decay=1., *args, **kwargs):
+        super().__init__(attack=0., decay=decay, sustain=0., release=decay, *args, **kwargs)
 
 
 class R(EnvelopeBase):
-    #TODO: Make me!
-    pass
+
+    """Release only envelope."""
+
+    def __init__(self, release=1., *args, **kwargs):
+        super().__init__(attack=0., decay=0., sustain=1., release=release, *args, **kwargs)
