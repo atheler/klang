@@ -338,6 +338,7 @@ Envelope_set_release(Envelope *self, PyObject *value, void *closure)
 
 // TODO: overshoot getter and setter.
 
+
 /**
  * Envelope active state.
  *
@@ -346,10 +347,11 @@ Envelope_set_release(Envelope *self, PyObject *value, void *closure)
 static PyObject*
 Envelope_get_active(Envelope* self, void* closure)
 {
+    //printf("Envelope_get_active()\n");
     if (self->stage)
-        return Py_True;
-
-    return Py_False;
+        Py_RETURN_TRUE;
+    else
+        Py_RETURN_FALSE;
 }
 
 
@@ -400,6 +402,7 @@ PyGetSetDef Envelope_getset[] = {
 static void
 Envelope_dealloc(Envelope* self)
 {
+    //printf("Envelope_dealloc()\n");
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -516,7 +519,7 @@ Envelope_gate(Envelope *self, PyObject *args)
         }
     }
 
-    return Py_BuildValue("");  // Python None value
+    Py_RETURN_NONE;
 }
 
 
@@ -600,15 +603,21 @@ Envelope_sample(Envelope *self, PyObject *args)
     // New numpy array
     int nd = 1;
     npy_intp dims[1] = {bufferSize};
-    PyObject* array = PyArray_SimpleNew(nd, dims, NPY_DOUBLE);
+    PyArrayObject *array = (PyArrayObject *) PyArray_SimpleNew(nd, dims, NPY_DOUBLE);
+    Py_DECREF(dims);
+    if (array == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Couldn't build output array.");
+        Py_XDECREF(array);
+        return NULL;
+    }
 
     // Fill in samples
-    double *arrayData = (double*)PyArray_DATA(array);
+    double *arrayData = (double *) PyArray_DATA(array);
     for (int i = 0; i < bufferSize; ++i) {
         arrayData[i] = Envelope_single_sample(self);
     }
 
-    return array;
+    return PyArray_Return(array);
 }
 
 
@@ -625,7 +634,7 @@ PyMethodDef Envelope_methods[] = {
         METH_VARARGS,  /* flags */
         "Get the next bufferSize many envelope samples",  /* docstring */
     },
-    {NULL}  /* Sentinel */
+    { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
 
