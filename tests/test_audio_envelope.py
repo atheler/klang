@@ -1,47 +1,58 @@
 import unittest
-import collections
 
-from klang.audio.envelope import EnvelopeGenerator
-from klang.messages import Note
+import numpy as np
 
-
-Scenario = collections.namedtuple('Scenario', 'initialState notes shouldBeDirty shouldBeTriggered')
-ON = Note(pitch=69, velocity=1.)
-OFF = Note(pitch=69, velocity=0.)
+from klang.audio._envelope import Envelope
 
 
-class TestEnvelopeGenerator(unittest.TestCase):
-    DIRTY_SCENARIOS = [
-        # Single note
-        Scenario(initialState=False, notes=[OFF], shouldBeDirty=False, shouldBeTriggered=False),
-        Scenario(initialState=False, notes=[ON], shouldBeDirty=True, shouldBeTriggered=True),
-        Scenario(initialState=True, notes=[OFF], shouldBeDirty=True, shouldBeTriggered=False),
-        Scenario(initialState=True, notes=[ON], shouldBeDirty=False, shouldBeTriggered=True),
+class TestEnvelope(unittest.TestCase):
+    def test_attributes(self):
+        env = Envelope(attack=.1, decay=.2, sustain=.8, release=1., dt=.1)
 
-        # Multiple notes
-        Scenario(initialState=False, notes=[OFF, OFF], shouldBeDirty=False, shouldBeTriggered=False),
-        Scenario(initialState=False, notes=[OFF, ON], shouldBeDirty=True, shouldBeTriggered=True),
-        Scenario(initialState=False, notes=[ON, OFF], shouldBeDirty=False, shouldBeTriggered=False),
-        Scenario(initialState=False, notes=[ON, ON], shouldBeDirty=True, shouldBeTriggered=True),
-        Scenario(initialState=True, notes=[OFF, OFF], shouldBeDirty=True, shouldBeTriggered=False),
-        Scenario(initialState=True, notes=[OFF, ON], shouldBeDirty=False, shouldBeTriggered=True),
-        Scenario(initialState=True, notes=[ON, OFF], shouldBeDirty=True, shouldBeTriggered=False),
-        Scenario(initialState=True, notes=[ON, ON], shouldBeDirty=False, shouldBeTriggered=True),
-    ]
+        self.assertEqual(env.attack, .1)
+        self.assertEqual(env.decay, .2)
+        self.assertEqual(env.sustain, .8)
+        self.assertEqual(env.release, 1.)
 
-    def run_scenario(self, scenario):
-            env = EnvelopeGenerator()
-            env.triggered = scenario.initialState
-            for note in scenario.notes:
-                env.input.push(note)
+        self.assertFalse(env.active)
 
-            self.assertEqual(env.dirty(), scenario.shouldBeDirty)
-            self.assertFalse(env.dirty())
-            self.assertEqual(env.triggered, scenario.shouldBeTriggered)
+        env.gate(True)
 
-    def test_dirty_logic(self):
-        for scenario in self.DIRTY_SCENARIOS:
-            self.run_scenario(scenario)
+        self.assertTrue(env.active)
+
+    def test_attack_overwrite(self):
+        env = Envelope(attack=1., decay=1., sustain=.5, release=1., dt=.1)
+        env.gate(True)
+        env.attack = 2.
+
+        self.assertEqual(env.sample(20)[-1], 1.)
+
+    def test_sample(self):
+        env = Envelope(attack=.1, decay=.2, sustain=.8, release=1., dt=.1)
+
+        with self.assertRaises(ValueError):
+            env.sample(-1)
+
+        np.testing.assert_equal(env.sample(0), [])
+        np.testing.assert_equal(env.sample(64), np.zeros(64))
+
+
+    def test_curve(self):
+        env = Envelope(attack=1., decay=1., sustain=.5, release=1., dt=.1)
+
+        np.testing.assert_equal(env.sample(10), np.zeros(10))
+
+        env.gate(True)
+
+        self.assertEqual(env.sample(10)[-1], 1.)
+        self.assertEqual(env.sample(10)[-1], .5)
+        np.testing.assert_equal(env.sample(10), .5)
+
+        env.gate(False)
+
+        self.assertEqual(env.sample(10)[-1], .0)
+
+        np.testing.assert_equal(env.sample(10), np.zeros(10))
 
 
 if __name__ == '__main__':
