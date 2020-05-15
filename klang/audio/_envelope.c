@@ -420,8 +420,7 @@ Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     //printf("Envelope_new()\n");
     Envelope *self;
     self = (Envelope *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
+    if (self != NULL) {
         self->attack = 0.;
         self->decay = 0.;
         self->sustain = 0.;
@@ -599,14 +598,13 @@ Envelope_sample(Envelope *self, PyObject *bufferSize)
     size_t length = PyLong_AsSize_t(bufferSize);
     if (PyErr_Occurred()) {
         PyErr_SetString(PyExc_ValueError, "Could not cast *bufferSize to size_t!");
-        return -1;
+        return NULL;
     }
 
     // Create new empty numpy array
     int nd = 1;
     npy_intp dims[1] = {length};
     PyArrayObject *array = (PyArrayObject *) PyArray_SimpleNew(nd, dims, NPY_DOUBLE);
-    Py_DECREF(dims);
     if (array == NULL) {
         PyErr_SetString(PyExc_RuntimeError, "Couldn't build output array.");
         Py_XDECREF(array);
