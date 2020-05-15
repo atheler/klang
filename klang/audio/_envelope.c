@@ -144,7 +144,6 @@ typedef struct {
     double value; /// Current envelope value
     /*@}*/
 
-    /* Helper */
     /**
      * @name Coefficients and base values.
      */
@@ -160,11 +159,6 @@ typedef struct {
 
 
 static PyMemberDef Envelope_members[] = {
-    //{"attack", T_DOUBLE, offsetof(Envelope, attack), 0, "Attack time"},
-    //{"decay", T_DOUBLE, offsetof(Envelope, decay), 0, "Decay time"},
-    //{"release", T_DOUBLE, offsetof(Envelope, release), 0, "Release time"},
-    //{"dt", T_DOUBLE, offsetof(Envelope, dt), 0, "Sampling interval"},
-    //
     {
         "retrigger",  /* name */
         T_BOOL,  /* type */
@@ -207,7 +201,7 @@ Envelope_compute_base_values_and_coefficients(Envelope *self)
 /**
  * Attack time getter.
  */
-static PyObject*
+static PyObject *
 Envelope_get_attack(Envelope *self, void *closure)
 {
     return PyFloat_FromDouble(self->attack);
@@ -223,8 +217,10 @@ static int
 Envelope_set_attack(Envelope *self, PyObject *value, void *closure)
 {
     double attack = PyFloat_AsDouble(value);
-    if (PyErr_Occurred())
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *value to double!");
         return -1;
+    }
 
     if (attack < 0) {
         PyErr_SetString(PyExc_ValueError, "attack must be positive!");
@@ -240,7 +236,7 @@ Envelope_set_attack(Envelope *self, PyObject *value, void *closure)
 /**
  * Decay time getter.
  */
-static PyObject*
+static PyObject *
 Envelope_get_decay(Envelope *self, void *closure)
 {
     return PyFloat_FromDouble(self->decay);
@@ -256,8 +252,10 @@ static int
 Envelope_set_decay(Envelope *self, PyObject *value, void *closure)
 {
     double decay = PyFloat_AsDouble(value);
-    if (PyErr_Occurred())
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *value to double!");
         return -1;
+    }
 
     if (decay < 0) {
         PyErr_SetString(PyExc_ValueError, "decay must be positive!");
@@ -273,7 +271,7 @@ Envelope_set_decay(Envelope *self, PyObject *value, void *closure)
 /**
  * Sustain value getter.
  */
-static PyObject*
+static PyObject *
 Envelope_get_sustain(Envelope *self, void *closure)
 {
     return PyFloat_FromDouble(self->sustain);
@@ -289,8 +287,10 @@ static int
 Envelope_set_sustain(Envelope *self, PyObject *value, void *closure)
 {
     double sustain  = PyFloat_AsDouble(value);
-    if (PyErr_Occurred())
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *value to double!");
         return -1;
+    }
 
     if (!(LOWER <= sustain && sustain <= UPPER)) {
         PyErr_SetString(PyExc_ValueError, "sustain not within bounds!");
@@ -306,7 +306,7 @@ Envelope_set_sustain(Envelope *self, PyObject *value, void *closure)
 /**
  * Release time getter.
  */
-static PyObject*
+static PyObject *
 Envelope_get_release(Envelope *self, void *closure)
 {
     return PyFloat_FromDouble(self->release);
@@ -322,8 +322,10 @@ static int
 Envelope_set_release(Envelope *self, PyObject *value, void *closure)
 {
     double release = PyFloat_AsDouble(value);
-    if (PyErr_Occurred())
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *value to double!");
         return -1;
+    }
 
     if (release < 0) {
         PyErr_SetString(PyExc_ValueError, "release must be positive!");
@@ -344,7 +346,7 @@ Envelope_set_release(Envelope *self, PyObject *value, void *closure)
  *
  * Is envelope active? Get active state of envelope.
  */
-static PyObject*
+static PyObject *
 Envelope_get_active(Envelope* self, void* closure)
 {
     //printf("Envelope_get_active()\n");
@@ -587,22 +589,22 @@ Envelope_single_sample(Envelope *self)
  * Get next BUFFER_SIZE many samples.
  *
  * @param self Envelope instance.
+ * @param bufferSize Number of samples to return.
  * @return Numpy array.
  */
 static PyObject *
-Envelope_sample(Envelope *self, PyObject *args)
+Envelope_sample(Envelope *self, PyObject *bufferSize)
 {
     //printf("Envelope.sample(...)\n");
-    // Fetch bufferSize argument
-    // TODO: Switch to METH_O? How to cast PyObject -> int?
-    int bufferSize;
-    if (!PyArg_ParseTuple(args, "i", &bufferSize)) {
-        return NULL;
+    size_t length = PyLong_AsSize_t(bufferSize);
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *bufferSize to size_t!");
+        return -1;
     }
 
-    // New numpy array
+    // Create new empty numpy array
     int nd = 1;
-    npy_intp dims[1] = {bufferSize};
+    npy_intp dims[1] = {length};
     PyArrayObject *array = (PyArrayObject *) PyArray_SimpleNew(nd, dims, NPY_DOUBLE);
     Py_DECREF(dims);
     if (array == NULL) {
@@ -611,9 +613,9 @@ Envelope_sample(Envelope *self, PyObject *args)
         return NULL;
     }
 
-    // Fill in samples
+    // Fill in envelope samples
     double *arrayData = (double *) PyArray_DATA(array);
-    for (int i = 0; i < bufferSize; ++i) {
+    for (size_t i = 0; i < length; ++i) {
         arrayData[i] = Envelope_single_sample(self);
     }
 
@@ -631,7 +633,7 @@ PyMethodDef Envelope_methods[] = {
     {
         "sample",  /* name */
         (PyCFunction)Envelope_sample,
-        METH_VARARGS,  /* flags */
+        METH_O,  /* flags */
         "Get the next bufferSize many envelope samples",  /* docstring */
     },
     { NULL, NULL, 0, NULL }  /* Sentinel */
