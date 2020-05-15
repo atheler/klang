@@ -22,6 +22,7 @@
  *   - https://www.earlevel.com/main/2012/12/15/a-one-pole-filter/
  */
 #define PY_SSIZE_T_CLEAN
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "stdbool.h"
 #include <math.h>  // exp, log
 #include <Python.h>
@@ -70,6 +71,7 @@ typedef enum {
  *
  * @param stage The envelope stage to print.
  */
+static void print_stage(const Stage stage) __attribute__((unused));
 static void
 print_stage(const Stage stage)
 {
