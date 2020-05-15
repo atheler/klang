@@ -350,7 +350,29 @@ Envelope_get_overshoot(Envelope *self, void *closure)
 }
 
 
-// TODO: overshoot setter?
+/**
+ * Overshoot value setter.
+ *
+ * Also recomputes base values and coefficients.
+ */
+static int
+Envelope_set_overshoot(Envelope *self, PyObject *value, void *closure)
+{
+    double overshoot = PyFloat_AsDouble(value);
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "Could not cast *value to double!");
+        return -1;
+    }
+
+    if (overshoot < 0) {
+        PyErr_SetString(PyExc_ValueError, "overshoot must be positive!");
+        return -1;
+    }
+
+    self->overshoot = clip(overshoot, 1e-9, 1e9);
+    Envelope_compute_base_values_and_coefficients(self);
+    return 0;
+}
 
 
 /**
@@ -401,8 +423,8 @@ PyGetSetDef Envelope_getset[] = {
     {
         "overshoot",  /* name */
          (getter) Envelope_get_overshoot,  /* getter */
-         NULL,  /* setter */
-         "Overshoot",  /* doc */
+         (setter) Envelope_set_overshoot,  /* setter */
+         "Overshoot value",  /* doc */
          NULL /* closure */
     },
     {
