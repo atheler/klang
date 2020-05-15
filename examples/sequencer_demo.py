@@ -1,6 +1,6 @@
 """Sequencer drum kit demo."""
 from klang.audio.effects import Delay
-from klang.audio.envelope import AR
+from klang.audio.envelopes import AR
 from klang.audio.mixer import Mixer
 from klang.audio.oscillators import Oscillator
 from klang.audio.sequencer import Sequencer

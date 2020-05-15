@@ -338,7 +338,17 @@ Envelope_set_release(Envelope *self, PyObject *value, void *closure)
 }
 
 
-// TODO: overshoot getter and setter.
+/**
+ * Overshoot value getter.
+ */
+static PyObject *
+Envelope_get_overshoot(Envelope *self, void *closure)
+{
+    return PyFloat_FromDouble(self->overshoot);
+}
+
+
+// TODO: overshoot setter?
 
 
 /**
@@ -384,6 +394,13 @@ PyGetSetDef Envelope_getset[] = {
          (getter) Envelope_get_release,  /* getter */
          (setter) Envelope_set_release,  /* setter */
          "Release time",  /* doc */
+         NULL /* closure */
+    },
+    {
+        "overshoot",  /* name */
+         (getter) Envelope_get_overshoot,  /* getter */
+         NULL,  /* setter */
+         "Overshoot",  /* doc */
          NULL /* closure */
     },
     {

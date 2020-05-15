@@ -44,6 +44,11 @@ class EnvelopeBase(Block, _CEnvelope):
 
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
+    def __deepcopy__(self, memo):
+        args = (self.attack, self.decay, self.sustain, self.release)
+        kwargs = {'overshoot': self.overshoot, 'retrigger': self.retrigger, 'loop': self.loop}
+        return type(self)(*args, **kwargs)
+
 
 class ADSR(EnvelopeBase):
 
@@ -63,6 +68,11 @@ class AR(EnvelopeBase):
     def __init__(self, attack=.1, release=1., *args, **kwargs):
         super().__init__(attack, decay=0., sustain=1., release=release, *args, **kwargs)
 
+    def __deepcopy__(self, memo):
+        args = (self.attack, self.release)
+        kwargs = {'overshoot': self.overshoot, 'retrigger': self.retrigger, 'loop': self.loop}
+        return type(self)(*args, **kwargs)
+
 
 class D(EnvelopeBase):
 
@@ -76,6 +86,11 @@ class D(EnvelopeBase):
     def __init__(self, decay=1., *args, **kwargs):
         super().__init__(attack=0., decay=decay, sustain=0., release=decay, *args, **kwargs)
 
+    def __deepcopy__(self, memo):
+        args = (self.decay,)
+        kwargs = {'overshoot': self.overshoot, 'retrigger': self.retrigger, 'loop': self.loop}
+        return type(self)(*args, **kwargs)
+
 
 class R(EnvelopeBase):
 
@@ -83,3 +98,8 @@ class R(EnvelopeBase):
 
     def __init__(self, release=1., *args, **kwargs):
         super().__init__(attack=0., decay=0., sustain=1., release=release, *args, **kwargs)
+
+    def __deepcopy__(self, memo):
+        args = (self.release,)
+        kwargs = {'overshoot': self.overshoot, 'retrigger': self.retrigger, 'loop': self.loop}
+        return type(self)(*args, **kwargs)
