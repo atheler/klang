@@ -6,13 +6,15 @@ import scipy.signal
 import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.audio import NYQUIST_FREQUENCY
+from klang.audio import NYQUIST_FREQUENCY, STEREO_SILENCE
+from klang.audio import get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.composite import Composite
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
+from klang.execution import execute
 from klang.math import clip
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
@@ -112,13 +114,13 @@ class Tremolo(Composite):
 
 class Delay(Block):
 
-    """Simple digital delay."""
+    """Simple digital mono delay."""
 
     MAX_TIME = 2.
     """float: Max delay time / max buffer size."""
 
     def __init__(self, time=1., feedback=.1, drywet=.5):
-        assert time <= self.MAX_TIME
+        self.validate_delay_time(time)
         super().__init__(nInputs=1, nOutputs=1)
         self.feedback = feedback
         self.drywet = drywet
@@ -126,17 +128,74 @@ class Delay(Block):
         maxlen = int(self.MAX_TIME * SAMPLING_RATE)
         time = compute_duration(time)
         delayOffset = int(time * SAMPLING_RATE)
-        self.buffers = {
-            MONO: RingBuffer.from_shape(maxlen, offset=delayOffset),
-            STEREO: RingBuffer.from_shape((maxlen, STEREO), offset=delayOffset),
-        }
+        self.buffer = RingBuffer.from_shape(maxlen, offset=delayOffset)
+
+    def validate_delay_time(self, time):
+        if time > self.MAX_TIME:
+            fmt = 'Delay time %.3f sec to long (max %.3f)!'
+            msg = fmt % (time, self.MAX_TIME)
+            raise ValueError(msg)
 
     def update(self):
         new = self.input.get_value()
-        buf = self.buffers[new.ndim]
-        old = buf.read(BUFFER_SIZE).T
-        buf.write((new + self.feedback * old).T)
+        old = self.buffer.read(BUFFER_SIZE).T
+        self.buffer.write((new + self.feedback * old).T)
         self.output.set_value(blend(new, old, self.drywet))
+
+
+class AudioSplitter(Block):
+
+    """Split incoming multi channel audio to individual mono outputs."""
+
+    def __init__(self, nOutputs):
+        super().__init__(nInputs=1, nOutputs=nOutputs)
+
+    def update(self):
+        samples = self.input.value
+        if samples.ndim == MONO:
+            # Broadcast to all channels. No questions asked.
+            for output in self.outputs:
+                output.set_value(samples)
+        else:
+            for channel, output in zip(self.input.value, self.outputs):
+                output.set_value(channel)
+
+
+class AudioCombiner(Block):
+
+    """Combine incoming mono signals to one multi channel output."""
+
+    def __init__(self, nInputs):
+        super().__init__(nInputs, nOutputs=1)
+        silence = get_silence((nInputs, BUFFER_SIZE)).copy()
+        self.output.set_value(silence)
+
+    def update(self):
+        for input_, buf in zip(self.inputs, self.output.value):
+            buf[:] = input_.value
+
+
+class StereoDelay(Composite):
+
+    """Stereo delay."""
+
+    def __init__(self, leftTime=1., rightTime=1., leftFeedback=.1,
+                 rightFeedback=.1, drywet=.5):
+        super().__init__()
+        self.inputs = [Relay(owner=self)]
+        self.outputs = [Relay(owner=self)]
+
+        splitter = AudioSplitter(nOutputs=STEREO)
+        leftDelay = Delay(leftTime, leftFeedback, drywet)
+        rightDelay = Delay(rightTime, rightFeedback, drywet)
+        combiner = AudioCombiner(nInputs=STEREO)
+
+        self.input.connect(splitter.input)
+        splitter.outputs[0] | leftDelay | combiner.inputs[0]
+        splitter.outputs[1] | rightDelay | combiner.inputs[1]
+        combiner.output.connect(self.output)
+
+        self.update_internal_exec_order()
 
 
 class FilterCoefficients:
