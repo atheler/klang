@@ -3,16 +3,17 @@ import abc
 import copy
 import heapq
 import itertools
+import math
 
 import numpy as np
 
 from config import BUFFER_SIZE
-from klang.audio import MONO_SILENCE
-from klang.audio.envelope import sample_exponential_decay, D
+from klang.audio import MONO_SILENCE, T, DT
+from klang.audio.envelopes import D
 from klang.audio.waves import sample_wave
 from klang.block import Block
 from klang.connections import MessageInput
-from klang.audio.oscillators import Chirper
+from klang.constants import PI
 
 
 def sample_pitch_decay(frequency, decay, intensity, t0=0.):
@@ -20,6 +21,12 @@ def sample_pitch_decay(frequency, decay, intensity, t0=0.):
     env, t1 = sample_exponential_decay(decay, t0)
     pitch = frequency * (1. + intensity * env)
     return pitch, t1
+
+
+def sample_exponential_decay(decay, t0=0.):
+    amp = math.exp(-PI / decay * t0)
+    signal = amp * np.exp(-PI / decay * T)
+    return signal, t0 + DT * BUFFER_SIZE
 
 
 def duplicate_voice(voice, number):
@@ -185,7 +192,7 @@ class HiHat(Block):
         else:
             self.noise_generator = lambda: 2 * np.random.random(BUFFER_SIZE) - 1.
 
-        self.envelope = D(decay, mode='exp')
+        self.envelope = D(decay)
 
     def update(self):
         triggered = False

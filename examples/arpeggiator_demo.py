@@ -3,7 +3,7 @@
 """Arpeggiator demonstration."""
 from klang.arpeggiator import Arpeggiator
 from klang.audio.effects import Delay, Filter, Transformer
-from klang.audio.envelope import ADSR
+from klang.audio.envelopes import ADSR
 from klang.audio.oscillators import Lfo
 from klang.audio.oscillators import Oscillator
 from klang.audio.sequencer import Sequencer

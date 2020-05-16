@@ -1,5 +1,5 @@
 """Klang synthesizer demo."""
-from klang.audio.envelope import ADSR
+from klang.audio.envelopes import ADSR
 from klang.audio.oscillators import Oscillator
 from klang.audio.synthesizer import MonophonicSynthesizer, PolyphonicSynthesizer
 from klang.audio.voices import OscillatorVoice
