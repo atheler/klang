@@ -1,5 +1,6 @@
 """This and that."""
 import json
+import wave
 
 import numpy as np
 import scipy.io.wavfile
@@ -42,7 +43,21 @@ np.testing.assert_equal(
 
 def load_wave(filepath):
     """Load WAV file."""
-    rate, data = scipy.io.wavfile.read(filepath)
+    #rate, data = scipy.io.wavfile.read(filepath)  # Can not handle some mono files?!
+    with wave.open(filepath, 'rb') as waveRead:
+        sampleWidth = waveRead.getsampwidth()
+        if not sampleWidth == 2:
+            fmt = 'Only 16 bit WAV supported at the moment. Not %s!'
+            msg = fmt % sampleWidth
+            raise ValueError(msg)
+
+        rate = waveRead.getframerate()
+        raw = waveRead.readframes(-1)
+        data = np.frombuffer(raw, dtype=np.int16)
+        nFrames = waveRead.getnframes()
+        nChannels = waveRead.getnchannels()
+        data = data.reshape((nFrames, nChannels))
+
     return rate, convert_samples_to_float(data)
 
 

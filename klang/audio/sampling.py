@@ -335,6 +335,7 @@ class AudioFile(Block):
         data = self.sample.read(BUFFER_SIZE)
         self.playing = self.sample.playing
         samples = extend_with_silence(data.T)
+        samples = (samples.T).squeeze()
         self.output.set_value(samples)
 
     def __str__(self):
