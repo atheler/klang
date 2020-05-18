@@ -31,7 +31,13 @@ def determine_execution_order(blocks):
     if not edges:
         return blocks
 
-    uniqueBlocks = set(sum(edges, tuple()))
+    # Determine unique block
+    uniqueBlocks = []
+    for src, dst in edges:
+        if src not in uniqueBlocks:
+            uniqueBlocks.append(src)
+        if dst not in uniqueBlocks:
+            uniqueBlocks.append(dst)
 
     # Block <-> int mapping (and back-mapping).
     size = len(uniqueBlocks)
@@ -42,7 +48,9 @@ def determine_execution_order(blocks):
     intEdges = [(block2idx[src], block2idx[dst]) for src, dst in edges]
     graph = graph_matrix(intEdges)
     order = topological_sorting(graph)
-    return [idx2block[idx] for idx in order]
+    execOrder = [idx2block[idx] for idx in order]
+    #print_exec_order(execOrder)
+    return execOrder
 
 
 def execute(blocks):
@@ -55,3 +63,4 @@ def print_exec_order(execOrder):
     """Print numbered execution order."""
     for iblock in enumerate(execOrder, 1):
         print('%d) %s' % iblock)
+    print()

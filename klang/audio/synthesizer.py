@@ -16,17 +16,17 @@ from klang.connections import MessageInput
 from klang.constants import PI
 
 
+def sample_exponential_decay(decay, t0=0.):
+    amp = math.exp(-PI / decay * t0)
+    signal = amp * np.exp(-PI / decay * T)
+    return signal, t0 + DT * BUFFER_SIZE
+
+
 def sample_pitch_decay(frequency, decay, intensity, t0=0.):
     """Sample decaying pitch curve."""
     env, t1 = sample_exponential_decay(decay, t0)
     pitch = frequency * (1. + intensity * env)
     return pitch, t1
-
-
-def sample_exponential_decay(decay, t0=0.):
-    amp = math.exp(-PI / decay * t0)
-    signal = amp * np.exp(-PI / decay * T)
-    return signal, t0 + DT * BUFFER_SIZE
 
 
 def duplicate_voice(voice, number):
