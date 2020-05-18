@@ -1,5 +1,5 @@
 """Mono and stereo audio signal mixer."""
-from klang.audio import MONO_SILENCE, STEREO_SILENCE
+from klang.audio.helpers import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.panning import CENTER, panning_amplitudes
 from klang.block import fetch_output, Block
 from klang.connections import Input

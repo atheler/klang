@@ -1,5 +1,5 @@
 from config import BUFFER_SIZE
-from klang.audio import get_silence, get_time
+from klang.audio.helpers import get_silence, get_time
 from klang.audio.oscillators import Phasor
 from klang.block import Block
 from klang.constants import TAU

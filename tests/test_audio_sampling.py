@@ -6,13 +6,12 @@ import numpy as np
 import scipy.io.wavfile
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.audio import MONO_SILENCE, STEREO_SILENCE
+from klang.audio.helpers import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.sampling import (
     extend_with_silence, interp_2d, Sample, AudioFile, VALID_MODES
 )
 from klang.constants import TAU, MONO, STEREO
-from klang.util import convert_samples_to_int
-
+from klang.audio.audio_files import convert_samples_to_int
 
 MULTI_CHANNEL_SILENCE = np.zeros((5, BUFFER_SIZE))
 LONG = int(10. * SAMPLING_RATE)

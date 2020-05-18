@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from klang.audio import get_silence, get_time
+from klang.audio.helpers import get_silence, get_time
 
 
 class TestCachedSignals(unittest.TestCase):

@@ -6,8 +6,7 @@ import scipy.signal
 import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.audio import NYQUIST_FREQUENCY
-from klang.audio import get_silence
+from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
 from klang.block import Block
@@ -17,7 +16,7 @@ from klang.constants import TAU, MONO, STEREO
 from klang.math import clip
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
-from klang.util import convert_samples_to_int, convert_samples_to_float
+from klang.audio.audio_files import convert_samples_to_float, convert_samples_to_int
 
 
 def blend(a, b, x):

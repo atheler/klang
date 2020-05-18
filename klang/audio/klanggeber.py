@@ -6,12 +6,11 @@ import numpy as np
 import pyaudio
 
 from config import BUFFER_SIZE, SAMPLING_RATE
-from klang.audio import get_silence
+from klang.audio.helpers import get_silence
 from klang.block import Block
 from klang.constants import MONO
 from klang.errors import KlangError
-from klang.util import write_wave
-
+from klang.audio.audio_files import write_wave
 
 D_TYPE = np.float32
 """type: Numpy audio sample datatype (has to be compatible with

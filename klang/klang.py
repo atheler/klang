@@ -2,7 +2,7 @@
 import time
 import logging
 
-from klang.audio import INTERVAL
+from klang.audio.helpers import INTERVAL
 from klang.audio.klanggeber import look_for_audio_blocks, run_audio_engine, Dac, Adc
 from klang.execution import determine_execution_order
 

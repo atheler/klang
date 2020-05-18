@@ -18,7 +18,7 @@ import numpy as np
 import samplerate
 
 from config import SAMPLING_RATE, BUFFER_SIZE
-from klang.audio import get_silence
+from klang.audio.helpers import get_silence
 from klang.audio.envelopes import AR
 from klang.audio.voices import Voice
 from klang.block import Block
@@ -26,8 +26,7 @@ from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
 from klang.math import clip
 from klang.music.tunings import EQUAL_TEMPERAMENT
-from klang.util import load_wave
-
+from klang.audio.audio_files import load_wave
 
 SAMPLERATE_CONVERTER_TYPES = set(samplerate.converters.ConverterType.__members__)
 """set: All possible converter types of samplerate library."""

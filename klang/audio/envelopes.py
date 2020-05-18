@@ -1,6 +1,6 @@
 """Envelope generator blocks."""
 from config import BUFFER_SIZE
-from klang.audio import DT
+from klang.audio.helpers import DT
 from klang.audio._envelope import Envelope as _CEnvelope
 from klang.block import Block
 from klang.connections import MessageInput

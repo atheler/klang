@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal.waveforms import _chirp_phase
 
 from config import BUFFER_SIZE
-from klang.audio import DT, INTERVAL, get_time
+from klang.audio.helpers import DT, INTERVAL, get_time
 from klang.audio.waves import sine
 from klang.block import Block
 from klang.constants import TAU
