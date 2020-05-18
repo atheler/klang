@@ -6,7 +6,7 @@ import scipy.signal
 import samplerate
 
 from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.audio import NYQUIST_FREQUENCY, STEREO_SILENCE
+from klang.audio import NYQUIST_FREQUENCY
 from klang.audio import get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
@@ -14,7 +14,6 @@ from klang.block import Block
 from klang.composite import Composite
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
-from klang.execution import execute
 from klang.math import clip
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
@@ -109,7 +108,7 @@ class Tremolo(Composite):
         env = 1. - clip(intensity, 0., 1.) * mod
 
         samples = self.input.get_value()
-        self.output.value = env * samples
+        self.output.set_value(env * samples)
 
 
 class Delay(Block):
@@ -138,6 +137,10 @@ class Delay(Block):
 
     def update(self):
         new = self.input.get_value()
+        if new.ndim != MONO:
+            nChannels, _ = new.shape
+            new = new.sum(axis=0) / nChannels
+
         old = self.buffer.read(BUFFER_SIZE).T
         self.buffer.write((new + self.feedback * old).T)
         self.output.set_value(blend(new, old, self.drywet))
