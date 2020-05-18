@@ -24,7 +24,7 @@ from klang.connections import MessageInput
 
 class Voice(Block):
 
-    """Base class for single syntehsizer voice."""
+    """Base class for single synthesizer voice."""
 
     def __init__(self, envelope):
         super().__init__(nInputs=0, nOutputs=1)
