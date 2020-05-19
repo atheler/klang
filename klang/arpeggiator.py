@@ -4,7 +4,7 @@ import functools
 import random
 
 from klang.audio.oscillators import Phasor
-from klang.audio.sequencer import pizza_slice_number, PizzaSlicer
+from klang.sequencer import pizza_slice_number, PizzaSlicer
 from klang.block import Block
 from klang.composite import Composite
 from klang.connections import MessageInput, MessageRelay, MessageOutput

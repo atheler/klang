@@ -4,7 +4,7 @@ import collections
 from klang.block import Block
 from klang.connections import MessageInput
 
-from klang.audio.sequencer import PizzaSlicer
+from klang.sequencer import PizzaSlicer
 from klang.constants import TAU
 
 

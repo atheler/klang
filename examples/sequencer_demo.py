@@ -3,8 +3,8 @@ from klang.audio.effects import Delay
 from klang.audio.envelopes import AR
 from klang.audio.mixer import Mixer
 from klang.audio.oscillators import Oscillator
-from klang.audio.sequencer import Sequencer
-from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer, MonophonicSynthesizer
+from klang.sequencer import Sequencer
+from klang.audio.synthesizer import Kick, HiHat, PolyphonicSynthesizer
 from klang.audio.voices import OscillatorVoice
 from klang.audio.klanggeber import Dac
 from klang.klang import run_klang

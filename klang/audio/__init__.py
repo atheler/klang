@@ -8,7 +8,7 @@ from klang.audio.mixer import *
 from klang.audio.oscillators import *
 from klang.audio.panning import *
 from klang.audio.sampling import *
-from klang.audio.sequencer import *
+from klang.sequencer import *
 from klang.audio.sync import *
 from klang.audio.synthesizer import *
 from klang.audio.voices import *

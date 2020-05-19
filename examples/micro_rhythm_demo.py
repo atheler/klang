@@ -3,7 +3,7 @@
 from klang.audio.klanggeber import Dac
 from klang.audio.mixer import Mixer
 from klang.audio.oscillators import Lfo
-from klang.audio.sequencer import Sequencer
+from klang.sequencer import Sequencer
 from klang.audio.synthesizer import Kick, HiHat
 from klang.audio.waves import triangle
 from klang.constants import MONO

@@ -6,7 +6,7 @@ from klang.audio.effects import Delay, Filter, Transformer
 from klang.audio.envelopes import ADSR
 from klang.audio.oscillators import Lfo
 from klang.audio.oscillators import Oscillator
-from klang.audio.sequencer import Sequencer
+from klang.sequencer import Sequencer
 from klang.audio.synthesizer import MonophonicSynthesizer
 from klang.audio.voices import OscillatorVoice
 from klang.audio.waves import sawtooth, triangle, sine
