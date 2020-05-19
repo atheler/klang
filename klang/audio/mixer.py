@@ -5,6 +5,9 @@ from klang.block import fetch_output, Block
 from klang.connections import Input
 
 
+__all__ = ['Mixer', 'StereoMixer']
+
+
 DEFAULT_GAIN = 1.
 """float: Default gain value for new channels."""
 

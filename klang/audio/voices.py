@@ -22,6 +22,9 @@ from klang.block import Block
 from klang.connections import MessageInput
 
 
+__all__ = ['Voice', 'OscillatorVoice']
+
+
 class Voice(Block):
 
     """Base class for single synthesizer voice."""

@@ -13,6 +13,12 @@ from klang.constants import TAU
 from klang.math import wrap
 
 
+__all__ = [
+    'WAVE_FUNCTIONS', 'sine', 'square', 'sawtooth', 'triangle', 'random',
+    'sample_wave',
+]
+
+
 def sine(phase):
     """Sine wave function."""
     return np.sin(phase)
@@ -47,7 +53,7 @@ WAVE_FUNCTIONS = {
 }
 
 
-def sample_wave(frequency, startPhase=0., wave_func=np.sin, shape=BUFFER_SIZE):
+def sample_wave(frequency, startPhase=0., wave_func=sine, shape=BUFFER_SIZE):
     """Sample wave function."""
     warnings.warn('sample_wave() function to be deprecated?')
     t = get_time(shape)

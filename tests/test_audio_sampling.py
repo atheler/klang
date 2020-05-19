@@ -8,7 +8,8 @@ import scipy.io.wavfile
 from config import SAMPLING_RATE, BUFFER_SIZE
 from klang.audio.helpers import MONO_SILENCE, STEREO_SILENCE
 from klang.audio.sampling import (
-    extend_with_silence, interp_2d, Sample, AudioFile, VALID_MODES
+    extend_with_silence, interp_2d, Sample, AudioFile, VALID_MODES,
+    number_of_channels
 )
 from klang.constants import TAU, MONO, STEREO
 from klang.audio.audio_files import convert_samples_to_int
@@ -187,7 +188,6 @@ class TestResampler(unittest.TestCase):
 
 
 class TestAudioFile(unittest.TestCase):
-
     def test_from_wave_file(self):
         for channels in [MONO, STEREO]:
             data = generate_audio_data(length=SAMPLING_RATE, channels=channels)
@@ -241,6 +241,17 @@ class TestAudioFile(unittest.TestCase):
             # Sample samples should be empty by now
             af.update()
             assert all_zero(af.output.value)
+
+
+class TestNumberOfChannels(unittest.TestCase):
+    def test_number_of_channels(self):
+        monoSignal = np.zeros(10)
+
+        self.assertEqual(number_of_channels(monoSignal), MONO)
+
+        tenChannelSignal = np.zeros((10, 100))
+
+        self.assertEqual(number_of_channels(tenChannelSignal), 10)
 
 
 if __name__ == '__main__':

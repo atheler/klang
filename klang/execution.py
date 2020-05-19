@@ -32,6 +32,13 @@ def determine_execution_order(blocks):
         return blocks
 
     # Determine unique block
+    #
+    # Note that the following did not work:
+    #
+    # >>> uniqueBlocks = set(itertools.chain.from_iterable(edges))
+    #
+    # Introduces a irregular bug which only messes up execution order 1 / 15
+    # runs (?)
     uniqueBlocks = []
     for src, dst in edges:
         if src not in uniqueBlocks:
@@ -63,4 +70,5 @@ def print_exec_order(execOrder):
     """Print numbered execution order."""
     for iblock in enumerate(execOrder, 1):
         print('%d) %s' % iblock)
+
     print()

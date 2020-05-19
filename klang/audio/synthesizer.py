@@ -16,6 +16,11 @@ from klang.connections import MessageInput
 from klang.constants import PI
 
 
+__all__ = [
+    'MonophonicSynthesizer', 'PolyphonicSynthesizer', 'HiHat', 'Kick',
+]
+
+
 def sample_exponential_decay(decay, t0=0.):
     amp = math.exp(-PI / decay * t0)
     signal = amp * np.exp(-PI / decay * T)

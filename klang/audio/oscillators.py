@@ -10,6 +10,9 @@ from klang.constants import TAU
 from klang.music.tempo import compute_rate
 
 
+__all__ = ['Phasor', 'Oscillator', 'Lfo', 'FmOscillator']
+
+
 def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
     """Create chirp phase. Ascending and descending. Same as
     scipy.signal.waveforms._chirp_phase with constant frequency extension for

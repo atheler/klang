@@ -8,6 +8,9 @@ from config import SAMPLING_RATE
 from klang.math import normalize_values
 
 
+__all__ = ['convert_samples_to_float', 'convert_samples_to_int', 'load_wave', 'write_wave']
+
+
 def convert_samples_to_float(samples):
     """Convert PCM audio samples to float [-1.0, ~1.0]."""
     samples = np.asarray(samples)
@@ -18,12 +21,6 @@ def convert_samples_to_float(samples):
     return samples / maxValue
 
 
-np.testing.assert_equal(
-    convert_samples_to_float(np.array([-32768, 0], dtype=np.int16)),
-    np.array([-1., 0.]),
-)
-
-
 def convert_samples_to_int(samples, dtype=np.int16):
     """Convert float audio samples [-1.0, 1.0] to PCM / int."""
     samples = np.asarray(samples)
@@ -32,12 +29,6 @@ def convert_samples_to_int(samples, dtype=np.int16):
 
     maxValue = np.iinfo(dtype).max
     return (maxValue * samples).astype(dtype)
-
-
-np.testing.assert_equal(
-    convert_samples_to_int(np.array([-1., 0., 1.])),
-    np.array([-32767, 0, 32767], dtype=np.int16),
-)
 
 
 def load_wave(filepath):

@@ -28,6 +28,14 @@ from klang.math import clip
 from klang.music.tunings import EQUAL_TEMPERAMENT
 from klang.audio.audio_files import load_wave
 
+
+__all__ = [
+    'CRUDE_RESAMPLER_MODES', 'VALID_MODES', 'sum_to_mono', 'number_of_channels',
+    'number_of_channels', 'CrudeResampler', 'Sample', 'AudioFile', 'Sampler',
+    'SampleVoice'
+]
+
+
 SAMPLERATE_CONVERTER_TYPES = set(samplerate.converters.ConverterType.__members__)
 """set: All possible converter types of samplerate library."""
 
@@ -93,10 +101,6 @@ def number_of_channels(samples):
         return MONO
 
     return samples.shape[0]
-
-
-assert number_of_channels(np.zeros(10)) == MONO
-assert number_of_channels(np.zeros((10, 100))) == 10
 
 
 class CrudeResampler:

@@ -11,6 +11,9 @@ import numpy as np
 from klang.constants import TAU
 
 
+__all__ = ['LEFT', 'CENTER', 'RIGHT', 'panning_amplitudes', 'pan_signal']
+
+
 LEFT = -1.
 """float: Maximum left panning value."""
 

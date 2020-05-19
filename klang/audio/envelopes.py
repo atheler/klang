@@ -6,6 +6,9 @@ from klang.block import Block
 from klang.connections import MessageInput
 
 
+__all__ = ['ADSR', 'AR', 'D', 'R']
+
+
 class EnvelopeBase(Block, _CEnvelope):
     def __init__(self, attack, decay, sustain, release, overshoot=1e-3,
                  retrigger=False, loop=False):

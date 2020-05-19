@@ -14,6 +14,12 @@ from klang.music.tempo import bar_period
 from klang.note_effects import NoteLengthener
 
 
+__all__ = [
+    'random_pattern', 'pizza_slice_number', 'PizzaSlicer', 'PatternLookup',
+    'Sequencer',
+]
+
+
 def random_pattern(length, period=None, minVal=60, maxVal=72):
     """Generate random sequence for given length with cycle period.
 

@@ -12,6 +12,10 @@ from klang.constants import MONO
 from klang.errors import KlangError
 from klang.audio.audio_files import write_wave
 
+
+__all__ = ['ChannelMismatchError', 'Adc', 'Dac', 'run_audio_engine']
+
+
 D_TYPE = np.float32
 """type: Numpy audio sample datatype (has to be compatible with
 pyaudio.paFloat32 otherwise bad things will happen!).

@@ -34,6 +34,7 @@ def cent_2_ratio(cent):
     """Convert cent to frequency ratio."""
     return 2 ** (cent / CENT_PER_OCTAVE)
 
+
 def find_temperament(name):
     """Find temperament by name."""
     return find_item(TEMPERAMENTS, name)
@@ -58,6 +59,7 @@ class Temperament:
         self.baseFrequency = kammerton / self.ratios[KAMMERTON_OFFSET]
 
     def pitch_2_frequency(self, pitch):
+        """Convert pitch number to frequency value."""
         octave, note = np.divmod(pitch, DODE)
         return self.baseFrequency * self.ratios[note] * (2. ** (octave - REF_OCTAVE))
 
@@ -66,9 +68,10 @@ class Temperament:
         if self.name:
             infos.append('%r' % self.name)
 
-        infos.extend([
+        infos.append(
             'kammerton: %.1f Hz' % self.kammerton
-        ])
+        )
+
         return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
 

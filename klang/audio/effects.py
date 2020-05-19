@@ -19,6 +19,13 @@ from klang.ring_buffer import RingBuffer
 from klang.audio.audio_files import convert_samples_to_float, convert_samples_to_int
 
 
+__all__ = [
+    'Gain', 'Tremolo', 'Delay', 'AudioSplitter', 'AudioCombiner', 'StereoDelay',
+    'Filter', 'Subsampler', 'Bitcrusher', 'OctaveDistortion', 'TanhDistortion',
+    'PitchShifter', 'Transformer',
+]
+
+
 def blend(a, b, x):
     """Dry / wet blend two signals together.
 
