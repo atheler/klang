@@ -8,7 +8,7 @@ from klang.constants import STEREO
 from klang.klang import run_klang
 
 
-FILEPATH = 'samples/gong.wav'
+FILEPATH = 'resources/gong.wav'
 
 
 if __name__ == '__main__':
