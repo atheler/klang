@@ -10,7 +10,7 @@ from klang.audio.helpers import get_silence
 from klang.block import Block
 from klang.constants import MONO
 from klang.errors import KlangError
-from klang.audio.audio_files import write_wave
+from klang.audio.wavfile import write_wave
 
 
 __all__ = ['ChannelMismatchError', 'Adc', 'Dac', 'run_audio_engine']

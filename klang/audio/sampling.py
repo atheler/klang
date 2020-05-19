@@ -26,7 +26,7 @@ from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
 from klang.math import clip
 from klang.music.tunings import EQUAL_TEMPERAMENT
-from klang.audio.audio_files import load_wave
+from klang.audio.wavfile import load_wave
 
 
 __all__ = [

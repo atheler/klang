@@ -13,10 +13,10 @@ from klang.block import Block
 from klang.composite import Composite
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
-from klang.math import clip
+from klang.math import clip, blend
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
-from klang.audio.audio_files import convert_samples_to_float, convert_samples_to_int
+from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 
 
 __all__ = [
@@ -24,16 +24,6 @@ __all__ = [
     'Filter', 'Subsampler', 'Bitcrusher', 'OctaveDistortion', 'TanhDistortion',
     'PitchShifter', 'Transformer',
 ]
-
-
-def blend(a, b, x):
-    """Dry / wet blend two signals together.
-
-    Usage:
-        >>> blend(np.zeros(4), np.ones(4), .5)
-        array([0.5, 0.5, 0.5, 0.5])
-    """
-    return (1. - x) * a + x * b
 
 
 def sub_sample(array, skip):

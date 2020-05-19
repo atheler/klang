@@ -18,7 +18,7 @@ import scipy.interpolate
 from klang.constants import TAU
 from klang.music.note_formatting import cumsum
 from klang.music.note_values import QUARTER_NOTE
-from klang.audio.effects import blend
+from klang.math import blend
 from klang.block import Block
 
 

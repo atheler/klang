@@ -70,3 +70,13 @@ def integrate(x, dt, y0=0.):
 def lcm(a, b):
     """Least common denominator."""
     return abs(a*b) // math.gcd(a, b)
+
+
+def blend(a, b, x):
+    """Dry / wet blend two signals together.
+
+    Usage:
+        >>> blend(np.zeros(4), np.ones(4), .5)
+        array([0.5, 0.5, 0.5, 0.5])
+    """
+    return (1. - x) * a + x * b

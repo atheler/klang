@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from klang.audio.audio_files import convert_samples_to_float, convert_samples_to_int
+from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 
 
 class TestSampleConversion(unittest.TestCase):

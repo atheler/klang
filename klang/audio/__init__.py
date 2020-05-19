@@ -1,5 +1,5 @@
 """All things audio."""
-from klang.audio.audio_files import *
+from klang.audio.wavfile import *
 from klang.audio.effects import *
 from klang.audio.envelopes import *
 from klang.audio.helpers import *

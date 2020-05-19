@@ -12,7 +12,7 @@ from klang.audio.sampling import (
     number_of_channels
 )
 from klang.constants import TAU, MONO, STEREO
-from klang.audio.audio_files import convert_samples_to_int
+from klang.audio.wavfile import convert_samples_to_int
 
 MULTI_CHANNEL_SILENCE = np.zeros((5, BUFFER_SIZE))
 LONG = int(10. * SAMPLING_RATE)
