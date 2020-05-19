@@ -90,5 +90,5 @@ PEP8 / Google flavored. With the one exception for variable and argument names (
 ## Acknowledgments
 
 Thanks for the support and inputs!
-- Nico Neureiter
+- Nico Neureiter [GitHub](https://github.com/NicoNeureiter)
 - Andreas Steiner

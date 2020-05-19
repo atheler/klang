@@ -7,6 +7,11 @@ from klang.config import KAMMERTON
 from klang.constants import DODE
 
 
+__all__ = [
+    'PITCH_CLASSES', 'PITCH_NAMES', 'CIRCLE_OF_FIFTHS', 'frequency_2_pitch',
+    'pitch_2_frequency', 'note_name_2_pitch', 'pitch_2_note_name',
+]
+
 PITCH_CLASSES = np.arange(DODE)
 """array: All base pitches."""
 

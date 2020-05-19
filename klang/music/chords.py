@@ -7,6 +7,9 @@ from klang.constants import SEMITONES_PER_OCTAVE
 from klang.util import find_item, parse_music_data_from_csv
 
 
+__all__ = ['CHORDS', 'find_chord', 'invert_chord']
+
+
 CHORDS = {}
 """dict: Chord name (str) -> Chord mapping (array)."""
 

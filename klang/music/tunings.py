@@ -14,6 +14,12 @@ from klang.constants import DODE, REF_OCTAVE, CENT_PER_OCTAVE
 from klang.util import parse_music_data_from_csv, find_item
 
 
+__all__ = [
+    'TEMPERAMENTS', 'EQUAL_TEMPERAMENT', 'ratio_2_cent', 'cent_2_ratio',
+    'find_temperament', 'Temperament',
+]
+
+
 TEMPERAMENTS = {}
 """dict: Name (str) -> Temperament (Temperament)."""
 

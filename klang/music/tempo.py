@@ -6,6 +6,12 @@ from klang.constants import TAU
 from klang.music.metre import default_beat_value
 
 
+__all__ = [
+    'tempo_2_frequency', 'tempo_2_period', 'bar_period', 'angular_velocity',
+    'note_duration', 'compute_duration', 'compute_rate'
+]
+
+
 def tempo_2_frequency(tempo):
     """Convert beats per minute (BPM) to beat frequency.
 

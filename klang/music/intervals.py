@@ -10,6 +10,9 @@ from klang.util import find_item
 from klang.util import parse_music_data_from_csv
 
 
+__all__ = ['INTERVALS', 'find_interval']
+
+
 INTERVALS = {}
 """dict: Interval name (str) -> Chord (Fraction)."""
 

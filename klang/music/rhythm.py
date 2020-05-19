@@ -22,6 +22,9 @@ from klang.audio.effects import blend
 from klang.block import Block
 
 
+__all__ = ['euclidian_rhythm', 'MicroRhyhtm']
+
+
 def _compute_bitmap(num_slots, num_pulses):
     """Bjorklund algorithm for Euclidian rhythm.
 

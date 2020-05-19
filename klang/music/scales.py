@@ -16,6 +16,12 @@ from klang.music.pitch import PITCH_CLASSES
 from klang.util import find_item, parse_music_data_from_csv
 
 
+__all__ = [
+    'ALL_POSSIBLE_SCALES', 'KNOWN_SCALES', 'find_scale', 'scale_2_pitches',
+    'pitches_2_scale',
+]
+
+
 MASK = 2 ** PITCH_CLASSES
 """array: Pitch number values for encoding."""
 
