@@ -1,16 +1,26 @@
 """Music chords."""
-import os
+import pkgutil
 
 import numpy as np
 
-from klang.config import CHORDS_FILEPATH
-from klang import ROOT_DIR
 from klang.constants import SEMITONES_PER_OCTAVE
-from klang.util import find_item, load_music_data_from_csv
+from klang.util import find_item, parse_music_data_from_csv
 
 
 CHORDS = {}
 """dict: Chord name (str) -> Chord mapping (array)."""
+
+def _load_chords():
+    """Load chords from CSV file."""
+    data = pkgutil.get_data('klang.music', 'data/chords.csv')
+    csvString = data.decode()
+    chords = {
+        name: np.array(data)
+        for name, data
+        in parse_music_data_from_csv(csvString).items()
+    }
+
+    return chords
 
 
 def find_chord(name):
@@ -74,17 +84,4 @@ np.testing.assert_equal(invert_chord(MAJOR, inversion=2), [7, 12, 16])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=-1), [-5, 0, 4])
 np.testing.assert_equal(invert_chord(MAJOR, inversion=-2), [-8, -5, 0])
 
-
-def _load_chords_from_csv(filepath):
-    """Load chords from CSV file."""
-    chords = {
-        name: np.array(data)
-        for name, data
-        in load_music_data_from_csv(filepath).items()
-    }
-    return chords
-
-
-CHORDS = _load_chords_from_csv(
-    os.path.join(ROOT_DIR, CHORDS_FILEPATH)
-)
+CHORDS = _load_chords()

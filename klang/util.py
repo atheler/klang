@@ -12,6 +12,19 @@ def parse_value(string):
         return string
 
 
+def parse_music_data_from_csv(string, sep=','):
+    """Parse CSV string with music data to dictionary."""
+    if isinstance(string, bytes):
+        string = string.decode()
+
+    dct = {}
+    for line in string.splitlines():
+        key, *values = line.split(sep)
+        dct[key] = [parse_value(v) for v in values]
+
+    return dct
+
+
 def load_music_data_from_csv(filepath, sep=','):
     """Load music data from CSV.
 
@@ -29,13 +42,8 @@ def load_music_data_from_csv(filepath, sep=','):
     Returns:
         dict: Name (str) -> Data (list).
     """
-    dct = {}
     with open(filepath, 'r') as f:
-        for line in f.readlines():
-            key, *values = line.split(sep)
-            dct[key] = [parse_value(v) for v in values]
-
-    return dct
+        return parse_music_data_from_csv(f.read(), sep)
 
 
 def levenshtein(first, second, deletionCost=1, insertionCost=1, substitutionCost=1):

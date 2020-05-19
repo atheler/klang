@@ -1,2 +1,2 @@
-include resources/*.csv
-include resources/gong.wav
+include klang/music/data/*.csv
+include klang/audio/samples/*.wav
