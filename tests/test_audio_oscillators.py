@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from config import BUFFER_SIZE, SAMPLING_RATE
+from klang.config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio.helpers import DT, INTERVAL
 from klang.audio.oscillators import chirp_phase, Oscillator, Phasor
 from klang.constants import TAU

@@ -11,7 +11,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-from config import SCALES_FILEPATH
+from klang.config import SCALES_FILEPATH
 from klang import ROOT_DIR
 from klang.constants import DODE, TAU
 from klang.music.pitch import PITCH_CLASSES

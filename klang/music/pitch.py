@@ -3,7 +3,7 @@ import re
 
 import numpy as np
 
-from config import KAMMERTON
+from klang.config import KAMMERTON
 from klang.constants import DODE
 
 

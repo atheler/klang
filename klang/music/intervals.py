@@ -6,7 +6,7 @@ Resources:
 import fractions
 import os
 
-from config import INTERVALS_FILEPATH
+from klang.config import INTERVALS_FILEPATH
 from klang import ROOT_DIR
 from klang.util import find_item
 from klang.util import load_music_data_from_csv

@@ -5,7 +5,7 @@ import time
 import numpy as np
 import pyaudio
 
-from config import BUFFER_SIZE, SAMPLING_RATE
+from klang.config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio.helpers import get_silence
 from klang.block import Block
 from klang.constants import MONO

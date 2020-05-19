@@ -1,7 +1,7 @@
 """Tempo of music."""
 import fractions
 
-from config import TEMPO, METRE
+from klang.config import TEMPO, METRE
 from klang.constants import TAU
 from klang.music.metre import default_beat_value
 

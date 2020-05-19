@@ -17,7 +17,7 @@ TODO:
 import numpy as np
 import samplerate
 
-from config import SAMPLING_RATE, BUFFER_SIZE
+from klang.config import SAMPLING_RATE, BUFFER_SIZE
 from klang.audio.helpers import get_silence
 from klang.audio.envelopes import AR
 from klang.audio.voices import Voice

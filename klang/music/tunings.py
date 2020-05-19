@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-from config import KAMMERTON, TUNINGS_FILEPATH
+from klang.config import KAMMERTON, TUNINGS_FILEPATH
 from klang import ROOT_DIR
 from klang.constants import DODE, REF_OCTAVE, CENT_PER_OCTAVE
 from klang.util import load_music_data_from_csv, find_item

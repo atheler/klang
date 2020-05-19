@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from config import CHORDS_FILEPATH
+from klang.config import CHORDS_FILEPATH
 from klang import ROOT_DIR
 from klang.constants import SEMITONES_PER_OCTAVE
 from klang.util import find_item, load_music_data_from_csv

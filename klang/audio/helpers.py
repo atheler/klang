@@ -3,7 +3,7 @@ import functools
 
 import numpy as np
 
-from config import SAMPLING_RATE, BUFFER_SIZE
+from klang.config import SAMPLING_RATE, BUFFER_SIZE
 
 
 DT = 1. / SAMPLING_RATE

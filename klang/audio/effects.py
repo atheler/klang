@@ -5,7 +5,7 @@ import numpy as np
 import scipy.signal
 import samplerate
 
-from config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
+from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine

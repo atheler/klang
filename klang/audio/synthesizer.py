@@ -7,7 +7,7 @@ import math
 
 import numpy as np
 
-from config import BUFFER_SIZE
+from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT, MONO_SILENCE, T
 from klang.audio.envelopes import D
 from klang.audio.waves import sample_wave
