@@ -2,7 +2,7 @@
 import wave
 
 import numpy as np
-import scipy.io
+import scipy.io.wavfile
 
 from config import SAMPLING_RATE
 from klang.math import normalize_values
