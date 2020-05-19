@@ -75,20 +75,19 @@ def all_possible_scales():
     ]
 
 
-ALL_POSSIBLE_SCALES = all_possible_scales()
-
-
-
 def _load_known_scales():
     data = pkgutil.get_data('klang.music', 'data/scales.csv')
-    return {
+    scales = {
         name: scale_2_code(scale)
         for name, scale
         in parse_music_data_from_csv(data).items()
     }
 
+    return scales
+
 
 # Load scales from database
+ALL_POSSIBLE_SCALES = all_possible_scales()
 KNOWN_SCALES = _load_known_scales()
 
 

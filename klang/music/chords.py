@@ -10,18 +10,6 @@ from klang.util import find_item, parse_music_data_from_csv
 CHORDS = {}
 """dict: Chord name (str) -> Chord mapping (array)."""
 
-def _load_chords():
-    """Load chords from CSV file."""
-    data = pkgutil.get_data('klang.music', 'data/chords.csv')
-    csvString = data.decode()
-    chords = {
-        name: np.array(data)
-        for name, data
-        in parse_music_data_from_csv(csvString).items()
-    }
-
-    return chords
-
 
 def find_chord(name):
     """Find chord in database."""
@@ -78,10 +66,16 @@ def invert_chord(chord, inversion):
     return np.array(chord)
 
 
-MAJOR = [0, 4, 7]
-np.testing.assert_equal(invert_chord(MAJOR, inversion=1), [4, 7, 12])
-np.testing.assert_equal(invert_chord(MAJOR, inversion=2), [7, 12, 16])
-np.testing.assert_equal(invert_chord(MAJOR, inversion=-1), [-5, 0, 4])
-np.testing.assert_equal(invert_chord(MAJOR, inversion=-2), [-8, -5, 0])
+def _load_chords():
+    """Load chords from CSV file."""
+    data = pkgutil.get_data('klang.music', 'data/chords.csv')
+    chords = {
+        name: np.array(data)
+        for name, data
+        in parse_music_data_from_csv(data).items()
+    }
+
+    return chords
+
 
 CHORDS = _load_chords()

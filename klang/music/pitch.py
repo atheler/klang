@@ -41,10 +41,6 @@ def pitch_2_frequency(noteNumber, kammerton=KAMMERTON):
     return (2 ** ((noteNumber - 69) / 12)) * kammerton
 
 
-assert frequency_2_pitch(KAMMERTON) == 69
-assert pitch_2_frequency(69) == KAMMERTON
-
-
 def note_name_2_pitch(note, midi=False):
     """Convert note name to pitch number. Uses scientific pitch notation by
     default (one octave difference compared to MIDI).
@@ -77,15 +73,6 @@ def note_name_2_pitch(note, midi=False):
     return pitch + shift + octave * DODE
 
 
-assert note_name_2_pitch('c-1') == 0
-assert note_name_2_pitch('c#-1') == 1
-assert note_name_2_pitch('Cb0') == 11
-assert note_name_2_pitch('B0') == 23
-assert note_name_2_pitch('a4') == 69
-assert note_name_2_pitch('G##4') == 69
-assert note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
-
-
 def pitch_2_note_name(pitch, midi=False):
     """Convert pitch number(s) to note name(s)."""
     """
@@ -100,7 +87,3 @@ def pitch_2_note_name(pitch, midi=False):
     octave, note = divmod(pitch, DODE)
     noteName = PITCH_NAMES[note] + str(octave - 1 + int(midi))
     return noteName.upper()
-
-
-assert note_name_2_pitch(pitch_2_note_name(69)) == 69
-assert note_name_2_pitch(pitch_2_note_name(69, midi=True), midi=True) == 69
