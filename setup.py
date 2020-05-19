@@ -2,35 +2,38 @@
 """Klang installation script."""
 import os
 from setuptools import setup, find_packages, Extension
+
 import numpy
+
+import klang
 
 
 ENVELOPE_EXT = Extension(
-    'klang.audio._envelope',
+    name='klang.audio._envelope',
     sources=['klang/audio/_envelope.c'],
     include_dirs=[numpy.get_include()],
 )
+"""Extension: C ADSR envelope generator."""
 
+with open('README.md', 'r') as fh:
+    LONG_DESCRIPTION = fh.read()
 
 setup(
     author='Alexander Theler',
-    data_files=[
-        ('resources', os.listdir('resources')),
-    ],
+    classifiers=[ 'Development Status :: 3 - Alpha', 'Environment :: Console', 'Intended Audience :: Developers', 'Intended Audience :: Education', 'Intended Audience :: End Users/Desktop', 'Operating System :: MacOS', 'Operating System :: POSIX :: Linux', 'Operating System :: Unix', 'Programming Language :: C', 'Programming Language :: Python :: 3 :: Only', 'Topic :: Multimedia :: Sound/Audio', 'Topic :: Multimedia :: Sound/Audio :: Editors', 'Topic :: Multimedia :: Sound/Audio :: MIDI', 'Topic :: Multimedia :: Sound/Audio :: Mixers', 'Topic :: Multimedia :: Sound/Audio :: Players', 'Topic :: Multimedia :: Sound/Audio :: Sound Synthesis', ],
+    data_files=[ ('resources', os.listdir('resources')), ],
+    description='Block based synthesis and music library',
+    ext_modules=[ENVELOPE_EXT],
     include_package_data=True,
-    install_requires=[
-        'numpy',
-        'scipy',
-        'matplotlib',
-        'PyAudio',
-        'pynput',
-        'samplerate',
-        'beautifulsoup4',
-        'python-rtmidi',
-    ],
+    install_requires=[ 'numpy', 'scipy', 'matplotlib', 'PyAudio', 'pynput', 'samplerate', 'beautifulsoup4', 'python-rtmidi', ],
+    keywords=['synthesis', 'music', 'library'],
+    long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/markdown',
     name='klang',
     packages=find_packages(),
+    python_requires='>=3.0',  #?
     test_suite='tests',
+    url='https://github.com/atheler/klang',
+    version=klang.__version__,
     zip_safe=False,
-    ext_modules=[ENVELOPE_EXT],
 )

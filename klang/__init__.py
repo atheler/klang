@@ -5,5 +5,6 @@ import matplotlib  # Avoid a lot of DEBUG log messages from matplotlib before sw
 
 
 __author__ = 'atheler'
+__version__ = '0.1.0'
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 logging.basicConfig(level=logging.DEBUG)
