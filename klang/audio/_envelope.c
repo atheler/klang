@@ -32,6 +32,7 @@
 
 static const double UPPER = 1.;  /// Upper bound of envelope signal.
 static const double LOWER = 0.;  /// Lower bound of envelope signal.
+static const bool DEBUG = false;  /// Print some debug messages -> stdout
 
 
 /**
@@ -383,7 +384,7 @@ Envelope_set_overshoot(Envelope *self, PyObject *value, void *closure)
 static PyObject *
 Envelope_get_active(Envelope* self, void* closure)
 {
-    //printf("Envelope_get_active()\n");
+    //if (DEBUG) printf("Envelope_get_active()\n");
     if (self->stage)
         Py_RETURN_TRUE;
     else
@@ -445,7 +446,7 @@ PyGetSetDef Envelope_getset[] = {
 static void
 Envelope_dealloc(Envelope* self)
 {
-    //printf("Envelope_dealloc()\n");
+    if (DEBUG) printf("Envelope_dealloc()\n");
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -458,7 +459,7 @@ Envelope_dealloc(Envelope* self)
 static PyObject *
 Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    //printf("Envelope_new()\n");
+    if (DEBUG) printf("Envelope_new()\n");
     Envelope *self;
     self = (Envelope *)type->tp_alloc(type, 0);
     if (self != NULL) {
@@ -498,8 +499,11 @@ Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 Envelope_change_stage(Envelope *self, const Stage stage)
 {
-    //printf("Envelope_change_stage()\n");
-    //print_stage(stage);
+    if (DEBUG) {
+        printf("Envelope_change_stage()\n");
+        print_stage(stage);
+    }
+
     self->stage = stage;
 }
 
@@ -512,7 +516,7 @@ Envelope_change_stage(Envelope *self, const Stage stage)
 static int
 Envelope_init(Envelope *self, PyObject *args, PyObject *kwargs)
 {
-    //printf("Envelope_init()\n");
+    if (DEBUG) printf("Envelope_init()\n");
     static char *kwlist[] = {
         "attack", "decay", "sustain", "release", "dt", "overshoot", "retrigger",
         "loop", NULL
@@ -547,7 +551,7 @@ static PyObject *
 Envelope_gate(Envelope *self, PyObject *args)
 {
     bool trigger = PyObject_IsTrue(args);
-    //printf("Envelope_gate(%i)\n", trigger);
+    if (DEBUG) printf("Envelope_gate(%i)\n", trigger);
     if (!self->loop) {
         Stage stage = self->stage;
         if (trigger) {
@@ -635,7 +639,7 @@ Envelope_single_sample(Envelope *self)
 static PyObject *
 Envelope_sample(Envelope *self, PyObject *bufferSize)
 {
-    //printf("Envelope.sample(...)\n");
+    //if (DEBUG) printf("Envelope.sample(...)\n");
     size_t length = PyLong_AsSize_t(bufferSize);
     if (PyErr_Occurred()) {
         PyErr_SetString(PyExc_ValueError, "Could not cast *bufferSize to size_t!");
