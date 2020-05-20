@@ -21,7 +21,7 @@ python3 setup.py test
 
 ## Klang Primer
 
-Klang provides various audio related blocks, which can be connected to each other to form a network. Every block can have multiple in- or output connections. Be connecting the various connections together we can define our network and then execute it with `run_klang(*blocks)`.
+Klang provides various audio related blocks, which can be connected to each other to form a network. Every block can have multiple in- or output connections. Be connecting the various connections together we can define our network and then execute it with `run_klang(*blocks)`. This function only needs some blocks which are part of the network. Not all of them. It will deduce the remaing blocks through the network connections and determine an appropriate execution order.
 
 In the following script we create a 440 Hz sine oscillator which output gets send to the sound card.
 
@@ -81,9 +81,9 @@ mixer = a + b + c
 
 ## Coding Style
 
-PEP8 / Google flavored. With the one exception for variable and argument names (`lowerCamelCase`). Function and methods are `written_like_this()`.
+PEP8 / Google flavored. With the one exception for variable and argument names (`camelCase`). Function and in methods are `snake_case()`.
 
-## Authors
+## Author
 
 * **Alexander Theler** - [GitHub](https://github.com/atheler)
 
@@ -91,4 +91,5 @@ PEP8 / Google flavored. With the one exception for variable and argument names (
 
 Thanks for the support and inputs!
 - Nico Neureiter [GitHub](https://github.com/NicoNeureiter)
-- Andreas Steiner
+- Andreas Steiner [Smoke And Mirrors](http://smokeandmirrors.ch)
+- Lawrence Markwalder [GitHub](https://github.com/lmarkwalder)
