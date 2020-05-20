@@ -27,11 +27,13 @@ def is_valid_connection(output, input_):
         MessageOutput: (MessageRelay, MessageInput),
         MessageRelay: (MessageRelay, MessageInput),
     }
+
     validInputTypes = validConnectionTypes.get(type(output), ())
+
     # pylint: disable=unidiomatic-typecheck
-    #
-    # isinstance(input_, validInputTypes) would also include parent classes. We
-    # do not want that (e.g. Connecting BaseOutput with a MessageInput)
+    # Idiomatic isinstance(input_, validInputTypes) check would also include
+    # parent classes. We do not want that (e.g. Connecting BaseOutput with a
+    # MessageInput)
     return type(input_) in validInputTypes
 
 
