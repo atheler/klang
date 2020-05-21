@@ -5,22 +5,28 @@ Graph helper functions. Graph is defined as an sparse adjacency matrix and a nod
 import collections
 
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 
-def graph_matrix(edges, directed=True):
+def graph_matrix(edges, directed=True, order=-1):
     """Build adjacency graph matrix from edges relationships.
 
     Args:
         edges (list): List of edges (tuples).
 
+    Kwargs:
+        directed (bool): If directed graph. Undirected otherwise.
+        order (int): Predefined graph order (number of nodes). Has to be bigger
+            than the maximum node index in edges. If < 0 will be determined from
+            unique nodes in edges.
+
     Returns:
         array: Dense graph matrix.
     """
     edges = np.asarray(edges)
-    nNodes = edges.max() + 1
-    shape = (nNodes, nNodes)
+    if order < 0:
+        order = edges.max() + 1
+
+    shape = (order, order)
     graph = np.zeros(shape, dtype=int)
     indices = tuple(edges.T)
     graph[indices] = 1
@@ -172,6 +178,8 @@ def topological_sorting(graph):
 
 def plot_node(position, label='', radius=.1, fontsize=10, ax=None):
     """Plot graph node."""
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
     ax = ax or plt.gca()
     circle = plt.Circle(position, radius=radius)
     ax.add_patch(circle)
@@ -182,6 +190,8 @@ def plot_node(position, label='', radius=.1, fontsize=10, ax=None):
 
 def plot_edge(start, end, color='black', ax=None, **kwargs):
     """Plot edge arrow"""
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
     ax = ax or plt.gca()
     arrow = mpl.patches.FancyArrowPatch(
         start,
@@ -198,6 +208,8 @@ def plot_edge(start, end, color='black', ax=None, **kwargs):
 
 def plot_graph(graph, positions, ax=None, edgeColor='black'):
     """Plot graph matrix."""
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
     ax = ax or plt.gca()
     n, _ = graph.shape
     for node in range(n):

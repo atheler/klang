@@ -5,55 +5,55 @@ from klang.block import input_neighbors, output_neighbors
 from klang.graph import graph_matrix, topological_sorting
 
 
-def traverse_edges(blocks):
-    """Traverse edges of block network."""
+def traverse_network(blocks):
+    """Traverse block network and collect vertices and edges. Vertices are
+    returned as a list, not as a set, for preserving sequence order / edge case
+    handling.
+
+    Args:
+        blocks (iterable): Starting blocks for graph traversal.
+
+    Returns:
+        tuple: Network vertices and edges.
+    """
+    vertices = []
+    edges = set()
     queue = collections.deque(blocks)
-    visited = set()
     while queue:
         block = queue.popleft()
-        if block in visited:
+        if block in vertices:
             continue
 
-        visited.add(block)
+        vertices.append(block)
         for successor in output_neighbors(block):
-            yield block, successor
+            edges.add((block, successor))
             queue.append(successor)
 
         for predecessor in input_neighbors(block):
-            yield predecessor, block
+            edges.add((predecessor, block))
             queue.append(predecessor)
+
+    return vertices, edges
 
 
 def determine_execution_order(blocks):
     """Get appropriate execution order for block network."""
     blocks = list(blocks)
-    edges = list(traverse_edges(blocks))
+    vertices, edges = traverse_network(blocks)
     if not edges:
-        return blocks
+        return vertices
 
-    # Determine unique block
-    #
-    # Note that the following did not work:
-    #
-    # >>> uniqueBlocks = set(itertools.chain.from_iterable(edges))
-    #
-    # Introduces a irregular bug which only messes up execution order 1 / 15
-    # runs (?)
-    uniqueBlocks = []
-    for src, dst in edges:
-        if src not in uniqueBlocks:
-            uniqueBlocks.append(src)
-        if dst not in uniqueBlocks:
-            uniqueBlocks.append(dst)
+    nNodes = len(vertices)  # Network size
 
-    # Block <-> int mapping (and back-mapping).
-    size = len(uniqueBlocks)
-    indices = list(range(size))
-    idx2block = dict(zip(indices, uniqueBlocks))
-    block2idx = dict(zip(uniqueBlocks, indices))
+    # klang.graph module operates with integer indices as nodes. We need a
+    # block <-> index mapping (and back-mapping).
+    indices = list(range(nNodes))
+    idx2block = dict(zip(indices, vertices))
+    block2idx = dict(zip(vertices, indices))
 
+    # Topological sort -> execution order
     intEdges = [(block2idx[src], block2idx[dst]) for src, dst in edges]
-    graph = graph_matrix(intEdges)
+    graph = graph_matrix(intEdges, order=nNodes)
     order = topological_sorting(graph)
     execOrder = [idx2block[idx] for idx in order]
     #print_exec_order(execOrder)
