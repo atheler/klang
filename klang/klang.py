@@ -1,25 +1,49 @@
 """Main entry point function."""
 import time
 import logging
+import collections
 
 from klang.audio.helpers import INTERVAL
-from klang.audio.klanggeber import look_for_audio_blocks, run_audio_engine, Dac, Adc
+# pylint: disable=unused-import
+from klang.audio.klanggeber import Dac, Adc
+from klang.audio.klanggeber import look_for_audio_blocks, run_audio_engine
+from klang.composite import Composite
 from klang.execution import determine_execution_order
 
 
-class Clock:
+def unravel(execOrder):
+    """Flatten global execution order. Turn internal execution order of
+    composites inside out.
+    """
+    for block in execOrder:
+        if isinstance(block, Composite):
+            yield from unravel(block.execOrder)
+        else:
+            yield block
 
-    """Pocket watch. Clock giver."""
 
-    def __init__(self, startTime=0.):
-        self.currentTime = startTime
+def validate_global_execution_order(execOrder, logger):
+    """Check for duplicates in flattened global execOrder. Issue a warning.
 
-    def __call__(self):
-        return self.currentTime
+    Args:
+        execOrder (list): Execution order.
+        logger (Logger): Logger instance to output the warning to.
+    """
+    flattenedExecOrder = unravel(execOrder)
+    counter = collections.Counter(flattenedExecOrder)
+    hasDuplicates = max(counter.values()) > 1
+    if hasDuplicates:
+        fmt = (
+            'Found duplicates in flattened execOrder! Following blocks will '
+            'get executed multiple times per buffer cycle!\n%s'
+        )
 
-    def step(self, dt):
-        """Move clock forward in time."""
-        self.currentTime += dt
+        duplicates = '\n'.join(
+            '  - %s: %dx' % (block, occurences)
+            for block, occurences in counter.items()
+            if occurences > 1
+        )
+        logger.warning(fmt, duplicates)
 
 
 def run_klang(*blocks, filepath=''):
@@ -27,17 +51,20 @@ def run_klang(*blocks, filepath=''):
     if not blocks:
         raise ValueError('No blocks to run specified!')
 
+    logger = logging.getLogger('Klang')
+    logger.info('Determining execution order from %s', ', '.join(map(str, blocks)))
     execOrder = determine_execution_order(blocks)
+    validate_global_execution_order(execOrder, logger)
 
     def callback():
         for block in execOrder:
             block.update()
 
+    # Do we have audio?
     adc, dac = look_for_audio_blocks(execOrder)
     if adc.nChannels > 0 or dac.nChannels > 0:
         return run_audio_engine(adc, dac, callback, filepath)
 
-    logger = logging.getLogger('Klang')
     logger.warning('Did not find any audio activity')
     logger.info('Starting non-audio main loop')
     while True:
