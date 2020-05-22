@@ -2,4 +2,4 @@
 variable-naming-style=camelCase
 attr-naming-style=camelCase
 argument-naming-style=camelCase
-good-names= input_,
+good-names= input_,_,

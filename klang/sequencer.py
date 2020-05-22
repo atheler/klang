@@ -87,6 +87,9 @@ class PizzaSlicer(Block):
 
 
 class PatternLookup(Block):
+
+    """Lookup pitch numbers in pattern list and output Note messages."""
+
     def __init__(self, pattern):
         super().__init__()
         self.inputs = [MessageInput(owner=self)]
@@ -109,14 +112,24 @@ class Sequence(Composite):
     """Single channel sequencer."""
 
     def __init__(self, sequencer, pattern, tempo=120., relNoteDuration=.5,
-            metre=FOUR_FOUR_METRE, beatValue=None, microRhythm=None):
+                 metre=FOUR_FOUR_METRE, beatValue=None):
+        """Args:
+            sequencer (Sequencer): Parent sequencer container.
+            pattern (list): Sequence pattern.
+
+        Kwargs:
+            tempo (float): Tempo in beats per minute.
+            relNoteDuration (float): Note duration relative to step duration.
+            metre (Fraction): Time signature.
+            beatValue (Fraction): Beat value.
+
+        """
         self.validate_pattern(pattern, metre, beatValue)
         super().__init__()
         self.inputs = self.phaseIn, = [Relay(owner=self)]
         self.outputs = _, self.phaseOut = [MessageRelay(owner=self), Relay(owner=self)]
         self.sequencer = sequencer
         self.pattern = pattern
-        self.microRhythm = microRhythm
 
         barPeriod = bar_period(tempo, metre, beatValue)
         phasor = Phasor(frequency=1. / barPeriod)
@@ -148,39 +161,56 @@ class Sequence(Composite):
             msg = 'Can not map pattern %s onto metre' % pattern
             raise ValueError(msg)
 
-    def connect_micro_rhythm(self, microRhythm):
-        """Insert micro rhythm for phase deviation."""
-        self.phaseOut.disconnect(self.phaseIn)
-        self.phaseOut.connect(microRhythm.input)
-        microRhythm.output.connect(self.phaseIn)
+    def apply_micro_rhythm(self, microRhythm=None):
+        """Apply micro rhythm to sequence."""
+        # Disconnect phaseOut / phaseIn
+        if self.phaseOut.connected:
+            for dst in list(self.phaseOut.outgoingConnections):  # Mutate while iterating
+                self.phaseOut.disconnect(dst)
+
+        if self.phaseIn.connected:
+            src = self.phaseIn.incomingConnection
+            src.disconnect(self.phaseIn)
+
+        # Patch microRhythm
+        if microRhythm:
+            self.phaseOut | microRhythm | self.phaseIn
+        else:
+            self.phaseOut | self.phaseIn
+
         self.sequencer.update_internal_exec_order()
 
-    '''
-    def disconnect_micro_rhythm(self):
-        mr = self.phaseIn.incomingConnection.owner
-        self.phaseOut.disconnect(mr.input)
-        mr.output.disconnect(self.phaseIn)
-        self.phaseOut.connect(self.phaseIn)
-        if self.sequencer:
-            self.sequencer.update_internal_exec_order()
-    '''
+    def reset_micro_rhythm(self):
+        """Reset micro rhythm."""
+        self.apply_micro_rhythm(microRhythm=None)
 
 
 class Sequencer(Composite):
+
+    """Pattern sequencer."""
+
     def __init__(self, pattern, *args, **kwargs):
         super().__init__()
         self.pattern = pattern
         self.sequences = []
-        for row in self.pattern:
-            sequence = Sequence(self, row, *args, **kwargs)
-            self.sequences.append(sequence)
-            relay = MessageRelay(owner=self)
-            sequence.output.connect(relay)
-            self.outputs.append(relay)
+        for row in pattern:
+            self.add_channel(row, *args, **kwargs)
 
+    def add_channel(self, *args, **kwargs):
+        """Add a new sequence channel."""
+        sequence = Sequence(sequencer=self, *args, **kwargs)
+        self.sequences.append(sequence)
+        relay = MessageRelay(owner=self)
+        sequence.output.connect(relay)
+        self.outputs.append(relay)
         self.update_internal_exec_order()
 
     @property
     def nChannels(self):
         """Number of channels."""
         return len(self.pattern)
+
+    def apply_micro_rhythm(self, channel, microRhythm):
+        """Apply micro to sequence of channel."""
+        seq = self.sequences[channel]
+        seq.apply_micro_rhythm(microRhythm)

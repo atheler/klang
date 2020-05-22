@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-"""Micro rhythm demo."""
-from klang.audio.klanggeber import Dac
-from klang.audio.mixer import Mixer
-from klang.audio.oscillators import Lfo
-from klang.sequencer import Sequencer
-from klang.audio.synthesizer import Kick, HiHat
-from klang.audio.waves import triangle
-from klang.constants import MONO
+"""Micro rhythm demo.
+
+Kick drum and hi-hat sound where the latter is phrased by an LFO.
+"""
+from klang.audio import Dac, HiHat, Kick, Lfo, triangle
 from klang.klang import run_klang
-from klang.music.note_values import QUARTER_NOTE, EIGHT_NOTE, SIXTEENTH_NOTE
-from klang.music.rhythm import MicroRhyhtm
+from klang.music import EIGHT_NOTE, SIXTEENTH_NOTE, MicroRhyhtm
+from klang.sequencer import Sequencer
 
 
 # Params
@@ -18,41 +15,23 @@ PATTERN = [
     [60, 0, 0, 0, 60, 0, 0, 0, 60, 0, 0, 0, 60, 0, 0, 60],  # Kick drum
     4 * [60, 60, 60, 60],  # Hi-Hat
 ]
-FILEPATH = 'micro_rhythm.wav'
-#FILEPATH = None
-SOME_MICRO_RHYHTMS = [
-    MicroRhyhtm([QUARTER_NOTE, EIGHT_NOTE], name='Swing'),
-    MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE], name='Afro-Cuban Triplet'),
-    MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE], name='Gnawa Triplet'),
-    MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE], name='Gnawa'),
-    MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE, SIXTEENTH_NOTE], name='Mad Professor Braff'),
-]
+MICRO_RHYTHM_NOTES = [EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE]
+RATE = .05
 
 
-seq = Sequencer(
-    PATTERN,
-    tempo=TEMPO,
-    relNoteDuration=.01
-)
+if __name__ == '__main__':
+    # Setup sequencer / synthesizers
+    sequencer = Sequencer(PATTERN, tempo=TEMPO, relNoteDuration=.01)
+    mixer = (sequencer.outputs[0] | Kick()) + (sequencer.outputs[1] | HiHat())
+    mixer.gains = [1., .2]
+    dac = mixer | Dac(nChannels=1)
 
+    # Apply micro rhythm to hihat sequence. The phrasing of the micro rhythm is
+    # controlled by an LFO. Call apply_micro_rhythm() method last so that the
+    # LFO is included in the internal execOrder of the Sequencer.
+    lfo = Lfo(frequency=RATE, wave_func=triangle)
+    mr = MicroRhyhtm(MICRO_RHYTHM_NOTES)
+    lfo | mr.phrasing
+    sequencer.sequences[1].apply_micro_rhythm(mr)
 
-# Attach micro rhythm to sequences[1]
-#mr = MicroRhyhtm([QUARTER_NOTE, EIGHT_NOTE], phrasing=1.)
-mr = MicroRhyhtm([EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE], phrasing=1.)
-
-# Setup synthesizers
-hihat = HiHat()
-kick = Kick()
-mixer = Mixer(2, gains=[1, .2])
-lfo = Lfo(frequency=.05, wave_func=triangle)
-lfo.output.connect(mr.phrasing)  # Lfo controls phrasing factor
-seq.sequences[1].connect_micro_rhythm(mr)
-
-
-seq.outputs[0].connect(kick.input)
-seq.outputs[1].connect(hihat.input)
-kick.output.connect(mixer.inputs[0])
-hihat.output.connect(mixer.inputs[1])
-dac = Dac(nChannels=MONO)
-mixer.output.connect(dac.input)
-run_klang(dac, filepath=FILEPATH)
+    run_klang(dac)
