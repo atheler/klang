@@ -7,28 +7,49 @@ import math
 
 import numpy as np
 
-from klang.config import BUFFER_SIZE
-from klang.audio.helpers import DT, MONO_SILENCE, T
 from klang.audio.envelopes import D
+from klang.audio.helpers import DT, MONO_SILENCE, T
 from klang.audio.waves import sample_wave
 from klang.block import Block
+from klang.config import BUFFER_SIZE
 from klang.connections import MessageInput
 from klang.constants import PI
 
 
-__all__ = [
-    'MonophonicSynthesizer', 'PolyphonicSynthesizer', 'HiHat', 'Kick',
-]
+__all__ = ['MonophonicSynthesizer', 'PolyphonicSynthesizer', 'HiHat', 'Kick']
 
 
 def sample_exponential_decay(decay, t0=0.):
+    """Sample exponential curve decay.
+
+    Args:
+        decay (float): Decay time.
+
+    Kwargs:
+        t0 (float): Start time.
+
+    Returns:
+        tuple: Curve samples and new start time.
+    """
     amp = math.exp(-PI / decay * t0)
     signal = amp * np.exp(-PI / decay * T)
     return signal, t0 + DT * BUFFER_SIZE
 
 
 def sample_pitch_decay(frequency, decay, intensity, t0=0.):
-    """Sample decaying pitch curve."""
+    """Sample decaying pitch curve.
+
+    Args:
+        frequency (float): Start frequency.
+        decay (float): Decay time.
+        intensity (float): Amount of pitch decay.
+
+    Kwargs:
+        t0 (float): Start time.
+
+    Returns:
+        tuple: Curve samples and new start time.
+    """
     env, t1 = sample_exponential_decay(decay, t0)
     pitch = frequency * (1. + intensity * env)
     return pitch, t1
@@ -70,6 +91,9 @@ class NoteScheduler:
     """
 
     def __init__(self, policy='newest'):
+        """Kwargs:
+            policy (str): Note scheduling policy.
+        """
         assert policy in {'newest', 'oldest', 'lowest', 'highest'}
         self.policy = policy
         self.counter = itertools.count()
@@ -133,6 +157,12 @@ class MonophonicSynthesizer(Synthesizer):
     """
 
     def __init__(self, voice, policy='newest'):
+        """Args:
+            voice (Voice): Synthesizer voice.
+
+        Kwargs:
+            policy (str): Note scheduling policy.
+        """
         super().__init__()
         self.voice = voice
         self.noteScheduler = NoteScheduler(policy)
@@ -156,8 +186,13 @@ class PolyphonicSynthesizer(Synthesizer):
     """Polyphonic synthesizer with multiple voices."""
 
     MAX_VOICES = 24
+    """int: Maximum number of voices."""
 
     def __init__(self, voice):
+        """Args:
+            voice (Voice): Synthesizer voice to use as a template for all the
+                polyphonic voices.
+        """
         super().__init__()
         self.voices = duplicate_voice(voice, self.MAX_VOICES)
         self.freeVoice = itertools.cycle(self.voices)
@@ -189,6 +224,11 @@ class HiHat(Block):
     """White noise / exponential decay hi hat synthesizer."""
 
     def __init__(self, decay=.05, loopedNoise=False):
+        """Kwargs:
+            decay (float): Decay time.
+            loopedNoise (bool): Loop noise / constant noise samples. Will be
+                tonal.
+        """
         super().__init__(nOutputs=1)
         self.inputs = [MessageInput(self)]
         if loopedNoise:
@@ -211,7 +251,16 @@ class HiHat(Block):
 
 
 class Kick(Block):
+
+    """Kick drum synthesizer."""
+
     def __init__(self, frequency=40., decay=.8, intensity=2, pitchDecay=.3):
+        """Kwargs:
+            frequency (float): Base frequency.
+            decay (float): Kick drum decay time.
+            intensity (float): Pitch decay intensity.
+            pitchDecay (float): Pitch decay time.
+        """
         super().__init__(nInputs=0, nOutputs=1)
         self.frequency = frequency
         self.decay = decay

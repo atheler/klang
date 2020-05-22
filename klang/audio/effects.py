@@ -5,18 +5,18 @@ import numpy as np
 import scipy.signal
 import samplerate
 
-from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
+from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 from klang.block import Block
 from klang.composite import Composite
+from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip, blend
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
-from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 
 
 __all__ = [
@@ -53,7 +53,7 @@ def octave_distortion(samples):
 
 
 def tanh_distortion(samples, drive=1.):
-    """Tanh distorition. Only odd harmonics."""
+    """Tanh distortion. Only odd harmonics."""
     return np.tanh(drive * samples)
 
 
@@ -115,6 +115,11 @@ class Delay(Block):
     """float: Max delay time / max buffer size."""
 
     def __init__(self, time=1., feedback=.1, drywet=.5):
+        """Kwargs:
+            time (float or Note): Delay time.
+            feedback (float): Amount of feedback.
+            drywet (float): Mixture between dry and effected signal.
+        """
         self.validate_delay_time(time)
         super().__init__(nInputs=1, nOutputs=1)
         self.feedback = feedback
@@ -180,6 +185,13 @@ class StereoDelay(Composite):
 
     def __init__(self, leftTime=1., rightTime=1., leftFeedback=.1,
                  rightFeedback=.1, drywet=.5):
+        """Kwargs:
+            leftTime (float): Left channel delay time.
+            rightTime (float): Right channel delay time.
+            leftFeedback (float): Left channel feedback amount.
+            rightFeedback (float): Right channel feedback amount.
+            drywet (float): Mixture between dry and effected signal.
+        """
         super().__init__()
         self.inputs = [Relay(owner=self)]
         self.outputs = [Relay(owner=self)]
@@ -202,9 +214,19 @@ class FilterCoefficients:
     """Cache result of filter design function for different frequencies."""
 
     F_MIN = 20.
+    """float: Minimum frequency."""
+
     F_MAX = 20000.
+    """float: Maximum frequency."""
 
     def __init__(self, design_func, *args, **kwargs):
+        """Args:
+            design_func (function): scipy.signal filter design function.
+
+        *args, **kwargs:
+            Arguments for the design function. All args beside Wn. This will be
+            set by FilterCoefficients.
+        """
         self.design_func = design_func
         self.args = args
         self.kwargs = kwargs
@@ -341,8 +363,12 @@ class Subsampler(Block):
     """Sub sample audio buffer. Soft bit crusher effect."""
 
     VALID_FACTORS = set(2**i for i in range(1, int(math.log2(BUFFER_SIZE))))
+    """set: Valid skip factors. Power of 2."""
 
     def __init__(self, factor):
+        """Args:
+            factor (int): Sub-sample skip factor. Power of 2.
+        """
         assert factor in self.VALID_FACTORS
         super().__init__(nInputs=1, nOutputs=1)
         self.factor = factor
@@ -361,6 +387,9 @@ class Bitcrusher(Block):
     """
 
     def __init__(self, nBits=16):
+        """Kwargs:
+            nBits (int): Bit reduction.
+        """
         assert  0 <= nBits < 16
         super().__init__(nInputs=1, nOutputs=1)
         self.nBits = nBits
@@ -386,7 +415,13 @@ class OctaveDistortion(Block):
 
 
 class TanhDistortion(Block):
+
+    """Tanh distorter."""
+
     def __init__(self, drive=1.):
+        """Kwargs:
+            drive (float): Overdrive gain factor.
+        """
         super().__init__(nInputs=1, nOutputs=1)
         self.drive = drive
 
@@ -403,13 +438,18 @@ class PitchShifter(Block):
     """array: Window samples."""
 
     def __init__(self, shift=2., dryWet=.5, mode='sinc_fastest'):
+        """Kwargs:
+            shift (float): Pitch shift ratio.
+            dryWet (float): Mixture between dry and effected signal.
+            mode (str): Resampler mode.
+        """
         super().__init__(nInputs=1, nOutputs=1)
         self.dryWet = dryWet
         self.resampler = samplerate.CallbackResampler(
             self.callback,
             ratio=1. / shift,
             converter_type=mode,
-            channels=1,
+            channels=MONO,
         )
 
     def callback(self):

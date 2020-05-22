@@ -1,4 +1,21 @@
-"""Audio blocks."""
+"""Klang blocks.
+
+Blocks represent the central unit in Klang. Each block can have multiple inputs
+and outputs with which it is connected to other blocks. Blocks use mostly value
+based connections for audio and control signals. But message based ones can be
+applied See the following example:
+
+    >>> class Foo(Block):
+    ... 
+    ...     '''Block with a message input and a value output'''
+    ... 
+    ...     def __init__(self):
+    ...         super().__init__(nOutputs=1)
+    ...         self.inputs = [MessageInput(owner=self)]
+
+Besides the Block base class the pipe_operator() and mix_operator() are also
+defined here (for operation overloading).
+"""
 from klang.connections import OutputBase, InputBase, Output, Input
 
 

@@ -1,3 +1,4 @@
+"""MIDI stuff. Work in progress."""
 import rtmidi
 
 from klang.block import Block

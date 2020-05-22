@@ -30,6 +30,9 @@ class Voice(Block):
     """Base class for single synthesizer voice."""
 
     def __init__(self, envelope):
+        """Args:
+            envelope (Envelope): Volume envelope.
+        """
         super().__init__(nInputs=0, nOutputs=1)
         self.inputs = [MessageInput(owner=self)]
         self.output.set_value(MONO_SILENCE)
@@ -39,7 +42,9 @@ class Voice(Block):
 
     @property
     def active(self):
-        """Return True if voice is active (active envelope or pending message)."""
+        """Return True if voice is active (active envelope or pending
+        message).
+        """
         if self.input.queue:
             return True
 
@@ -72,6 +77,10 @@ class OscillatorVoice(Voice):
     """Oscillator + envelope voice."""
 
     def __init__(self, envelope, oscillator):
+        """Args:
+            envelope (Envelope): Volume envelope.
+            oscillator (Oscillator): Oscillator instance.
+        """
         super().__init__(envelope)
         self.oscillator = oscillator
 

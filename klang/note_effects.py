@@ -9,12 +9,16 @@ from klang.connections import MessageInput, MessageOutput
 class NoteLengthener(Block):
 
     """Convert note-ons to actual notes (note-on followed by a note-off later
-    on).
+    on in the future).
     """
 
     clock = time.time
+    """callable: Clock giver."""
 
     def __init__(self, duration):
+        """Args:
+            duration (float): Absolute note duration in seconds.
+        """
         super().__init__()
         self.inputs = [MessageInput(owner=self)]
         self.outputs = [MessageOutput(owner=self)]

@@ -65,19 +65,21 @@ class Keyboard(Block):
 
 class MusicalKeyboard(Keyboard):
 
-    """Musical keyboard.
+    """Musical QWERTZ keyboard.
 
     Main output outputs Notes. Octaves can be changed with the 'y' and 'x' keys,
     velocity can be changed via 'c', 'v'. Current tuning temperaments can be
     switched via the number keys. If others=True remaining key events will be
     send to a secondary output.
+
+    TODO: Support for different keyboard layouts?
     """
 
     CHAR_2_BASE_PITCH = {
         'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5, 't': 6, 'g': 7, 'z': 8,
         'h': 9, 'u': 10, 'j': 11, 'k': 12, 'o': 13, 'l': 14, 'p': 15,
     }
-    """dict: Keyboard character (str) -> Pitch number."""
+    """dict: QWERTZ keyboard character (str) -> Pitch number."""
 
     SILENT = 0.
     """float: Silent velocity value."""

@@ -1,4 +1,10 @@
-"""Arpeggiator and helpers."""
+"""Arpeggiator and helpers.
+
+An arpeggio is playing individual chord notes sequentially
+(https://en.wikipedia.org/wiki/Arpeggio). This can happen in different orders
+and dictates the state dimensions. One dimensional for simpler patterns, two
+dimensional for the bit more complex (see initial_arpeggio_state(...)).
+"""
 import bisect
 import functools
 import random
@@ -11,6 +17,17 @@ from klang.connections import MessageInput, MessageRelay, MessageOutput
 from klang.note_effects import NoteLengthener
 
 
+ARPEGGIO_ORDERS = [
+    'up',
+    'down',
+    'upDown',
+    'downUp',
+    'random',
+    'alternating',
+]
+"""list: All supported arpeggio orders."""
+
+
 def initial_arpeggio_state(length, order):
     """Get initial arpeggiator state. Depending on the order we need a one ore
     two dimensional state (e.g. simply up or alternating vs. upDown).
@@ -18,6 +35,9 @@ def initial_arpeggio_state(length, order):
     Args:
         length (int): Number of notes in arpeggio.
         order (str): Arpeggio note order.
+
+    Returns:
+        list: Initial arpeggio state vector.
     """
     first = 0
     last = length - 1
@@ -102,7 +122,16 @@ def alternating_jump_sequence(length):
 
 
 def step_arpeggio_state(state, length, order):
-    """Calculate next arpeggiator state."""
+    """Calculate next arpeggiator state.
+
+    Args:
+        state (list): Arpeggio state.
+        length (int): Number of notes.
+        order (str): Arpeggio order.
+
+    Returns:
+        list: Arpeggio state vector.
+    """
     if order == 'random':
         return initial_arpeggio_state(length, order='random')
 
@@ -143,7 +172,7 @@ class Arpeggio(Block):
     """
 
     def __init__(self, order='up', initialNotes=[]):
-        if order not in {'up', 'down', 'upDown', 'downUp', 'random', 'alternating'}:
+        if order not in ARPEGGIO_ORDERS:
             raise ValueError('Invalid order %r!' % order)
 
         super().__init__()
@@ -224,6 +253,12 @@ class Arpeggio(Block):
 
 
 class Pulsar(Block):
+
+    """Pulsar / clock block.
+
+    Outputs discrete trigger messages for each step.
+    """
+
     def __init__(self, frequency, nSteps, initialPhase=0.):
         super().__init__()
         self.nSteps = nSteps
@@ -232,6 +267,7 @@ class Pulsar(Block):
         self.phasor = Phasor(frequency, initialPhase)
 
     def increment(self):
+        """Go to next step."""
         self.currentNr = (self.currentNr + 1) % self.nSteps
 
     def update(self):
@@ -255,6 +291,14 @@ class Arpeggiator(Composite):
     """Note arpeggiator block."""
 
     def __init__(self, frequency, nSteps, order='up', duration=.1):
+        """Args:
+            frequency (float): Arpeggio frequency.
+            nSteps (int): Number of steps (?)
+
+        Kwargs:
+            order (str): Arpeggio order.
+            duration (float): Note duration.
+        """
         super().__init__()
         self.inputs = [MessageRelay(owner=self)]
         self.outputs = [MessageRelay(owner=self)]

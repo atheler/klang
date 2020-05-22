@@ -4,14 +4,21 @@ import numpy as np
 
 class RingBuffer:
 
-    """Numpy ring buffer.
-
-    Accessing the buffer over the turnaround point will result in a copy.
-
-    TODO(atheler): Reimplement as double buffer?
+    """Numpy ring buffer. Wraps a numpy array as a quasi ring buffer. Note that
+    read access with a wrap around returns a copy of the section (via
+    concatenate). Can be used as a delay line. Supports slices and int as
+    __setitem__ / __getitem__ arguments but no tuples!
     """
 
     def __init__(self, data, offset=0, copy=True):
+        """Args:
+            data (list): Data buffer of ring buffer.
+
+        Kwargs:
+            offset (int): Initial offset of write and read pointer. If used as a
+                delay line this corresponds the delay time in samples.
+            copy (bool): Copy data.
+        """
         self.data = np.array(data, copy=copy)
         self.offset = offset
 

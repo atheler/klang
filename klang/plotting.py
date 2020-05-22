@@ -1,8 +1,8 @@
+"""Some plotting functions."""
 import fractions
 import math
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 from klang.constants import TAU
 from klang.music.pitch import PITCH_NAMES, CIRCLE_OF_FIFTHS
@@ -39,6 +39,8 @@ def set_radian_xticks(ax):
 
 def plot_metre(ax, metre):
     """Plot metre lines over axis."""
+    import matplotlib.pyplot as plt
+
     cm = plt.get_cmap()
     for phi in np.linspace(0, TAU, metre.numerator, endpoint=False):
         ax.axvline(phi, ls=':', c=cm(phi / TAU))
@@ -75,6 +77,8 @@ def format_circle_of_fifth_polar_plot(ax):
 
 def plot_scale_in_circle_of_fifth(scale, ax=None):
     """Plot a music scale in a circle of fifth plot."""
+    import matplotlib.pyplot as plt
+
     pitches = scale_2_pitches(scale)
     ax = ax or plt.gca()
     xy = np.array([

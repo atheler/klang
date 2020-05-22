@@ -9,7 +9,6 @@ Resources:
 import pkgutil
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 from klang.constants import DODE, TAU
 from klang.music.pitch import PITCH_CLASSES
@@ -99,6 +98,8 @@ KNOWN_SCALES = _load_known_scales()
 
 def main():
     """Scales circle of fifths plot demo."""
+    from matplotlib import pyplot as plt
+
     from klang.plotting import nice_plotting_shape, plot_scale_in_circle_of_fifth
 
     # Scales demo plot. Params:

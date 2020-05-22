@@ -17,16 +17,16 @@ TODO:
 import numpy as np
 import samplerate
 
-from klang.config import SAMPLING_RATE, BUFFER_SIZE
-from klang.audio.helpers import get_silence
 from klang.audio.envelopes import AR
+from klang.audio.helpers import get_silence
 from klang.audio.voices import Voice
+from klang.audio.wavfile import load_wave
 from klang.block import Block
+from klang.config import SAMPLING_RATE, BUFFER_SIZE
 from klang.connections import MessageInput
 from klang.constants import MONO, ONE_D
 from klang.math import clip
 from klang.music.tunings import EQUAL_TEMPERAMENT
-from klang.audio.wavfile import load_wave
 
 
 __all__ = [
@@ -198,6 +198,17 @@ class Sample:
 
     def __init__(self, rate, data, start=0, stop=None, loop=False,
                  playbackSpeed=1., mode='linear'):
+        """Args:
+            rate (float): Sampling rate.
+            data (array): Samples.
+
+        Kwargs:
+            start (int): Start sample index.
+            stop (int): Stop sample index. End of audio samples by default.
+            loop (bool): Loop samples.
+            playbackSpeed (float): Playback speed. 1.0 is normal speed.
+            mode (str): Resampling mode.
+        """
         assert is_audio_samples_shape(data)
         self.rate = rate
         self.data = data
@@ -286,6 +297,14 @@ class AudioFile(Block):
     """
 
     def __init__(self, filepath, mono=False, *args, **kwargs):
+        """Args:
+            filepath (str): WAV filepath.
+
+        Kwargs:
+            mono (bool): Sum samples to mono.
+
+        *args, **kwargs: Arguments for Sample instance.
+        """
         rate, data = load_wave(filepath)
         assert is_audio_samples_shape(data)
         super().__init__(nOutputs=1)
@@ -342,19 +361,15 @@ class AudioFile(Block):
         self.output.set_value(samples)
 
     def __str__(self):
+        infos = []
         if self.filepath:
             infos = [repr(self.filepath)]
-        else:
-            infos = []
 
         infos.extend([
             'Playing' if self.playing else 'Paused',
             '%.3f / %.3f sec' % (self.playingPosition, self.duration),
         ])
-        return '%s(%s)' % (
-            self.__class__.__name__,
-            ', '.join(infos)
-        )
+        return '%s(%s)' % (type(self).__name__, ', '.join(infos))
 
 
 class Sampler(Block):

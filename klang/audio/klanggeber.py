@@ -5,12 +5,12 @@ import time
 import numpy as np
 import pyaudio
 
-from klang.config import BUFFER_SIZE, SAMPLING_RATE
 from klang.audio.helpers import get_silence
+from klang.audio.wavfile import write_wave
 from klang.block import Block
+from klang.config import BUFFER_SIZE, SAMPLING_RATE
 from klang.constants import MONO
 from klang.errors import KlangError
-from klang.audio.wavfile import write_wave
 
 
 __all__ = ['ChannelMismatchError', 'Adc', 'Dac', 'run_audio_engine']
@@ -123,7 +123,14 @@ class Dac(Block):
 
 
 def look_for_audio_blocks(blocks):
-    """Get the first best Adc and Dac blocks."""
+    """Get the first best Adc and Dac blocks.
+
+    Args:
+        blocks (list): List of blocks.
+
+    Returns:
+        tuple: Adc and dac instances.
+    """
     for block in blocks:
         if isinstance(block, Adc):
             adc = block

@@ -19,32 +19,6 @@ def find_chord(name):
     return find_item(CHORDS, name)
 
 
-def pitch_classes_2_chord(pitchClasses):
-    """Parse pitch classes.
-
-    Usage:
-        >>> pitch_classes_2_chord('0 4 7 t')
-        np.array([0, 4, 7, 10])
-    """
-    pitchClasses = pitchClasses.replace('t', '10')
-    pitchClasses = pitchClasses.replace('A', '10')
-    pitchClasses = pitchClasses.replace('e', '11')
-    pitchClasses = pitchClasses.replace('B', '11')
-
-    base = 0
-    prev = -float('inf')
-    chord = []
-    for pc in pitchClasses.split(' '):
-        pitch = base + int(pc)
-        if pitch < prev:
-            base += SEMITONES_PER_OCTAVE
-
-        chord.append(base + pitch)
-        prev = pitch
-
-    return np.array(chord)
-
-
 def _invert_up(chord):
     """Invert chord up. Helper for invert_chord()."""
     lowest, *core = chord

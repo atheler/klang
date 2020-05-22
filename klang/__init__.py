@@ -1,6 +1,8 @@
-"""Klang Library."""
+"""Klang
+
+Block based synthesis and music library.
+"""
 import logging
-import matplotlib  # Avoid a lot of DEBUG log messages from matplotlib before switching logging level.
 
 
 __author__ = 'atheler'

@@ -1,8 +1,8 @@
-"""Network blocks."""
+"""Signals over network blocks."""
+import base64
 import json
 import logging
 import socket
-import base64
 
 import numpy as np
 
@@ -52,6 +52,8 @@ def receive_all_from(sock, bufsize=NETWORK_BUFFER_SIZE):
         bytes: Received data chunks.
     """
     try:
+        # This would be a use case for the Walrus Operator but we want support
+        # for <3.8
         data = sock.recv(bufsize)
         while data:
             if len(data) == bufsize:
@@ -84,7 +86,7 @@ def array_from_dict(dct):
 
 
 def klang_object_hook(obj):
-    """Object hook with support for Klang objects."""
+    """JSON object hook for Klang objects."""
     type_ = obj.get('type')
     if type_ == 'Note':
         return Note.from_dict(obj)

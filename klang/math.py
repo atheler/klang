@@ -1,4 +1,4 @@
-"""General mathematical helper functions."""
+"""Mathematical helper functions."""
 import math
 
 import numpy as np
@@ -22,7 +22,7 @@ def normalize_values(array):
 
 
 def clip(value, lower, upper):
-    """Clip value to [lower, upper]."""
+    """Clip value to [lower, upper]. Aka. clamp."""
     return min(max(value, lower), upper)
 
 
@@ -45,26 +45,6 @@ def is_dyadic(fraction):
 def is_divisible(number, denominator):
     """Check if number is divisible by denominator."""
     return number % denominator == 0
-
-
-def integrate(x, dt, y0=0.):
-    """Numerical integration. Output is:
-
-    y = integrate x with dt
-
-    Args:
-        x (array): Input array.
-        dt (float): Time interval.
-
-    Kwargs:
-        y0 (float or array): Initial value of integrator.
-
-    Returns:
-        array: Integrated output array.
-    """
-    tmp = np.roll(x, 1, axis=0)
-    tmp[0] = y0 / dt
-    return dt * np.cumsum(tmp, axis=0)
 
 
 def lcm(a, b):

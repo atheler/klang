@@ -1,10 +1,12 @@
 """Web scraping from Wikipedia for scale and chord names."""
 import re
+
+import numpy as np
 import requests
 
 import bs4
 
-from klang.music.chords import pitch_classes_2_chord
+from klang.constants import SEMITONES_PER_OCTAVE
 from klang.music.scales import pitches_2_scale
 
 
@@ -92,6 +94,32 @@ def spawn_jobs(name, data, nameSeps=[' / ', ' or '], dataSeps=[' / ', ' or ', 'o
                 nam += ' %d' % i
 
             yield nam.strip(), dat
+
+
+def pitch_classes_2_chord(pitchClasses):
+    """Parse pitch classes. Chords listed on Wikipedia sometimes have this format.
+
+    Usage:
+        >>> pitch_classes_2_chord('0 4 7 t')
+        np.array([0, 4, 7, 10])
+    """
+    pitchClasses = pitchClasses.replace('t', '10')
+    pitchClasses = pitchClasses.replace('A', '10')
+    pitchClasses = pitchClasses.replace('e', '11')
+    pitchClasses = pitchClasses.replace('B', '11')
+
+    base = 0
+    prev = -float('inf')
+    chord = []
+    for pc in pitchClasses.split(' '):
+        pitch = base + int(pc)
+        if pitch < prev:
+            base += SEMITONES_PER_OCTAVE
+
+        chord.append(base + pitch)
+        prev = pitch
+
+    return np.array(chord)
 
 
 def extract_chords(table):

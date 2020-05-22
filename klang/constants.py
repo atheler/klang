@@ -1,3 +1,4 @@
+"""Constants used in Klang."""
 import math
 
 

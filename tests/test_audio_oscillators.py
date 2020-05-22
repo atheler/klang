@@ -28,6 +28,15 @@ class TestPhaseor(unittest.TestCase):
 
         self.assertAlmostEqual(phasor.currentPhase, atLeastOneCycle*TAU*freq*INTERVAL % TAU)
 
+    def test_around_the_clock(self):
+        phasor = Phasor(frequency=.25/INTERVAL)
+
+        self.assertEqual(phasor.sample(), 0. * TAU)
+        self.assertEqual(phasor.sample(), 0.25 * TAU)
+        self.assertEqual(phasor.sample(), 0.5 * TAU)
+        self.assertEqual(phasor.sample(), 0.75 * TAU)
+        self.assertEqual(phasor.sample(), 0. * TAU)
+
 
 class TestOscillator(unittest.TestCase):
     def test_440_hz(self):

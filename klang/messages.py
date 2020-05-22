@@ -7,7 +7,7 @@ from klang.music.tunings import EQUAL_TEMPERAMENT
 
 class Note(collections.namedtuple('Note', 'pitch velocity frequency')):
 
-    """Music note. Pitch optional. Used for voice mapping in synthesizer.
+    """Music note. Pitch is optional. Used for voice mapping in synthesizer.
 
     Note:
       - pitch before velocity for lexicographical order.

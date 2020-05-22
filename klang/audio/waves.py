@@ -7,8 +7,8 @@ import warnings
 
 import numpy as np
 
-from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT, get_time
+from klang.config import BUFFER_SIZE
 from klang.constants import TAU
 from klang.math import wrap
 

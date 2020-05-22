@@ -2,15 +2,15 @@
 import numpy as np
 from scipy.signal.waveforms import _chirp_phase
 
-from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT, INTERVAL, get_time
 from klang.audio.waves import sine
 from klang.block import Block
+from klang.config import BUFFER_SIZE
 from klang.constants import TAU
 from klang.music.tempo import compute_rate
 
 
-__all__ = ['Phasor', 'Oscillator', 'Lfo', 'FmOscillator']
+__all__ = ['Phasor', 'Lfo', 'Oscillator', 'FmOscillator']
 
 
 def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
@@ -69,13 +69,18 @@ class Phasor(Block):
 
     """Scalar phase oscillator. Outputs a scalar phase value per buffer."""
 
-    def __init__(self, frequency=1., initialPhase=0.):
+    def __init__(self, frequency=1., startPhase=0.):
+        """Kwargs:
+            frequency (float): Initial frequency.
+            startPhase (float): Initial phase.
+        """
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
         self.frequency.set_value(frequency)
-        self.currentPhase = initialPhase
+        self.currentPhase = startPhase
 
     def sample(self):
+        """Get the next sample."""
         phase = self.currentPhase
         freq = compute_rate(self.frequency.value)
         delta = TAU * freq * INTERVAL
@@ -86,6 +91,27 @@ class Phasor(Block):
         self.output.set_value(self.sample())
 
 
+class Lfo(Phasor):
+
+    """Simple low frequency oscillator (LFO). Output value range [0., 1.].
+    Outputs scalar and not arrays like Oscillator.
+    """
+
+    def __init__(self, frequency=1., wave_func=sine, startPhase=0.):
+        """Kwargs:
+            frequency (float): Initial frequency.
+            wave_func (function): Waveform function.
+            startPhase (float): Initial phase.
+        """
+        super().__init__(frequency, startPhase)
+        self.wave_func = wave_func
+
+    def sample(self):
+        phase = super().sample()
+        sample = self.wave_func(phase)
+        return .5 * (sample + 1.)
+
+
 class Oscillator(Block):
 
     """Audio signal oscillator. Generates an array of audio each buffer. Also
@@ -94,6 +120,11 @@ class Oscillator(Block):
     """
 
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
+        """Kwargs:
+            frequency (float): Initial frequency.
+            wave_func (function): Wave function. Phase -> waveform sample lookup.
+            startPhase (float): Start phase.
+        """
         super().__init__(nInputs=1, nOutputs=1)
         self.frequency, = self.inputs
         self.frequency.set_value(frequency)
@@ -120,28 +151,19 @@ class Oscillator(Block):
         )
 
 
-class Lfo(Phasor):
-
-    """Simple low frequency oscillator (LFO). Output value range [0., 1.].
-    Outputs scalar and not arrays like Oscillator.
-    """
-
-    def __init__(self, frequency=1., wave_func=sine, startPhase=0.):
-        super().__init__(frequency, startPhase)
-        self.wave_func = wave_func
-
-    def update(self):
-        phase = self.sample()
-        sample = self.wave_func(phase)
-        self.output.set_value(.5 * (sample + 1.))
-
-
 class FmOscillator(Oscillator):
 
     """Frequency modulation oscillator."""
 
     def __init__(self, frequency=440., intensity=1., modFrequency=10.,
                  wave_func=sine, startPhase=0.):
+        """Kwargs:
+            frequency (float): Initial frequency (carrier frequency).
+            intensity (float): Modulation intensity.
+            modFrequency (float): Modulator frequency.
+            wave_func (function): Wave form function.
+            startPhase (float): Initial phase.
+        """
         super().__init__(frequency, wave_func, startPhase)
         self.intensity = intensity
         self.modulator = Oscillator(modFrequency, wave_func=wave_func)

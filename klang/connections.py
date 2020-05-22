@@ -14,7 +14,9 @@ import collections
 from klang.errors import KlangError
 
 
-__all__ = ['Output', 'Relay', 'Input', 'MessageOutput', 'MessageRelay', 'MessageInput']
+__all__ = [
+    'Output', 'Relay', 'Input', 'MessageOutput', 'MessageRelay', 'MessageInput',
+]
 
 
 def is_valid_connection(output, input_):

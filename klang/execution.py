@@ -7,8 +7,8 @@ from klang.graph import graph_matrix, topological_sorting
 
 def traverse_network(blocks):
     """Traverse block network and collect vertices and edges. Vertices are
-    returned as a list, not as a set, for preserving sequence order / edge case
-    handling.
+    returned as a list, not as a set, for preserving sequence order / better
+    edge case handling.
 
     Args:
         blocks (iterable): Starting blocks for graph traversal.
