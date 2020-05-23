@@ -1,5 +1,5 @@
 """Composite block."""
-from klang.block import Block
+from klang.block import Block, collect_connections
 from klang.connections import RelayBase
 from klang.execution import determine_execution_order, execute
 
@@ -19,26 +19,6 @@ def introspect(composite):
             output = relay.incomingConnection
             if output and output.owner:
                 yield output.owner
-
-
-def collect_connections(block):
-    """Get all in- and outgoing connections of a block ((output, input) tuples).
-    Exclude loop-around connections (block connected to itself).
-    """
-    for input_ in block.inputs:
-        if input_.connected:
-            src = input_.incomingConnection
-            if src.owner is block:
-                continue
-
-            yield src, input_
-
-    for output in block.outputs:
-        for dst in output.outgoingConnections:
-            if dst.owner is block:
-                continue
-
-            yield output, dst
 
 
 class temporarily_unpatch:

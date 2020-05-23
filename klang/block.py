@@ -19,37 +19,93 @@ defined here (for operation overloading).
 from klang.connections import OutputBase, InputBase, Output, Input
 
 
-def output_neighbors(block):
-    """Get output neighbors of block."""
+def input_connections(block):
+    """Iterate over all incoming connections.
+
+    Args:
+        block (Block): Block to inspect.
+
+    Yields:
+        tuple: Src -> block input connections.
+    """
+    for input_ in block.inputs:
+        if input_.connected:
+            src = input_.incomingConnection
+            if src.owner is not block:
+                yield src, input_
+
+
+def output_connections(block):
+    """Iterate over all outgoing connections.
+
+    Args:
+        block (Block): Block to inspect.
+
+    Yields:
+        tuple: Block output -> dst.
+    """
     for output in block.outputs:
-        for input_ in output.outgoingConnections:
-            if input_.owner:
-                yield input_.owner
+        for dst in output.outgoingConnections:
+            if dst.owner is not block:
+                yield output, dst
+
+
+def collect_connections(block):
+    """Get all in- and outgoing connections of a block ((output, input) tuples).
+    Exclude loop-around connections (block connected to itself).
+
+    Args:
+        block (Block): Block to inspect.
+
+    Yields:
+        tuple: Output -> input connections
+    """
+    yield from input_connections(block)
+    yield from output_connections(block)
 
 
 def input_neighbors(block):
-    """Get input neighbors of block."""
-    for input_ in block.inputs:
-        if input_.connected:
-            output = input_.incomingConnection
-            if output.owner:
-                yield output.owner
+    """Get input neighbors of block.
+
+    Args:
+        block (Block): Block to inspect
+
+    Yields:
+        Block: Input neighbors / source owners.
+    """
+    for src, _ in input_connections(block):
+        if src.owner:
+            yield src.owner
 
 
-def fetch_input(other):
-    """Fetch input from other."""
-    if isinstance(other, Block):
-        return other.input
+def output_neighbors(block):
+    """Get output neighbors of block.
 
-    return other
+    Args:
+        block (Block): Block to inspect
+
+    Yields:
+        Block: Output neighbors / destination owner.
+    """
+    for _, dst in output_connections(block):
+        if dst.owner:
+            yield dst.owner
 
 
-def fetch_output(other):
-    """Fetch output from other."""
-    if isinstance(other, Block):
-        return other.output
+def fetch_input(blockOrInput):
+    """Fetch primary input."""
+    if isinstance(blockOrInput, Block):
+        return blockOrInput.input
 
-    return other
+    return blockOrInput
+
+
+def fetch_output(blockOrOutput):
+    """Fetch primary output."""
+    if isinstance(blockOrOutput, Block):
+        return blockOrOutput.output
+
+    return blockOrOutput
 
 
 def pipe_operator(left, right):
