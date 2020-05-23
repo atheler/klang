@@ -1,17 +1,12 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Arpeggiator demonstration."""
 from klang.arpeggiator import Arpeggiator
-from klang.audio.effects import Delay, Filter, Transformer
-from klang.audio.envelopes import ADSR
-from klang.audio.oscillators import Lfo
-from klang.audio.oscillators import Oscillator
-from klang.sequencer import Sequencer
-from klang.audio.synthesizer import MonophonicSynthesizer
-from klang.audio.voices import OscillatorVoice
-from klang.audio.waves import sawtooth, triangle, sine
-from klang.klang import run_klang, Dac
+from klang.audio import (
+    ADSR, Dac, Delay, Filter, Lfo, MonophonicSynthesizer, Oscillator,
+    OscillatorVoice, Transformer, sawtooth, sine, triangle
+)
+from klang.klang import run_klang
 from klang.messages import Note
+from klang.sequencer import Sequencer
 
 
 Alow = Note(pitch=57)
@@ -24,6 +19,7 @@ A = Note(pitch=69)
 
 
 def build_synthesizer(attack=.1, decay=.2, sustain=.3, release=.4, wave_func=sine):
+    """Create a monophonic synthesizer instance."""
     env = ADSR(attack, decay, sustain, release)
     osc = Oscillator(wave_func=wave_func)
     voice = OscillatorVoice(env, osc)
@@ -32,20 +28,15 @@ def build_synthesizer(attack=.1, decay=.2, sustain=.3, release=.4, wave_func=sin
 
 if __name__ == '__main__':
     # Arp synthesizer
-    synthesizer = build_synthesizer(wave_func=sawtooth)
-
     arp = Arpeggiator(frequency=.2, nSteps=16, order='alternating')
-    #arp.arpeggio.process_notes(C, D, F, G, A)
-    #arp.arpeggio.process_notes(C, D, Alow, G, A, F)
     arp.arpeggio.process_notes(Alow, C, E, F, G, A)
-    #arp.arpeggio.process_notes( Note(pitch=57), C, D, E, G, F,)
-    delay = Delay(time=0.76, feedback=.9)
+    synthesizer = build_synthesizer(wave_func=sawtooth)
     lfo = Lfo(frequency=.1, wave_func=triangle)
     trafo = Transformer.from_limits(100., 3000.)
     fil = Filter(frequency=220.)
-    dac = Dac(nChannels=1)
+    delay = Delay(time=0.76, feedback=.9)
 
-    # Bass
+    # Bass synthesizer
     sequencer = Sequencer(
         pattern=[[38, 41, 0, 0, 36, 34, 0, 0]],
         tempo=15,
@@ -53,28 +44,10 @@ if __name__ == '__main__':
     )
     bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
 
-    # Old style
-    """
-    klang = Klang(nOutputs=1)
-    mixer = Mixer(gains=[1., .3])
-    arp.output.connect(synthesizer.input)
-    synthesizer.output.connect(fil.input)
-    lfo.output.connect(trafo.input)
-    trafo.output.connect(fil.frequency)
-    fil.output.connect(delay.input)
-    delay.output.connect(mixer.inputs[0])
-
-    # Bass
-    sequencer.outputs[0].connect(bass.input)
-    bass.output.connect(mixer.inputs[1])
-
-    mixer.output.connect(klang.dac.input)
-    klang.start()
-    """
-
-    # New style
+    # Make block connections
     lfo | trafo | fil.frequency
     mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
     mixer.gains = [1., .3]
-    mixer | dac
-    run_klang(dac, filepath='test.wav')
+    dac = mixer | Dac(nChannels=1)
+
+    run_klang(dac)

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Klang hello world.
 
 Output a A440 sine wave.

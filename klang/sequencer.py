@@ -198,7 +198,7 @@ class Sequencer(Composite):
 
     def add_channel(self, *args, **kwargs):
         """Add a new sequence channel."""
-        sequence = Sequence(sequencer=self, *args, **kwargs)
+        sequence = Sequence(self, *args, **kwargs)
         self.sequences.append(sequence)
         relay = MessageRelay(owner=self)
         sequence.output.connect(relay)

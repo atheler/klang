@@ -1,14 +1,15 @@
-"""Audio file demo."""
+"""Audio file demo.
+
+Some noisy ambient sound from a slightly pitched down gong sample and stereo
+delay / filtering.
+"""
 import io
 import pkgutil
 
-from klang.audio.effects import (
-    Delay, Tremolo, Filter, Transformer, StereoDelay, Bitcrusher, Subsampler
+from klang.audio import (
+    Dac, Lfo, Tremolo, Filter, Transformer, StereoDelay, AudioFile, triangle,
+    square
 )
-from klang.audio.klanggeber import Dac
-from klang.audio.oscillators import Lfo
-from klang.audio.sampling import AudioFile
-from klang.audio.waves import triangle, square
 from klang.constants import STEREO
 from klang.klang import run_klang
 
@@ -22,7 +23,7 @@ def load_audio_file():
 if __name__ == '__main__':
     # Init blocks
     audioFile = AudioFile(load_audio_file(), playbackSpeed=.75, loop=True)
-    audioFile.sample.trim(0, 44100)
+    audioFile.sample.trim(0, 44100)  # Loop one second of audio
     audioFile.play()
 
     tremolo = Tremolo(rate=1 / .2, wave_func=square)

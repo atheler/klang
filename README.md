@@ -6,11 +6,21 @@ Block based synthesis and music library for Python. *Klang* is German for sound.
 
 ### Prerequisites
 
-We use Python bindings for PortAudio and RtMidi. On Mac they can be installed via [Homebrew](https://brew.sh).
+We use Python bindings for [PortAudio](http://www.portaudio.com) and [RtMidi](https://www.music.mcgill.ca/~gary/rtmidi/). On Mac they can be installed via [Homebrew](https://brew.sh).
 
 ### Installing
 
-Klang can be installed via PyPi / pip or directly via setup.py. Note that there is a C extension which needs to be compiled (`klang/audio/_envelope.c`).
+Klang can be installed via PyPi / pip or directly via setup.py. Note that there is a C extension which needs to be compiled (`klang/audio/_envelope.c`). C extensions can be compiled in place with:
+
+```bash
+python3 setup.py build_ext --inplace
+```
+
+For developing you can link your working copy with
+
+```python
+python3 setup.py develop
+```
 
 ## Running the tests
 
@@ -19,9 +29,11 @@ Tests can be run via with
 python3 setup.py test
 ```
 
-## Klang Primer
+## Safety First
+As always when programming with sound: Unplug your headphones or be very sure of what you are doing! Also with low headphone volume bugs in the code can result in very unpleasant loud noises which could probably impair your hearing. Be careful!
 
-Klang provides various audio related blocks, which can be connected to each other to form a network. Every block can have multiple in- or output connections. Be connecting the various connections together we can define our network and then execute it with `run_klang(*blocks)`. This function only needs some blocks which are part of the network. Not all of them. It will deduce the remaing blocks through the network connections and determine an appropriate execution order.
+## Klang Primer
+Klang provides various audio related blocks. Every block can have multiple in- and outputs and by connecting them with each other we can define our network. Once we are finished with patching we can run our network with by calling `run_klang(*blocks)`. This function only needs some blocks which belong to the network. It will then automatically discovers the other blocks of the network and deduce an appropriate block execution order.
 
 In the following script we create a 440 Hz sine oscillator which output gets send to the sound card.
 
@@ -40,6 +52,12 @@ osc.output.connect(dac.input)
 run_klang(dac)
 ```
 
+Audio can be written to disk as a WAV file with the `filepath` argument.
+
+```python
+run_klang(*blocks, filepath='some/filepath.wav')`
+```
+
 ### Connections
 
 There are two different connection types in Klang:
@@ -47,7 +65,7 @@ There are two different connection types in Klang:
 - *Message* (`MessageInput` and `MessageOutput` classes)
 
 Value based connections can hold any kind of Python object as value. Message connections have an internal queue.
-The former is mostly used to propgate audio samples and modulation signals through the network (Numpy arrays as values). The latter is used for discrete messages like note messages.
+The former is mostly used to propagate audio samples and modulation signals through the network (Numpy arrays as values). The latter is used for discrete messages like note messages.
 There are also corresponding *Relay* connections (`Relay` and `MessageRelay` classes). These are used to build composite blocks (blocks which contain there own network of child blocks). Relays can be used to interface between the inside and outside of an composite block.
 
 ### Defining The Network
@@ -78,6 +96,17 @@ mixer = a + b + c
 # ... mixer.add_new_channel()
 # ... c.output.connect(mixer.inputs[-1])
 ```
+
+## Examples
+
+See the `examples/` directory with a couple example script which illustrate the core functionality of Klang. Currently there are:
+- `hello_world.py`: 440 Hz sine wave generator
+- `arpeggiator_demo.py`: Two synthesizer patch with an arpeggiator and some sound effects
+- `audio_file_demo.py`: Looped audio file playback (`gong.wav` sample) with audio effects
+- `micro_rhythm_demo.py`: Kick and Hi-Hat pattern where the latter is phrased with a micro rhythm
+- `sequencer_demo.py`: Techno patch with sequencer
+- `synthesizer_demo.py`: This has to be started as root. Computer keyboard playable monophonic synthesizer
+- `tempo_aware_effects.py`: Modulated noise with time synced effects
 
 ## Coding Style
 

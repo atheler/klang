@@ -80,8 +80,8 @@ class Composite(Block):
     has its own execution order of the internal blocks.
     """
 
-    def __init__(self, name=''):
-        super().__init__(nInputs=0, nOutputs=0, name=name)
+    def __init__(self, nInputs=0, nOutputs=0, name=''):
+        super().__init__(nInputs, nOutputs, name)
         self.execOrder = []
 
     def update_internal_exec_order(self):

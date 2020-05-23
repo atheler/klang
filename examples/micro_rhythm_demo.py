@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Micro rhythm demo.
 
 Kick drum and hi-hat sound where the latter is phrased by an LFO.
@@ -26,9 +25,9 @@ if __name__ == '__main__':
     mixer.gains = [1., .2]
     dac = mixer | Dac(nChannels=1)
 
-    # Apply micro rhythm to hihat sequence. The phrasing of the micro rhythm is
-    # controlled by an LFO. Call apply_micro_rhythm() method last so that the
-    # LFO is included in the internal execOrder of the Sequencer.
+    # Apply micro rhythm to Hi-Hat sequence. The phrasing of the micro rhythm is
+    # controlled by an LFO. apply_micro_rhythm() method has to be called last!
+    # So that the LFO is included in the internal execOrder of the Sequencer.
     lfo = Lfo(frequency=RATE, wave_func=triangle)
     mr = MicroRhyhtm(MICRO_RHYTHM_NOTES)
     lfo | mr.phrasing
