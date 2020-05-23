@@ -21,17 +21,15 @@ def traverse_network(blocks):
     queue = collections.deque(blocks)
     while queue:
         block = queue.popleft()
-        if block in vertices:
-            continue
+        if block not in vertices:
+            vertices.append(block)
+            for successor in output_neighbors(block):
+                edges.add((block, successor))
+                queue.append(successor)
 
-        vertices.append(block)
-        for successor in output_neighbors(block):
-            edges.add((block, successor))
-            queue.append(successor)
-
-        for predecessor in input_neighbors(block):
-            edges.add((predecessor, block))
-            queue.append(predecessor)
+            for predecessor in input_neighbors(block):
+                edges.add((predecessor, block))
+                queue.append(predecessor)
 
     return vertices, edges
 

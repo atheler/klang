@@ -42,9 +42,7 @@ class NoteLengthener(Block):
             self.output.send(noteOff)
 
         for note in self.input.receive():
-            if note.off:
-                continue
-
-            entry = (now + self.duration, note)
-            self.activeNotes.append(entry)
-            self.output.send(note)
+            if note.on:
+                entry = (now + self.duration, note)
+                self.activeNotes.append(entry)
+                self.output.send(note)

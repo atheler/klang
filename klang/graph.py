@@ -163,15 +163,13 @@ def topological_sorting(graph):
     order = []
     while queue:
         node = queue.popleft()
-        if node in order:
-            continue
-
-        successors = get_successors(dag, node)
-        if _node_is_ready(dag, node, order):
-            queue.extendleft(successors)
-            order.append(node)
-        else:
-            queue.extend(successors)
+        if node not in order:
+            successors = get_successors(dag, node)
+            if _node_is_ready(dag, node, order):
+                queue.extendleft(successors)
+                order.append(node)
+            else:
+                queue.extend(successors)
 
     return order
 
