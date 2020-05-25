@@ -30,6 +30,7 @@ class temporarily_unpatch:
         >>> a = Block(0, 1, 'a')
         ... b = Block(1, 1, 'b')
         ... c = Block(1, 0, 'c')
+        ... a | b | c
         ... with temporarily_unpatch(b):
         ...     # Do some stuff with b
         ...     pass
