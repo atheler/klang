@@ -1,7 +1,8 @@
 """Envelope generator blocks."""
 from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT
-from klang.audio._envelope import Envelope as _CEnvelope
+#from klang.audio._envelope import Envelope as _CEnvelope
+from klang.audio.envelope import Envelope as _CEnvelope
 from klang.block import Block
 from klang.connections import MessageInput
 
@@ -20,7 +21,7 @@ class EnvelopeBase(Block, _CEnvelope):
             decay=decay,
             sustain=sustain,
             release=release,
-            dt=DT,
+            #dt=DT,
             overshoot=overshoot,
             retrigger=retrigger,
             loop=loop,
@@ -35,7 +36,7 @@ class EnvelopeBase(Block, _CEnvelope):
         for note in self.input.receive():
             self.gate(note.on)
 
-        samples = self.sample(BUFFER_SIZE)
+        samples = self.sample()
         self.output.set_value(samples)
 
     def __str__(self):

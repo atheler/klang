@@ -8,6 +8,9 @@ PI = math.pi
 TAU = 2. * math.pi
 """float: Circle constant."""
 
+INF = float('inf')
+"""float: To infinity and beyond."""
+
 DODE = 12
 """int: Greek twelve."""
 

@@ -60,3 +60,8 @@ def blend(a, b, x):
         array([0.5, 0.5, 0.5, 0.5])
     """
     return (1. - x) * a + x * b
+
+
+def sign(number):
+    """Math sign function."""
+    return math.copysign(1., number)
