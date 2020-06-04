@@ -145,6 +145,7 @@ typedef struct {
     /*@{*/
     Stage stage;  /// Current envelope stage
     double value; /// Current envelope value
+    bool enabled; /// Additional flag for triggering in looping mode
     /*@}*/
 
     /**
@@ -475,6 +476,7 @@ Envelope_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
         self->stage = OFF;
         self->value = 0.;
+        self->enabled = false;
 
         self->attackCoef = 0.;
         self->attackBase = 0.;
@@ -555,10 +557,12 @@ Envelope_gate(Envelope *self, PyObject *args)
     if (!self->loop) {
         Stage stage = self->stage;
         if (trigger) {
+            self->enabled = true;
             if (self->retrigger || stage == OFF || stage == RELEASING) {
                 Envelope_change_stage(self, ATTACKING);
             }
         } else {
+            self->enabled = false;
             if (stage == ATTACKING || stage == DECAYING || stage == SUSTAINING) {
                 Envelope_change_stage(self, RELEASING);
             }
@@ -572,7 +576,8 @@ Envelope_gate(Envelope *self, PyObject *args)
 /**
  * Envelope single cycle.
  *
- * Step envelope forward by one cycle and get next single sample.
+ * Step envelope forward by one cycle and get next single sample. Skip
+ * SUSTAINING and OFF stage in case of looping.
  *
  * @param self Envelope instance.
  * @return Next envelope sample.
@@ -584,9 +589,6 @@ Envelope_single_sample(Envelope *self)
     switch(self->stage) {
         case OFF:
             newValue = LOWER;
-            if (self->loop)
-                Envelope_change_stage(self, ATTACKING);
-
             break;
         case ATTACKING:
             newValue = self->attackBase + self->value * self->attackCoef;
@@ -600,21 +602,22 @@ Envelope_single_sample(Envelope *self)
             newValue = self->decayBase + self->value * self->decayCoef;
             if (newValue <= self->sustain) {
                 newValue = self->sustain;
-                Envelope_change_stage(self, SUSTAINING);
+                if (self->loop) {
+                    Envelope_change_stage(self, RELEASING);
+                } else {
+                    Envelope_change_stage(self, SUSTAINING);
+                }
             }
 
             break;
         case SUSTAINING:
             newValue = self->sustain;
-            if (self->loop)
-                Envelope_change_stage(self, RELEASING);
-
             break;
         case RELEASING:
             newValue = self->releaseBase + self->value * self->releaseCoef;
             if (newValue <= LOWER) {
                 newValue = LOWER;
-                if (self->loop) {
+                if (self->loop && self->enabled) {
                     Envelope_change_stage(self, ATTACKING);
                 } else {
                     Envelope_change_stage(self, OFF);
