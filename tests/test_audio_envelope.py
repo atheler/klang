@@ -171,7 +171,6 @@ class TestEnvelope(unittest.TestCase):
 
         np.testing.assert_equal(samples, env.sustain)
 
-
         self.assertTrue(env.active)
 
         env.gate(False)
@@ -179,6 +178,7 @@ class TestEnvelope(unittest.TestCase):
         self.assertTrue(env.active)
 
         samples = env.sample()
+
         self.assertAlmostEqual(samples[0], env.sustain, 6)
 
         for _ in range(number_of_blocks(env.release)):

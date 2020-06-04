@@ -1,8 +1,16 @@
 """Envelope generator blocks."""
+
+
+USE_C_ENVELOPE = True
+
+
 from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT
-#from klang.audio._envelope import Envelope as _CEnvelope
-from klang.audio.envelope import Envelope as _CEnvelope
+if USE_C_ENVELOPE:
+    from klang.audio._envelope import Envelope as _Envelope
+else:
+    from klang.audio.envelope import Envelope as _Envelope
+from klang.audio.envelope import DEFAULT_OVERSHOOT
 from klang.block import Block
 from klang.connections import MessageInput
 
@@ -10,18 +18,18 @@ from klang.connections import MessageInput
 __all__ = ['ADSR', 'AR', 'D', 'R']
 
 
-class EnvelopeBase(Block, _CEnvelope):
-    def __init__(self, attack, decay, sustain, release, overshoot=1e-3,
-                 retrigger=False, loop=False):
+class EnvelopeBase(Block, _Envelope):
+    def __init__(self, attack, decay, sustain, release,
+                 overshoot=DEFAULT_OVERSHOOT, retrigger=False, loop=False):
         super().__init__(nOutputs=1)
         self.inputs = self.trigger, = [MessageInput(owner=self)]
-        _CEnvelope.__init__(
+        _Envelope.__init__(
             self,
             attack=attack,
             decay=decay,
             sustain=sustain,
             release=release,
-            #dt=DT,
+            dt=DT,
             overshoot=overshoot,
             retrigger=retrigger,
             loop=loop,
@@ -36,7 +44,7 @@ class EnvelopeBase(Block, _CEnvelope):
         for note in self.input.receive():
             self.gate(note.on)
 
-        samples = self.sample()
+        samples = self.sample(BUFFER_SIZE)
         self.output.set_value(samples)
 
     def __str__(self):

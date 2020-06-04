@@ -45,6 +45,8 @@ LOWER = 0.
 SENTINEL_ARRAY = np.zeros(0)
 """array: Empty array signaling the end of sample generators."""
 
+UNUSED = 'Unused'
+
 
 @functools.lru_cache()
 def full(shape, fill_value):
@@ -182,7 +184,7 @@ def curve_samples(start, target, duration, overshoot=DEFAULT_OVERSHOOT, prepend=
     targetArr = full(BUFFER_SIZE, target + sign(target - start) * overshoot)
     zi = [start]
 
-    # Prepend samples to output
+    # Prepend samples to first output
     if prepend is not None:
         missing = BUFFER_SIZE - prepend.size
         available = min(nSamples, missing)
@@ -260,7 +262,7 @@ class Envelope:
         update_sample_generator() call?)
     """
 
-    def __init__(self, attack, decay, sustain, release,
+    def __init__(self, attack, decay, sustain, release, dt=UNUSED,
                  overshoot=DEFAULT_OVERSHOOT, retrigger=False, loop=False):
         """Args:
             attack (float): Attack time duration.
@@ -269,6 +271,7 @@ class Envelope:
             release (float): Release time duration.
 
         Kwargs:
+            dt (float): UNUSED sampling interval. For same API as C Envelope.
             overshoot (float): Overshoot amount.
             retrigger (bool): Allow envelope retrigger on repeated note-ons.
             loop (bool): Loop envelope (skip SUSTAINING and OFF stages if
@@ -348,6 +351,8 @@ class Envelope:
         Returns:
             Stage: Next envelope stage.
         """
+        # Keeping it pure is easier to read here
+        # pylint: disable=no-else-return
         if self.stage is Stage.ATTACKING:
             return Stage.DECAYING
 
@@ -371,8 +376,15 @@ class Envelope:
         nextStage = self.determine_next_stage()
         self.switch_stage(nextStage)
 
-    def sample(self):
-        """Get next BUFFER_SIZE envelope samples."""
+    def sample(self, bufferSize=UNUSED):
+        """Get next BUFFER_SIZE envelope samples.
+
+        Kwargs:
+            bufferSize (float): UNUSED buffer length. For same API as C Envelope.
+
+        Returns:
+            array: Envelope samples.
+        """
         samples, self.value = next(self.sampleGenerator)
         while generator_finished(samples):
             self.go_to_next_stage()
