@@ -531,9 +531,6 @@ Envelope_init(Envelope *self, PyObject *args, PyObject *kwargs)
 
     self->overshoot = clip(self->overshoot, 1e-9, 1e9);  // Headroom
     Envelope_compute_base_values_and_coefficients(self);
-    if (self->loop)
-        Envelope_change_stage(self, ATTACKING);
-
     return 0;
 }
 
@@ -554,18 +551,15 @@ Envelope_gate(Envelope *self, PyObject *args)
 {
     bool trigger = PyObject_IsTrue(args);
     if (DEBUG) printf("Envelope_gate(%i)\n", trigger);
-    if (!self->loop) {
-        Stage stage = self->stage;
-        if (trigger) {
-            self->enabled = true;
-            if (self->retrigger || stage == OFF || stage == RELEASING) {
-                Envelope_change_stage(self, ATTACKING);
-            }
-        } else {
-            self->enabled = false;
-            if (stage == ATTACKING || stage == DECAYING || stage == SUSTAINING) {
-                Envelope_change_stage(self, RELEASING);
-            }
+    if (trigger) {
+        self->enabled = true;
+        if (self->retrigger || self->stage == OFF || self->stage == RELEASING) {
+            Envelope_change_stage(self, ATTACKING);
+        }
+    } else {
+        self->enabled = false;
+        if (self->stage == ATTACKING || self->stage == DECAYING || self->stage == SUSTAINING) {
+            Envelope_change_stage(self, RELEASING);
         }
     }
 
