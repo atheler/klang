@@ -102,6 +102,7 @@ mixer = a + b + c
 See the `examples/` directory with a couple example script which illustrate the core functionality of Klang. Currently there are:
 - `hello_world.py`: 440 Hz sine wave generator
 - `arpeggiator_demo.py`: Two synthesizer patch with an arpeggiator and some sound effects
+- `haunting_envelopes.py`: Multiple oscillators controlled by looping envelopes
 - `audio_file_demo.py`: Looped audio file playback (`gong.wav` sample) with audio effects
 - `micro_rhythm_demo.py`: Kick and Hi-Hat pattern where the latter is phrased with a micro rhythm
 - `sequencer_demo.py`: Techno patch with sequencer
