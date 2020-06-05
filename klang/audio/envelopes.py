@@ -1,15 +1,12 @@
 """Envelope generator blocks."""
-
-
-USE_C_ENVELOPE = True
-
-
 from klang.config import BUFFER_SIZE
 from klang.audio.helpers import DT
-if USE_C_ENVELOPE:
-    from klang.audio._envelope import Envelope as _Envelope
-else:
-    from klang.audio.envelope import Envelope as _Envelope
+try:
+    # C Envelope
+    from klang.audio._envelope import Envelope
+except ImportError:
+    # Pure Python fallback
+    from klang.audio.envelope import Envelope
 from klang.audio.envelope import DEFAULT_OVERSHOOT
 from klang.block import Block
 from klang.connections import MessageInput
@@ -18,12 +15,12 @@ from klang.connections import MessageInput
 __all__ = ['ADSR', 'AR', 'D', 'R']
 
 
-class EnvelopeBase(Block, _Envelope):
+class EnvelopeBase(Block, Envelope):
     def __init__(self, attack, decay, sustain, release,
                  overshoot=DEFAULT_OVERSHOOT, retrigger=False, loop=False):
         super().__init__(nOutputs=1)
         self.inputs = self.trigger, = [MessageInput(owner=self)]
-        _Envelope.__init__(
+        Envelope.__init__(
             self,
             attack=attack,
             decay=decay,
