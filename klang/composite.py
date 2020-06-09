@@ -1,4 +1,6 @@
 """Composite block."""
+import contextlib
+
 from klang.block import Block, collect_connections
 from klang.connections import RelayBase
 from klang.execution import determine_execution_order, execute
@@ -21,9 +23,9 @@ def introspect(composite):
                 yield output.owner
 
 
-class temporarily_unpatch:
-
-    """Context manager for temporarily un- and repatching a block from its
+@contextlib.contextmanager
+def temporarily_unpatch(block):
+    """Context manager to temporarily unpatch block its input and output
     neighbors.
 
     Usage:
@@ -37,22 +39,14 @@ class temporarily_unpatch:
         ... 
         ... # Connections are restored
     """
+    connections = list(collect_connections(block))
+    for src, dst in connections:
+        src.disconnect(dst)
 
-    def __init__(self, block):
-        """Args:
-            block (Block): Block to unpatch.
-        """
-        self.connections = list(collect_connections(block))
+    yield block
 
-    def __enter__(self):
-        """Temporarily unpatch."""
-        for src, dst in self.connections:
-            src.disconnect(dst)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Repatch as it was before."""
-        for src, dst in self.connections:
-            src.connect(dst)
+    for src, dst in connections:
+        src.connect(dst)
 
 
 class Composite(Block):
