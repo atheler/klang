@@ -190,6 +190,36 @@ class FmOscillator(Oscillator):
         )
 
 
+class PwmOscillator(Block):
+
+    """Pulse width modulation oscillator."""
+
+    def __init__(self, frequency=440., dutyCycle=.5, startPhase=0.):
+        super().__init__(nInputs=2, nOutputs=1)
+        self.frequency, self.dutyCycle = self.inputs
+        self.frequency.set_value(frequency)
+        self.dutyCycle.set_value(dutyCycle)
+        self.currentPhase = startPhase
+
+    def sample(self):
+        freq = compute_rate(self.frequency.value)
+        phase, self.currentPhase = sample_phase(freq, startPhase=self.currentPhase)
+        active = (phase < TAU * self.dutyCycle.value)
+        return 2. * active - 1.
+
+    def update(self):
+        self.output.set_value(self.sample())
+
+    def __str__(self):
+        return '%s(%.1f Hz)' % (type(self).__name__, self.frequency.value)
+
+    def __deepcopy__(self, memo):
+        return type(self)(
+            frequency=self.frequency.value,
+            startPhase=self.currentPhase,
+        )
+
+
 class WavetableOscillator(Oscillator):
     # TODO(atheler): Make me!
     pass
