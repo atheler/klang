@@ -65,3 +65,21 @@ def blend(a, b, x):
 def sign(number):
     """Math sign function."""
     return math.copysign(1., number)
+
+
+def linear_mapping(xRange, yRange):
+    """Get linear coefficients of f(x) = a * x + b.
+
+    Args:
+        xRange (tuple): Input range (xmin, xmax).
+        yRange (tuple): Output range (xmin, xmax).
+
+    Returns:
+        tuple: Linear coefficients a, b.
+    """
+    xmin, xmax = xRange
+    ymin, ymax = yRange
+    return np.linalg.solve([
+        [xmin, 1.],
+        [xmax, 1.],
+    ], [ymin, ymax])
