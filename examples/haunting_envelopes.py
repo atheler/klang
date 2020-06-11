@@ -5,7 +5,7 @@
 import fractions
 
 from klang.audio import (
-    AR, Dac, Oscillator, OscillatorVoice, StereoMixer, triangle, sine
+    AR, Dac, Oscillator, StereoMixer, Voice, sine, triangle
 )
 from klang.klang import run_klang
 from klang.math import blend
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         attack = RATIO * duration
         release = (1 - RATIO) * duration
         env = AR(attack, release, loop=True)
-        voice = OscillatorVoice(env, osc)
+        voice = Voice(osc, env)
         mixer += voice
         mixer.pannings[-1] = panLevel
 

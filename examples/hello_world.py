@@ -5,4 +5,4 @@ Output a A440 sine wave.
 from klang.audio.oscillators import Oscillator
 from klang.klang import Dac, run_klang
 
-run_klang(Oscillator(frequency=444.) | Dac(nChannels=1))
+run_klang(Oscillator(frequency=440.) | Dac(nChannels=1))

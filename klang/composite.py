@@ -59,10 +59,18 @@ class Composite(Block):
         super().__init__(nInputs, nOutputs, name)
         self.execOrder = []
 
-    def update_internal_exec_order(self):
-        """Update execution order of composite."""
+    def update_internal_exec_order(self, *blocks):
+        """Update execution order of composite. Uses "introspected" blocks by
+        default (internally connected blocks via relays).
+
+        Args:
+            blocks (Block): Starting blocks.
+        """
+        if not blocks:
+            blocks = introspect(self)
+
         with temporarily_unpatch(self):
-            execOrder = determine_execution_order(introspect(self))
+            execOrder = determine_execution_order(blocks)
 
         if self in execOrder:
             execOrder.remove(self)

@@ -1,7 +1,6 @@
 """Sequencer drum kit demo with synthesizer pad sound."""
 from klang.audio import (
-    AR, Dac, Delay, HiHat, Kick, Oscillator, OscillatorVoice,
-    PolyphonicSynthesizer
+    AR, Dac, Delay, HiHat, Kick, Oscillator, PolyphonicSynthesizer, Voice
 )
 from klang.sequencer import Sequencer
 from klang.klang import run_klang
@@ -26,7 +25,7 @@ if __name__ == '__main__':
     # Create synthesizer
     osc = Oscillator()
     env = AR(attack=.1, release=.02)
-    voice = OscillatorVoice(envelope=env, oscillator=osc)
+    voice = Voice(envelope=env, oscillator=osc)
     synthesizer = PolyphonicSynthesizer(voice)
 
     # Setup audio path

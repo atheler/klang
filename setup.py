@@ -77,6 +77,7 @@ KWARGS = dict(
         'PyAudio',
         'pynput',
         'samplerate',
+        'requests',
         'beautifulsoup4',
         'python-rtmidi',
     ],

@@ -17,28 +17,30 @@ Pitch curve: Via a bend() method?
 """
 import copy
 
-from klang.audio.helpers import MONO_SILENCE
-from klang.block import Block
+from klang.composite import Composite
 from klang.connections import MessageInput
+from klang.execution import execute
 
 
-__all__ = ['Voice', 'OscillatorVoice']
+__all__ = ['Voice']
 
 
-class Voice(Block):
+class Voice(Composite):
 
-    """Base class for single synthesizer voice."""
+    """Single synthesizer voice."""
 
-    def __init__(self, envelope):
+    def __init__(self, oscillator, envelope):
         """Args:
-            envelope (Envelope): Volume envelope.
+            oscillator (Oscillator): Oscillator-like block. Frequency input -> value output.
+            envelope (Envelope): Envelope generator.
         """
-        super().__init__(nInputs=0, nOutputs=1)
+        super().__init__(nOutputs=1)
         self.inputs = [MessageInput(owner=self)]
-        self.output.set_value(MONO_SILENCE)
-        self.amplitude = 0.
+        self.oscillator = oscillator
         self.envelope = envelope
+        self.amplitude = 0.
         self.currentPitch = 0
+        self.update_internal_exec_order(self.oscillator, self.envelope)
 
     @property
     def active(self):
@@ -50,55 +52,29 @@ class Voice(Block):
 
         return self.envelope.active
 
-    def process_note(self, note):
-        """Process note."""
-        if note.on:
-            self.amplitude = note.velocity
-            self.currentPitch = note.pitch
-        else:
-            self.currentPitch = 0
-
-        self.envelope.input.push(note)
-
-    def update(self):
+    def process_incoming_notes(self):
+        """Process all incoming notes."""
         for note in self.input.receive():
-            self.process_note(note)
-
-        self.envelope.update()
-
-    def __deepcopy__(self, memo):
-        return type(self)(
-            envelope=copy.deepcopy(self.envelope)
-        )
-
-
-class OscillatorVoice(Voice):
-
-    """Oscillator + envelope voice."""
-
-    def __init__(self, envelope, oscillator):
-        """Args:
-            envelope (Envelope): Volume envelope.
-            oscillator (Oscillator): Oscillator instance.
-        """
-        super().__init__(envelope)
-        self.oscillator = oscillator
-
-    def process_note(self, note):
-        super().process_note(note)
-        if note.on:
-            self.oscillator.frequency.set_value(note.frequency)
+            self.envelope.gate(note.on)
+            if note.on:
+                self.amplitude = note.velocity
+                self.oscillator.frequency.set_value(note.frequency)
+                self.currentPitch = note.pitch
+            else:
+                self.currentPitch = 0
 
     def update(self):
-        super().update()
-        self.oscillator.update()
-        osc = self.oscillator.output.get_value()
-        env = self.envelope.output.get_value()
+        self.process_incoming_notes()
+        execute(self.execOrder)
+
+        # Assemble output samples
+        env = self.oscillator.output.value
+        osc = self.envelope.output.value
         signal = self.amplitude * env * osc
         self.output.set_value(signal)
 
     def __deepcopy__(self, memo):
         return type(self)(
-            envelope=copy.deepcopy(self.envelope),
             oscillator=copy.deepcopy(self.oscillator),
+            envelope=copy.deepcopy(self.envelope),
         )

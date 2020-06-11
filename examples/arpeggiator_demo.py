@@ -2,7 +2,7 @@
 from klang.arpeggiator import Arpeggiator
 from klang.audio import (
     ADSR, Dac, Delay, Filter, Lfo, MonophonicSynthesizer, Oscillator,
-    OscillatorVoice, Transformer, sawtooth, sine, triangle
+    Transformer, Voice, sawtooth, sine, triangle,
 )
 from klang.klang import run_klang
 from klang.messages import Note
@@ -22,7 +22,7 @@ def build_synthesizer(attack=.1, decay=.2, sustain=.3, release=.4, wave_func=sin
     """Create a monophonic synthesizer instance."""
     env = ADSR(attack, decay, sustain, release)
     osc = Oscillator(wave_func=wave_func)
-    voice = OscillatorVoice(env, osc)
+    voice = Voice(osc, env)
     return MonophonicSynthesizer(voice)
 
 
