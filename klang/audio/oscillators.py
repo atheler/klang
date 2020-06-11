@@ -10,7 +10,7 @@ from klang.constants import TAU
 from klang.music.tempo import compute_rate
 
 
-__all__ = ['Phasor', 'Lfo', 'Oscillator', 'FmOscillator']
+__all__ = ['FmOscillator', 'Lfo', 'Oscillator', 'Phasor', 'PwmOscillator']
 
 
 def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
@@ -36,33 +36,33 @@ def chirp_phase(t, freqStart, tEnd, freqEnd, method='linear', vertex_zero=True):
     return phase
 
 
-def sample_phase(frequency, startPhase=0., length=BUFFER_SIZE, dt=DT):
-    """Get phase values for a given frequency and a starting phase. Also
-    supports an array of frequencies (varying frequency). If so has to be
-    BUFFER_SIZE long.
+def sample_phase(frequency, startPhase=0.):
+    """Get BUFFER_SIZE many phase samples for a given frequency. Also supports
+    an array of frequencies (varying frequency). If so has to be BUFFER_SIZE
+    long.
 
     Args:
-        frequency (float or array): Frequency value(s). If varying frequency
-            these have to correspond to the length argument.
+        frequency (float or array): Frequency value(s). Scalar -> assuming
+            constant frequency over the whole buffer. If an array / varying
+            frequency has to be BUFFER_SIZE long.
 
     Kwargs:
-        startPhase (float): Starting phase.
-        length (int): Length of returned phase array.
-        dt (float): Time interval.
+        startPhase (float): Value of first phase sample.
 
     Returns:
         tuple: Phase array and next starting phase.
     """
     constFrequency = (np.ndim(frequency) == 0)
     if constFrequency:
-        t = get_time(length + 1, dt)
+        t = get_time(BUFFER_SIZE + 1, DT)
         phase = TAU * frequency * t + startPhase
     else:
-        phase = np.empty(length + 1)
+        phase = np.empty(BUFFER_SIZE + 1)
         phase[0] = startPhase
-        phase[1:] = TAU * dt * np.cumsum(frequency) + startPhase
+        phase[1:] = TAU * DT * np.cumsum(frequency) + startPhase
 
-    return phase[:-1], phase[-1] % TAU
+    phase = np.mod(phase, TAU)
+    return phase[:-1], phase[-1]
 
 
 class Phasor(Block):
