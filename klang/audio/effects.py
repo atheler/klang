@@ -14,7 +14,7 @@ from klang.composite import Composite
 from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.connections import Input, Relay
 from klang.constants import TAU, MONO, STEREO
-from klang.math import clip, blend
+from klang.math import clip, blend, linear_mapping
 from klang.music.tempo import compute_duration
 from klang.ring_buffer import RingBuffer
 
@@ -493,7 +493,12 @@ class Transformer(Block):
         width = upper - lower
         return cls(scale=.5 * width, offset=lower + .5 * width)
 
+    @classmethod
+    def from_ranges(cls, xRange=(0., 1.), yRange=(0., 1.)):
+        scale, offset = linear_mapping(xRange, yRange)
+        return cls(scale, offset)
+
     def update(self):
-        x = self.input.value
-        y = self.scale * x + self.offset
-        self.output.set_value(y)
+        self.output.set_value(
+            self.scale * self.input.value + self.offset
+        )
