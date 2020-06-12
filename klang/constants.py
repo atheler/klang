@@ -34,3 +34,5 @@ TWO_D = 2
 
 CENT_PER_OCTAVE = 1200
 """int: Cents per octave."""
+
+SCALAR = 1
