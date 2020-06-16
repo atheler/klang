@@ -69,9 +69,9 @@ def sample_phase(frequency, startPhase=0.):
 
 class Phasor(Block):
 
-    """Scalar phase oscillator. Outputs a scalar phase value per buffer. Base
-    class of all oscillator. Child classes should overwrite the sample()
-    method.
+    """Scalar phase oscillator. Outputs a scalar phase value per buffer [0.,
+    TAU). Base class of all oscillator. Child classes should overwrite the
+    sample(frequency) method.
 
     Attributes:
         frequency (Input): Frequency input connection.
@@ -113,6 +113,9 @@ class Oscillator(Phasor):
     """Audio signal oscillator. Generates an array of audio each buffer. Also
     supports an array as frequency input for varying frequencies (has to be
     BUFFER_SIZE long).
+
+    Attributes:
+        wave_func (function): Circular phase -> value wave from function.
     """
 
     def __init__(self, frequency=440., wave_func=sine, startPhase=0.):
@@ -141,9 +144,16 @@ class Lfo(Phasor):
 
     """Simple low frequency oscillator (LFO). Can output scalar or vectorial
     values. Output value range can be controlled with outputRange (ymin, ymax).
+
+    Attributes:
+        wave_func (function): Circular phase -> value wave from function.
+        shape (int): Number of output samples per buffer.
+        outputRange (tuple): Output value range (ymin, ymax).
+        scale (float): Linear output transform.
+        offset (float): Linear output transform.
     """
 
-    def __init__(self, frequency=1., wave_func=sine, shape=BUFFER_SIZE,
+    def __init__(self, frequency=1., wave_func=sine, shape=1,
                  outputRange=(0, 1), startPhase=0.):
         """Kwargs:
             frequency (float): Initial frequency value.
@@ -161,13 +171,11 @@ class Lfo(Phasor):
         self.scale, self.offset = linear_mapping(xRange=(-1, 1), yRange=outputRange)
 
     def sample(self):
+        freq = compute_rate(self.frequency.value)
         if self.shape == SCALAR:
             phase = self.currentPhase
-            freq = compute_rate(self.frequency.value)
             self.currentPhase = (TAU * freq * INTERVAL + self.currentPhase) % TAU
-
         else:
-            freq = compute_rate(self.frequency.value)
             phase, self.currentPhase = sample_phase(freq, self.currentPhase)
 
         return self.scale * self.wave_func(phase) + self.offset
@@ -184,7 +192,12 @@ class Lfo(Phasor):
 
 class FmOscillator(Oscillator):
 
-    """Frequency modulation oscillator."""
+    """Frequency modulation oscillator.
+
+    Attributes:
+        intensity (float): FM intensity.
+        modulator (Oscillator): Frequency modulator oscillator.
+    """
 
     def __init__(self, frequency=440., intensity=1., modFrequency=10.,
                  wave_func=sine, startPhase=0.):
@@ -223,7 +236,11 @@ class FmOscillator(Oscillator):
 
 class PwmOscillator(Phasor):
 
-    """Pulse width modulation oscillator."""
+    """Pulse width modulation oscillator.
+
+    Attributes:
+        dutyCycle (Input): Duty cycle value input.
+    """
 
     def __init__(self, frequency=440., dutyCycle=.5, startPhase=0.):
         """Kwargs:

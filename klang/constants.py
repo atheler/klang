@@ -36,3 +36,4 @@ CENT_PER_OCTAVE = 1200
 """int: Cents per octave."""
 
 SCALAR = 1
+"""int: Scalar shape."""
