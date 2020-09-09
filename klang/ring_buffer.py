@@ -1,108 +1,121 @@
 """The missing ring buffer."""
+from typing import Tuple, Sequence
+
 import numpy as np
+
+from klang.config import BUFFER_SIZE
+from klang.constants import MONO
 
 
 class RingBuffer:
 
-    """Numpy ring buffer. Wraps a numpy array as a quasi ring buffer. Note that
-    read access with a wrap around returns a copy of the section (via
-    concatenate). Can be used as a delay line. Supports slices and int as
-    __setitem__ / __getitem__ arguments but no tuples!
+    """Circular sample buffer.
+
+    Supports extending by multiple values. Over allocates bufferSize many
+    samples so that we have enough space for new samples at a given read / write
+    position.
     """
 
-    def __init__(self, data, offset=0, copy=True):
+    def __init__(self, length: int, capacity: int = None, bufferSize:
+                 int = BUFFER_SIZE, nChannels: int = MONO, dtype: type = float):
         """Args:
-            data (list): Data buffer of ring buffer.
+            length: Length of ring buffer.
 
         Kwargs:
-            offset (int): Initial offset of write and read pointer. If used as a
-                delay line this corresponds the delay time in samples.
-            copy (bool): Copy data.
+            capacity: Maximum ring buffer capacity. Same as length by default.
+            bufferSize: Amount of over allocation. Should be as big as largest
+                maximum number of samples.
+            nChannels: Number of audio channels.
+            dtype: Buffer data type.
         """
-        self.data = np.array(data, copy=copy)
-        self.offset = offset
+        if capacity is None:
+            capacity = length
 
-        self.readIdx = 0
-        self.writeIdx = offset % self.length
+        self._length = length
+        self.capacity = capacity
+        self.bufferSize = bufferSize
 
-    @classmethod
-    def from_shape(cls, shape, offset=0):
-        """Initialize empty ring buffer from shape."""
-        data = np.zeros(shape)
-        return cls(data, offset, copy=False)
+        if nChannels == MONO:
+            shape = (capacity + bufferSize,)
+        else:
+            shape = (capacity + bufferSize, nChannels)
+
+        self.data = np.zeros(shape, dtype)
+        self.pos = 0
 
     @property
-    def length(self):
-        """Length of ring buffer."""
-        return self.data.shape[0]
+    def length(self) -> int:
+        """Get current length."""
+        return self._length
 
-    def write(self, frames):
-        """Write some data to ring buffer."""
-        start = self.writeIdx
-        stop = (start + len(frames)) % self.length
-        self.writeIdx = stop
-        self[start:stop] = frames
+    @length.setter
+    def length(self, value: int):
+        """Set new length (and adjust current read / write position). Can not be
+        bigger than allocated max capacity.
+        """
+        if value > self.capacity:
+            msg = f'New length {value} larger than max capacity {self.capacity}!'
+            raise ValueError(msg)
 
-    def read(self, nFrames):
-        """Read `nFrames` from ring buffer."""
-        start = self.readIdx
-        stop = (start + nFrames) % self.length
-        self.readIdx = stop
-        return self[start:stop]
+        self._length = value
+        self.pos %= value
 
-    def unpack_slice(self, slc):
-        """Unpack slice `slice` in to tuple (start, stop, end)."""
-        if slc.start is None:
-            start = 0
-        else:
-            start = slc.start % self.length
+    def peek(self, nValues: int = None) -> np.ndarray:
+        """Peek into current buffer content. Returns no copy!"""
+        nValues = nValues or self.bufferSize
+        start = self.pos
+        stop = start + self.bufferSize
+        return self.data[start:stop]
 
-        if slc.stop is None:
-            stop = self.length
-        else:
-            stop = slc.stop % self.length
+    def append(self, value: float):
+        """Append single value to RingBuffer."""
+        self.data[self.pos] = value
+        if self.pos < self.bufferSize:
+            # Copy to tail as well
+            self.data[self.pos + self.length] = value
 
-        if slc.step is None:
-            step = 1
-        else:
-            step = slc.step
+        if self.pos > self.length:
+            # Copy to head as well
+            self.data[self.pos - self.length] = value
 
-        return start, stop, step
+        self.pos += 1
+        self.pos %= self._length
 
-    def __setitem__(self, key, value):
-        #print('__setitem__(%s, %s)' % (key, value))
-        if isinstance(key, slice):
-            start, stop, step = self.unpack_slice(key)
-            if start < stop:
-                self.data[start:stop:step] = value
-            else:
-                try:
-                    mid = (self.length - start) // step
-                    self.data[start::step] = value[:mid]
-                    self.data[:stop:step] = value[mid:]
-                except TypeError:
-                    self.data[start::step] = value
-                    self.data[:stop:step] = value
+    def extend(self, values: Sequence[float]):
+        """Extend RingBuffer with multiple values."""
+        nValues = len(values)
+        if nValues > self.bufferSize:
+            raise ValueError('To many samples!')
 
-        elif isinstance(key, int):
-            self.data[key % self.length] = value
+        start = self.pos
+        stop = start + nValues
+        self.data[start:stop] = values
+        if start < self.bufferSize:
+            # Copy to tail as well
+            a = start + self._length
+            b = min(self._length + self.bufferSize, stop + self._length)
+            self.data[a:b] = values[:b-a]  # Pick first (b-a) values
 
-        else:
-            self.data[key] = value
+        if stop > self._length:
+            # Copy to head as well
+            a = max(0, start - self._length)
+            b = stop - self._length
+            self.data[a:b] = values[-(b-a):]  # Pick last (b-a) values
 
-    def __getitem__(self, key):
-        #print('__getitem__(%s)' % key)
-        if isinstance(key, slice):
-            start, stop, step = self.unpack_slice(key)
-            if start < stop:
-                return self.data[start:stop:step]
+        self.pos += nValues
+        self.pos %= self._length
 
-            return np.concatenate([
-                self.data[start::step],
-                self.data[:stop:step],
-            ])
+    def peek_extend(self, values: Sequence[float]) -> np.ndarray:
+        """Pop some samples from buffer before overwriting them with the new values."""
+        ret = self.peek(nValues=len(values)).copy()
+        self.extend(values)
+        return ret
 
-        if isinstance(key, int):
-            return self.data[key % self.length]
+    def __repr__(self) -> str:
+        infos = [
+            'length=%d' % self.length,
+        ]
+        if self.length < self.capacity:
+            infos.append('capacity=%d' % self.capacity)
 
-        return self.data[key]
+        return f"{type(self).__qualname__}({', '.join(infos)})"

@@ -125,10 +125,11 @@ class Delay(Block):
         self.feedback = feedback
         self.drywet = drywet
 
-        maxlen = int(self.MAX_TIME * SAMPLING_RATE)
         time = compute_duration(time)
-        delayOffset = int(time * SAMPLING_RATE)
-        self.buffer = RingBuffer.from_shape(maxlen, offset=delayOffset)
+        length = int(time * SAMPLING_RATE)
+        capacity = int(self.MAX_TIME * SAMPLING_RATE)
+
+        self.ring = RingBuffer(length, capacity)
 
     def validate_delay_time(self, time):
         if time > self.MAX_TIME:
@@ -142,8 +143,8 @@ class Delay(Block):
             nChannels, _ = new.shape
             new = new.sum(axis=0) / nChannels
 
-        old = self.buffer.read(BUFFER_SIZE).T
-        self.buffer.write((new + self.feedback * old).T)
+        old = self.ring.peek()
+        self.ring.extend(new + self.feedback * old)
         self.output.set_value(blend(new, old, self.drywet))
 
 

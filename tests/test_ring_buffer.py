@@ -1,58 +1,149 @@
 import unittest
 
 import numpy as np
+from numpy.testing import assert_equal
 
 from klang.ring_buffer import RingBuffer
 
 
 class TestRingBuffer(unittest.TestCase):
-    def setUp(self):
-        self.ring = RingBuffer(np.arange(10))
+    def test_data(self):
+        ring = RingBuffer(7, bufferSize=4)
 
-    def test_getitem_with_index_and_wrap_around(self):
-        for i in range(-10, 20):
-            np.testing.assert_equal(self.ring[i], i % 10)
+        assert_equal(ring.data, 11 * [0.])
+        self.assertEqual(ring.pos, 0)
 
-    def test_getitem_with_slice(self):
-        np.testing.assert_equal(self.ring[:2], [0, 1])
-        np.testing.assert_equal(self.ring[8:], [8, 9])
-        np.testing.assert_equal(self.ring[2:8:2], [2, 4, 6])
+    def test_appending(self):
+        ring = RingBuffer(7, bufferSize=4)
+        for i in range(5):
+            ring.append(10 + i)
 
-    def test_getitem_with_slice_and_wrap_around(self):
-        np.testing.assert_equal(self.ring[8:12], [8, 9, 0, 1])
+        self.assertEqual(ring.pos, 5)
+        assert_equal(ring.data, [
+            10, 11, 12, 13, 14, 0, 0,  # Main memory
+            10, 11, 12, 13,  # Over allocated shadow memory
+        ])
 
-    def test_setitem_single_value_with_slice_and_wrap_aroud(self):
-        self.ring[8:14:2] = 666
-        np.testing.assert_equal(self.ring.data, [666, 1, 666, 3, 4, 5, 6, 7, 666, 9])
+    def test_extending(self):
+        ring = RingBuffer(7, bufferSize=4)
 
-    def test_setitem_multiple_values_with_slice_and_wrap_aroud(self):
-        self.ring[8:14:2] = 42, 43, 44
-        np.testing.assert_equal(self.ring.data, [43, 1, 44, 3, 4, 5, 6, 7, 42, 9])
+        self.assertEqual(ring.pos, 0)
+        assert_equal(ring.data, [
+            0., 0., 0., 0., 0., 0., 0.,  # Main memory
+            0., 0., 0., 0.,  # Over allocated shadow memory
+        ])
 
-    def test_write_read(self):
-        data = np.zeros((10, 2))
-        ring = RingBuffer(data)
-        ring.write(np.ones((1, 2)))
-        ring.write(np.ones((2, 2)) * 2)
-        ring.write(np.ones((3, 2)) * 3)
+        ring.extend([1, 2, 3, 4])
 
-        np.testing.assert_equal(ring.read(1), [[1, 1]])
-        np.testing.assert_equal(ring.read(1), [[2, 2]])
-        np.testing.assert_equal(ring.read(2), [[2, 2], [3, 3]])
+        self.assertEqual(ring.pos, 4)
+        assert_equal(ring.data, [
+            1., 2., 3., 4., 0., 0., 0.,  # Main memory
+            1., 2., 3., 4.,  # Over allocated shadow memory
+        ])
 
-    def test_stereo_delay_buffer(self):
-        zeros = np.zeros((88200, 2))
-        buf = RingBuffer(zeros, offset=44100)  # One second delay
-        first = np.ones((44100, 2))
-        buf.write(first)
+        ring.extend([11, 12, 13, 14])
 
-        np.testing.assert_equal(buf.read(44100), zeros[:44100])
+        self.assertEqual(ring.pos, 1)
+        assert_equal(ring.data, [
+            14., 2., 3., 4., 11., 12., 13.,  # Main memory
+            14., 2., 3., 4.,  # Over allocated shadow memory
+        ])
 
-        second = 2 * np.ones((44100, 2))
-        buf.write(second)
+        ring.extend([111, 112, 113, 114])
 
-        np.testing.assert_equal(buf.read(44100), first)
-        np.testing.assert_equal(buf.read(44100), second)
+        self.assertEqual(ring.pos, 5)
+        assert_equal(ring.data, [
+            14., 111., 112., 113., 114., 12., 13.,  # Main memory
+            14., 111., 112., 113.,  # Over allocated shadow memory
+        ])
+
+    def test_extending_with_less_than_buffer_size(self):
+        ring = RingBuffer(7, bufferSize=4)
+        ring.extend([0.])
+        ring.extend([1., 2.])
+        ring.extend([3., 4., 5.])
+        ring.extend([6., 7.])
+
+        assert_equal(ring.data, [
+            7., 1., 2., 3., 4., 5., 6.,
+            7., 1., 2., 3.
+        ])
+
+    def test_extending_with_to_many_samples(self):
+        ring = RingBuffer(7, bufferSize=4)
+        with self.assertRaises(ValueError):
+            ring.extend([1, 2, 3, 4, 5])
+
+    def test_peeking(self):
+        ring = RingBuffer(7, bufferSize=4)
+
+        assert_equal(ring.peek(), [0, 0, 0, 0])
+
+        ring.extend([1, 2, 3, 4])
+
+        assert_equal(ring.peek(), [0, 0, 0, 1])
+
+        ring.extend([5, 6, 7, 8])
+
+        assert_equal(ring.peek(), [2, 3, 4, 5])
+
+    def test_to_long(self):
+        bufSize = 4
+        ring = RingBuffer(7, bufferSize=bufSize)
+        with self.assertRaises(ValueError):
+            ring.length = 2 * bufSize
+
+    def test_peek_extend(self):
+        ring = RingBuffer(7, bufferSize=4)
+
+        assert_equal(ring.peek_extend([1, 2, 3, 4]), [0, 0, 0, 0])
+        assert_equal(ring.peek_extend([5, 6, 7, 8]), [0, 0, 0, 1])
+        assert_equal(ring.peek_extend([9, 10, 11, 12]), [2, 3, 4, 5])
+
+    def test_delay_line_with_impulse(self):
+        bufSize = 4
+
+        # Delay of 7 samples
+        ring = RingBuffer(7, bufferSize=bufSize)
+        x = np.array([1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+        desired = [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+        blocks = [
+            ring.peek_extend(row)
+            for row in x.reshape((-1, bufSize))
+        ]
+        y = np.concatenate(blocks)
+
+        assert_equal(y, desired)
+
+    def test_stereo_delay_line_with_impulse(self):
+        ring = RingBuffer(7, bufferSize=4, nChannels=2)
+        audio = np.array([
+            [1., 0.],
+            [0., 1.],
+            [0., 0.],
+            [0., 0.],
+        ])
+        silence = np.zeros((4, 2))
+
+        assert_equal(ring.peek_extend(audio), [[0, 0], [0, 0], [0, 0], [0, 0]])
+        assert_equal(ring.peek_extend(silence), [[0, 0], [0, 0], [0, 0], [1, 0]])
+        assert_equal(ring.peek_extend(silence), [[0, 1], [0, 0], [0, 0], [0, 0]])
+
+    def test_reducing_length(self):
+        ring = RingBuffer(7, bufferSize=4)
+        impulse = np.array([1., 0., 0., 0.])
+        silence = np.zeros(4)
+
+        assert_equal(ring.peek_extend(impulse), [0., 0., 0., 0.])
+        assert_equal(ring.peek_extend(silence), [0., 0., 0., 1.])
+        assert_equal(ring.peek_extend(silence), [0., 0., 0., 0.])
+
+        ring.length = 5
+        ring.pos = 2  # Test non zero pos
+
+        assert_equal(ring.peek_extend(silence), [0., 0., 0., 0.])
+        assert_equal(ring.peek_extend(impulse), [0., 0., 0., 0.])
+        assert_equal(ring.peek_extend(silence), [0., 1., 0., 0.])
 
 
 if __name__ == '__main__':
