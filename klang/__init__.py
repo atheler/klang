@@ -12,5 +12,5 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Surpress parse loggers
 for name in logging.root.manager.loggerDict:
-    if 'parso' in name:
+    if 'parso' in name or 'matplotlib' in name:
         logging.getLogger(name).disabled = True

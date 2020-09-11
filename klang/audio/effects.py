@@ -1,9 +1,13 @@
 """Audio effects blocks."""
+from typing import List
 import math
 
 import numpy as np
 import scipy.signal
 import samplerate
+
+from klang.primes import find_next_prime
+from klang.audio.filters import BackwardCombFilter, EchoFilter
 
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
 from klang.audio.oscillators import Oscillator
@@ -22,7 +26,7 @@ from klang.ring_buffer import RingBuffer
 __all__ = [
     'Gain', 'Tremolo', 'Delay', 'AudioSplitter', 'AudioCombiner', 'StereoDelay',
     'Filter', 'Subsampler', 'Bitcrusher', 'OctaveDistortion', 'TanhDistortion',
-    'PitchShifter', 'Transformer',
+    'PitchShifter', 'Transformer', 'Reverb',
 ]
 
 
@@ -503,3 +507,47 @@ class Transformer(Block):
         self.output.set_value(
             self.scale * self.input.value + self.offset
         )
+
+
+class Reverb(Block):
+
+    """Simple comb filter based reverb effect.
+
+    TODO:
+      - Different gain policies.
+      - Filters in comb filter feedback loop
+    """
+
+    def __init__(self, decay=1.5, preDelay=.03, dryWet=.7, nEchos=10):
+        assert nEchos > 0
+        super().__init__(nInputs=1, nOutputs=1)
+        self.dryWet = clip(dryWet, 0., 1.)
+
+        # Find next prime numbers for comb filter delay times (in samples)
+        start = int(preDelay * SAMPLING_RATE)
+        delays: List[int] = []
+        for _ in range(nEchos):
+            primeNr = find_next_prime(start)
+            delays.append(primeNr)
+            start = primeNr + 1
+
+        # Compute gain values for each comb filter. Assure same decay rate for
+        # each individual comb filter no matter which delay time.
+        alphas: List[float] = [
+            math.exp(-math.pi * k / SAMPLING_RATE / decay)
+            for k in delays
+        ]
+
+        self.combFilters = [
+            BackwardCombFilter(k, alpha)
+            for k, alpha in zip(delays, alphas)
+        ]
+
+    def update(self):
+        x = self.input.value
+        y = self.combFilters[0].filter(x)
+        for comb in self.combFilters[1:]:
+            y += comb.filter(x)
+
+        y /= len(self.combFilters)
+        self.output.set_value(blend(x, y, self.dryWet))
