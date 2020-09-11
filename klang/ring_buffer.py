@@ -35,10 +35,9 @@ class RingBuffer:
         self.capacity = capacity
         self.bufferSize = bufferSize
 
-        if nChannels == MONO:
-            shape = (capacity + bufferSize,)
-        else:
-            shape = (capacity + bufferSize, nChannels)
+        shape: list = [capacity + bufferSize]
+        if nChannels > MONO:
+            shape.append(nChannels)
 
         self.data = np.zeros(shape, dtype)
         self.pos = 0
