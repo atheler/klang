@@ -1,8 +1,8 @@
 """Arpeggiator demonstration."""
 from klang.arpeggiator import Arpeggiator
 from klang.audio import (
-    ADSR, Dac, Delay, Filter, Lfo, MonophonicSynthesizer, Oscillator,
-    Transformer, Voice, sawtooth, sine, triangle,
+    ADSR, Dac, Delay, Filter, Lfo, MonophonicSynthesizer, Oscillator, Voice,
+    sawtooth, sine, triangle,
 )
 from klang.klang import run_klang
 from klang.messages import Note
@@ -31,8 +31,7 @@ if __name__ == '__main__':
     arp = Arpeggiator(frequency=.2, nSteps=16, order='alternating')
     arp.arpeggio.process_notes(Alow, C, E, F, G, A)
     synthesizer = build_synthesizer(wave_func=sawtooth)
-    lfo = Lfo(frequency=.1, wave_func=triangle)
-    trafo = Transformer.from_limits(100., 3000.)
+    lfo = Lfo(frequency=.1, wave_func=triangle, outputRange=(100, 3000))
     fil = Filter(frequency=220.)
     delay = Delay(time=0.76, feedback=.9)
 
@@ -45,7 +44,7 @@ if __name__ == '__main__':
     bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
 
     # Make block connections
-    lfo | trafo | fil.frequency
+    lfo | fil.frequency
     mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
     mixer.gains = [1., .3]
     dac = mixer | Dac(nChannels=1)

@@ -1,7 +1,6 @@
 """Demonstration of tempo aware effects."""
 from klang.audio import (
-    Tremolo, Filter, Transformer, StereoDelay, Oscillator, Lfo, square,
-    triangle, random
+    Tremolo, Filter, StereoDelay, Oscillator, Lfo, square, triangle, random
 )
 from klang.constants import STEREO
 from klang.klang import run_klang, Dac
@@ -19,8 +18,7 @@ if __name__ == '__main__':
     # Init blocks
     osc = Oscillator(wave_func=random)
     tremolo = Tremolo(rate=QUARTER_NOTE, intensity=1., wave_func=square)
-    lfo = Lfo(LARGE_NOTE, wave_func=triangle)
-    trafo = Transformer.from_limits(lower=110., upper=1100)
+    lfo = Lfo(LARGE_NOTE, wave_func=triangle, outputRange=(110, 1100))
     fil = Filter()
     delay = StereoDelay(
         leftTime=DOUBLE_DOTTED_QUARTER_NOTE,
@@ -33,6 +31,6 @@ if __name__ == '__main__':
 
     # Connect blocks
     osc | tremolo | fil.input | delay | dac
-    lfo | trafo | fil.frequency
+    lfo | fil.frequency
 
     run_klang(dac)

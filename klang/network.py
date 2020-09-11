@@ -173,6 +173,9 @@ class NetworkIn(Block):
     """Network value receiver block."""
 
     def __init__(self, address):
+        """Args:
+            address (tuple or str): Network address.
+        """
         super().__init__(nOutputs=1)
         self.courier = JsonCourier(address, bind=True)
 
@@ -186,6 +189,9 @@ class NetworkMessageIn(Block):
     """Network message receiver block."""
 
     def __init__(self, address):
+        """Args:
+            address (tuple or str): Network address.
+        """
         super().__init__()
         self.outputs = [MessageOutput(owner=self)]
         self.courier = JsonCourier(address, bind=True)
@@ -200,6 +206,9 @@ class NetworkOut(Block):
     """Network value sender block."""
 
     def __init__(self, address):
+        """Args:
+            address (tuple or str): Network address.
+        """
         super().__init__(nInputs=1)
         self.courier = JsonCourier(address)
 
@@ -213,6 +222,9 @@ class NetworkMessageOut(Block):
     """Network message sender block."""
 
     def __init__(self, address):
+        """Args:
+            address (tuple or str): Network address.
+        """
         super().__init__()
         self.inputs = [MessageInput(owner=self)]
         self.courier = JsonCourier(address)

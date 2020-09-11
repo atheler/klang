@@ -7,8 +7,7 @@ import io
 import pkgutil
 
 from klang.audio import (
-    Dac, Lfo, Tremolo, Filter, Transformer, StereoDelay, AudioFile, triangle,
-    square
+    Dac, Lfo, Tremolo, Filter, StereoDelay, AudioFile, triangle, square
 )
 from klang.constants import STEREO
 from klang.klang import run_klang
@@ -29,11 +28,10 @@ if __name__ == '__main__':
     tremolo = Tremolo(rate=1 / .2, wave_func=square)
     delay = StereoDelay(leftTime=1.5, rightTime=1.3, leftFeedback=.9, rightFeedback=.9, drywet=.5)
     filter_ = Filter()
-    lfo = Lfo(frequency=.2, wave_func=triangle)
-    scaler = Transformer.from_limits(100, 2000)
+    lfo = Lfo(frequency=.2, wave_func=triangle, outputRange=(100, 2000))
     dac = Dac(nChannels=STEREO)
 
     # Define block network
-    lfo | scaler | filter_.frequency
+    lfo | filter_.frequency
     audioFile | tremolo | filter_ | delay | dac
     run_klang(dac)

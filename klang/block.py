@@ -16,6 +16,8 @@ applied See the following example:
 Besides the Block base class the pipe_operator() and mix_operator() are also
 defined here (for operation overloading).
 """
+import functools
+
 from klang.connections import OutputBase, InputBase, Output, Input
 
 
@@ -162,8 +164,8 @@ class Block:
     per audio buffer.
 
     Attributes:
-        inputs (list of klang.connections.Input): Input connection.
-        outputs (list of klang.connections.Output): Output connection.
+        inputs (list): Input connections.
+        outputs (list): Output connections.
         name (str): Custom name of the owner (if any).
     """
 
@@ -223,14 +225,14 @@ class Block:
 
     __or__ = pipe_operator
 
+    @functools.wraps(pipe_operator)
     def __ror__(self, output):
-        """Connect output with block."""
         # Reverse operands. Maintain order.
         return pipe_operator(output, self)
 
     __add__ = mix_operator
 
+    @functools.wraps(mix_operator)
     def __radd__(self, output):
-        """Mix output and block."""
         # Reverse operands. Maintain order.
         return mix_operator(output, self)
