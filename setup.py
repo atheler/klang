@@ -99,13 +99,18 @@ KWARGS = dict(
 
 if __name__ == '__main__':
     try:
-        ENVELOPE_EXT = Extension(
-            name='klang.audio._envelope',
-            sources=['klang/audio/_envelope.c'],
-            include_dirs=[numpy.get_include()],
-        )
-        """Extension: C ADSR envelope generator."""
-        setup(ext_modules=[ENVELOPE_EXT], **KWARGS)
+        setup(ext_modules=[
+            Extension(
+                name='klang.audio._envelope',
+                sources=['klang/audio/_envelope.c'],
+                include_dirs=[numpy.get_include()],
+            ),
+            Extension(
+                name='klang.audio._filters',
+                sources=['klang/audio/_filters.c'],
+                include_dirs=[numpy.get_include()],
+            ),
+        ], **KWARGS)
     except SystemExit as err:
         print(err)
         print('Failed to built C-extensions. Continuing with pure Python fallback')

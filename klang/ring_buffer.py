@@ -35,10 +35,9 @@ class RingBuffer:
         self.capacity = capacity
         self.bufferSize = bufferSize
 
-        if nChannels == MONO:
-            shape = (capacity + bufferSize,)
-        else:
-            shape = (capacity + bufferSize, nChannels)
+        shape: list = [capacity + bufferSize]
+        if nChannels > MONO:
+            shape.append(nChannels)
 
         self.data = np.zeros(shape, dtype)
         self.pos = 0
@@ -62,9 +61,11 @@ class RingBuffer:
 
     def peek(self, nValues: int = None) -> np.ndarray:
         """Peek into current buffer content. Returns no copy!"""
-        nValues = nValues or self.bufferSize
+        if nValues is None:
+            nValues = self.bufferSize
+
         start = self.pos
-        stop = start + self.bufferSize
+        stop = start + nValues
         return self.data[start:stop]
 
     def append(self, value: float):
