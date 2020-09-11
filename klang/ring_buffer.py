@@ -62,9 +62,11 @@ class RingBuffer:
 
     def peek(self, nValues: int = None) -> np.ndarray:
         """Peek into current buffer content. Returns no copy!"""
-        nValues = nValues or self.bufferSize
+        if nValues is None:
+            nValues = self.bufferSize
+
         start = self.pos
-        stop = start + self.bufferSize
+        stop = start + nValues
         return self.data[start:stop]
 
     def append(self, value: float):

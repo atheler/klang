@@ -62,7 +62,8 @@ RingBuffer* RingBuffer_create(size_t length)
 /**
  * Destroy RingBuffer instance.
  */
-void RingBuffer_destroy(RingBuffer *self)
+void
+RingBuffer_destroy(RingBuffer *self)
 {
     free(self);
 }
@@ -73,7 +74,8 @@ void RingBuffer_destroy(RingBuffer *self)
  *
  * Without modfiying current read / write position.
  */
-double RingBuffer_peek(RingBuffer *self)
+double
+RingBuffer_peek(RingBuffer *self)
 {
     return self->data[self->position];
 }
@@ -82,7 +84,8 @@ double RingBuffer_peek(RingBuffer *self)
 /**
  * Append value to RingBuffer.
  */
-void RingBuffer_append(RingBuffer *self, double newValue)
+void
+RingBuffer_append(RingBuffer *self, double newValue)
 {
     self->data[self->position++] = newValue;
     self->position %= self->length;
