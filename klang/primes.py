@@ -1,6 +1,5 @@
 """Prime number utils."""
-from typing import Iterator
-import unittest
+from typing import Iterator, List
 
 
 PRIMES: list = [2, 3, 5, 7]
@@ -8,7 +7,7 @@ PRIMES: list = [2, 3, 5, 7]
 
 
 def is_prime(number: int) -> bool:
-    """Primality test.
+    """Primality test. Check if number is prime.
 
     Resources:
       - https://en.wikipedia.org/wiki/Primality_test
@@ -129,3 +128,14 @@ def find_next_prime(number: int) -> int:
         _increase_cache(PRIMES)
 
     return binary_search_with_upper(PRIMES, number)
+
+
+def find_next_primes(nPrimes: int, start: int = 1) -> List[int]:
+    """Find the next n prime numbers larger than start."""
+    primes = []
+    for _ in range(nPrimes):
+        primeNr = find_next_prime(start)
+        primes.append(primeNr)
+        start = primeNr + 1
+
+    return primes

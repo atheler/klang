@@ -1,14 +1,11 @@
 """Audio effects blocks."""
-from typing import List
 import math
 
 import numpy as np
 import scipy.signal
 import samplerate
 
-from klang.primes import find_next_prime
-from klang.audio.filters import BackwardCombFilter, EchoFilter
-
+from klang.audio.filters import BackwardCombFilter
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
 from klang.audio.oscillators import Oscillator
 from klang.audio.waves import sine
@@ -17,9 +14,11 @@ from klang.block import Block
 from klang.composite import Composite
 from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.connections import Input, Relay
+from klang.constants import PI
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip, blend, linear_mapping
 from klang.music.tempo import compute_duration
+from klang.primes import find_next_primes
 from klang.ring_buffer import RingBuffer
 
 
@@ -72,6 +71,22 @@ class Gain(Block):
     def update(self):
         samples = self.input.value
         self.output.set_value(self.gain * samples)
+
+
+def compute_alpha(delayTime: float, decay: float):
+    """Compute gain value alpha for comb and echo filters.
+
+    Args:
+        delayTime: Delay time in seconds.
+        decay: Decay rate in seconds.
+
+    Returns:
+        alpha gain value.
+    """
+    if decay <= 0:
+        return 0.
+
+    return math.exp(-PI * delayTime / decay)
 
 
 class Tremolo(Composite):
@@ -511,43 +526,28 @@ class Transformer(Block):
 
 class Reverb(Block):
 
-    """Simple comb filter based reverb effect.
+    """Simple comb filter / echo based reverb effect.
 
     TODO:
       - Different gain policies.
-      - Filters in comb filter feedback loop
+      - Bandpass in feedback path of filters
     """
 
-    def __init__(self, decay=1.5, preDelay=.03, dryWet=.7, nEchos=10):
+    def __init__(self, decay: float = 1.5, preDelay: float = .03, dryWet: float
+                 = .7, nEchos: int = 10, echoType: type = BackwardCombFilter):
         assert nEchos > 0
         super().__init__(nInputs=1, nOutputs=1)
         self.dryWet = clip(dryWet, 0., 1.)
-
-        # Find next prime numbers for comb filter delay times (in samples)
-        start = int(preDelay * SAMPLING_RATE)
-        delays: List[int] = []
-        for _ in range(nEchos):
-            primeNr = find_next_prime(start)
-            delays.append(primeNr)
-            start = primeNr + 1
-
-        # Compute gain values for each comb filter. Assure same decay rate for
-        # each individual comb filter no matter which delay time.
-        alphas: List[float] = [
-            math.exp(-math.pi * k / SAMPLING_RATE / decay)
-            for k in delays
-        ]
-
-        self.combFilters = [
-            BackwardCombFilter(k, alpha)
-            for k, alpha in zip(delays, alphas)
+        self.filters = [
+            echoType(k, compute_alpha(k / SAMPLING_RATE, decay))
+            for k in find_next_primes(nEchos, int(preDelay * SAMPLING_RATE))
         ]
 
     def update(self):
         x = self.input.value
-        y = self.combFilters[0].filter(x)
-        for comb in self.combFilters[1:]:
-            y += comb.filter(x)
+        y = self.filters[0].filter(x)
+        for fil in self.filters[1:]:
+            y += fil.filter(x)
 
-        y /= len(self.combFilters)
+        y /= len(self.filters)
         self.output.set_value(blend(x, y, self.dryWet))
