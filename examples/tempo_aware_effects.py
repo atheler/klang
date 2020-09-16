@@ -17,7 +17,7 @@ DRY_WET = .4
 if __name__ == '__main__':
     # Init blocks
     osc = Oscillator(wave_func=random)
-    tremolo = Tremolo(rate=QUARTER_NOTE, intensity=1., wave_func=square)
+    tremolo = Tremolo(rate=QUARTER_NOTE, depth=1., smoothness=0.1)
     lfo = Lfo(LARGE_NOTE, wave_func=triangle, outputRange=(110, 1100))
     fil = Filter()
     delay = StereoDelay(

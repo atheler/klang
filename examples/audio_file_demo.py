@@ -25,7 +25,7 @@ if __name__ == '__main__':
     audioFile.sample.trim(0, 44100)  # Loop one second of audio
     audioFile.play()
 
-    tremolo = Tremolo(rate=1 / .2, wave_func=square)
+    tremolo = Tremolo(rate=1 / .2, smoothness=.1)
     delay = StereoDelay(leftTime=1.5, rightTime=1.3, leftFeedback=.9, rightFeedback=.9, drywet=.5)
     filter_ = Filter()
     lfo = Lfo(frequency=.2, wave_func=triangle, outputRange=(100, 2000))

@@ -1,4 +1,7 @@
 """Audio effects blocks."""
+from typing import Tuple, Union
+import functools
+import fractions
 import math
 
 import numpy as np
@@ -7,14 +10,14 @@ import samplerate
 
 from klang.audio.filters import BackwardCombFilter
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
-from klang.audio.oscillators import Oscillator
+from klang.audio.oscillators import Oscillator, PwmOscillator
 from klang.audio.waves import sine
 from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 from klang.block import Block
 from klang.composite import Composite
 from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.connections import Input, Relay
-from klang.constants import PI
+from klang.connections import Input, Relay, Output
+from klang.constants import PI, INF
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip, blend, linear_mapping
 from klang.music.tempo import compute_duration
@@ -27,6 +30,9 @@ __all__ = [
     'Filter', 'Subsampler', 'Bitcrusher', 'OctaveDistortion', 'TanhDistortion',
     'PitchShifter', 'Transformer', 'Reverb',
 ]
+
+
+FrequencyOrTempoAware = Union[float, fractions.Fraction]
 
 
 def sub_sample(array, skip):
@@ -60,6 +66,31 @@ def tanh_distortion(samples, drive=1.):
     return np.tanh(drive * samples)
 
 
+@functools.lru_cache()
+def low_pass_coefficients(frequency: float) -> Tuple[list, list]:
+    """Filter coefficients for single pole low pass IIR filter. For decay use
+    frequency = 1. / decay. 0 and INF are supported as well.
+
+    Args:
+        frequency: Unnormalized cutoff frequency.
+
+    Returns:
+        Numerator / denominator coefficients.
+
+    Resources:
+        - https://tomroelandts.com/articles/low-pass-single-pole-iir-filter
+    """
+    if frequency == 0:
+        return [0.], [1., -1.]
+
+    if frequency == INF:
+        return [1.], [1., 0.]
+
+    a1 = -math.exp(-TAU * frequency / SAMPLING_RATE)
+    b0 = 1. - abs(a1)
+    return [b0], [1., a1]
+
+
 class Gain(Block):
 
     """Simple gain block."""
@@ -73,57 +104,67 @@ class Gain(Block):
         self.output.set_value(self.gain * samples)
 
 
-def compute_alpha(delayTime: float, decay: float):
-    """Compute gain value alpha for comb and echo filters.
-
-    Args:
-        delayTime: Delay time in seconds.
-        decay: Decay rate in seconds.
-
-    Returns:
-        alpha gain value.
-    """
-    if decay <= 0:
-        return 0.
-
-    return math.exp(-PI * delayTime / decay)
-
-
 class Tremolo(Composite):
 
-    """LFO controlled amplitude modulation (AM)."""
+    """LFO controlled amplitude modulation.
 
-    def __init__(self, rate=5., intensity=1., wave_func=sine):
+    Support for different active phases (dutyCycle) and curve shape
+    (smoothness).
+
+    Attributes:
+        rate: Frequency relays to lfo.
+        depth: Value input for tremolo intensity.
+        smoothness: Value input for envelope shape.
+        dutyCycle: dutyCycle relays to lfo.
+        lfo: Pulse width modulation lfo.
+        zi: Low pass filter state.
+    """
+
+    def __init__(self, rate: FrequencyOrTempoAware = 3., depth: float = .8,
+                 smoothness: float = 1., dutyCycle: float = .5):
         """Kwargs:
-            rate (float): Initial effect frequency.
-            intensity (float): Initial effect intensity.
-            wave_func (function): Wave form function.
+            rate: Rate of tremolo.
+            depth: Intensity of amplitude modulation.
+            smoothness: Curve shape. 0. -> sine-like, 1. -> square.
+            dutyCycle: Active phase duration.
         """
         super().__init__(nOutputs=1)
-        _, self.rate, self.intensity = self.inputs = [
+        self.inputs = [
             Input(owner=self),
             Relay(owner=self),
             Input(owner=self),
+            Input(owner=self),
+            Relay(owner=self),
         ]
-        self.rate.set_value(rate),
-        self.intensity.set_value(intensity)
-        self.lfo = Oscillator(
-            frequency=rate,
-            wave_func=wave_func,
-            startPhase=TAU / 4., # Start from zero
-        )
+
+        _, self.rate, self.depth, self.smoothness, self.dutyCycle = self.inputs
+        self.rate.set_value(rate)
+        self.depth.set_value(depth)
+        self.smoothness.set_value(smoothness)
+        self.dutyCycle.set_value(dutyCycle)
+
+        self.lfo = PwmOscillator(rate)
         self.rate.connect(self.lfo.frequency)
+        self.dutyCycle.connect(self.lfo.dutyCycle)
+        self.zi = np.zeros(1)
 
     def update(self):
+        # Fetch input values
+        depth = self.depth.value
+        smoothness = self.smoothness.value
+        dutyCycle = self.dutyCycle.value
+
+        # Calculate AM-envelope
+        decay = max(1e-6, smoothness * min(dutyCycle, 1. - dutyCycle))
+        coeffs = low_pass_coefficients(1. / decay)
         self.lfo.update()
+        pwm = self.lfo.output.value
+        filteredPwm, self.zi = scipy.signal.lfilter(*coeffs, pwm, zi=self.zi)
+        env = (1. - depth) + depth * (.5 + .5 * filteredPwm)
 
-        # Calculate tremolo envelope in [0., 1.].
-        intensity = self.intensity.get_value()
-        mod = self.lfo.output.get_value()
-        env = 1. - clip(intensity, 0., 1.) * mod
-
-        samples = self.input.get_value()
-        self.output.set_value(env * samples)
+        # Apply
+        x = self.input.value
+        self.output.set_value(env * x)
 
 
 class Delay(Block):
@@ -539,9 +580,25 @@ class Reverb(Block):
         super().__init__(nInputs=1, nOutputs=1)
         self.dryWet = clip(dryWet, 0., 1.)
         self.filters = [
-            echoType(k, compute_alpha(k / SAMPLING_RATE, decay))
+            echoType(k, self.compute_alpha(k / SAMPLING_RATE, decay))
             for k in find_next_primes(nEchos, int(preDelay * SAMPLING_RATE))
         ]
+
+    @staticmethod
+    def compute_alpha(delayTime: float, decay: float) -> float:
+        """Compute gain value alpha for comb and echo filters.
+
+        Args:
+            delayTime: Delay time in seconds.
+            decay: Decay rate in seconds.
+
+        Returns:
+            alpha gain value.
+        """
+        if decay <= 0:
+            return 0.
+
+        return math.exp(-PI * delayTime / decay)
 
     def update(self):
         x = self.input.value
