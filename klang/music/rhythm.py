@@ -10,6 +10,7 @@ Euclidian Rhyhtm
   - https://github.com/WilCrofter/Euclidean_Rhythms/blob/master/euclidean_rhythms.py
   - https://pdfs.semanticscholar.org/c652/d0a32895afc5d50b6527447824c31a553659.pdf
 """
+# TODO: type hinting
 import fractions
 
 import numpy as np

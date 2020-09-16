@@ -5,22 +5,22 @@ Metre classification.
 Resources:
   - https://en.wikipedia.org/wiki/Metre_(music)
 """
-import fractions
+from fractions import Fraction
 
 from klang.math import is_dyadic, is_divisible
 
 
-DUPLE = 2
+DUPLE: int = 2
 """int: A duplet."""
 
-TRIPLE = 3
+TRIPLE: int = 3
 """int: A triplet."""
 
-QUAD = 4
+QUAD: int = 4
 """int: ???"""
 
 
-def create_metre(numerator, denominator=None):
+def create_metre(numerator: int, denominator: int = None) -> Fraction:
     """Create time signature fraction. Normal Fraction with no normalization.
 
     Args:
@@ -34,7 +34,7 @@ def create_metre(numerator, denominator=None):
     """
     #if not isinstance(numerator, int):  # Fractional rhythms?
     #    numerator = fractions.Fraction.from_float(numerator)
-    return fractions.Fraction(numerator, denominator, _normalize=False)
+    return Fraction(numerator, denominator, _normalize=False)
 
 
 FOUR_FOUR_METRE = create_metre(4, 4)
@@ -59,17 +59,17 @@ NINE_EIGHT_METRE = create_metre(9, 8)
 """Fraction: 9 / 8 time signature."""
 
 
-def is_irrational(metre):
+def is_irrational(metre: Fraction) -> bool:
     """Check if irrational metre."""
     return not is_dyadic(metre)
 
 
-def is_fractional(metre):
+def is_fractional(metre: Fraction) -> bool:
     """Check if fractional metre."""
     return metre.numerator % 1 != 0  # TODO(atheler): Kind of redundant in this fraction based setting.
 
 
-def is_complex(metre):
+def is_complex(metre: Fraction) -> bool:
     """Check if complex metre (e.g. 7/8)."""
     if is_divisible(metre.numerator, DUPLE):
         return False
@@ -80,7 +80,7 @@ def is_complex(metre):
     return True
 
 
-def is_compound(metre):
+def is_compound(metre: Fraction) -> bool:
     """Check if compound metre. E.g. 6/8, 9/8."""
     if metre.numerator < 6:
         return False
@@ -88,12 +88,12 @@ def is_compound(metre):
     return is_divisible(metre.numerator, TRIPLE)
 
 
-def is_simple(metre):
+def is_simple(metre: Fraction) -> bool:
     """Check if simple metre."""
     return metre.numerator in {DUPLE, TRIPLE, QUAD}
 
 
-def default_beat_value(metre):
+def default_beat_value(metre: Fraction) -> Fraction:
     """Default / "best guess" beat value for a given metre.
 
     Args:
@@ -128,7 +128,7 @@ def default_beat_value(metre):
     return create_metre(1, metre.denominator)
 
 
-def number_of_beats(metre, beatValue=None):
+def number_of_beats(metre: Fraction, beatValue: Fraction = None) -> int:
     """Number of beats in a bar."""
     if beatValue is None:
         beatValue = default_beat_value(metre)

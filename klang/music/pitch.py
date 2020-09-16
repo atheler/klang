@@ -34,19 +34,19 @@ ACCIDENTAL_SHIFTS = {
 """dict: Accidental string (str) -> Pitch modifier value (int)."""
 
 
-def frequency_2_pitch(frequency, kammerton=KAMMERTON):
+def frequency_2_pitch(frequency: float, kammerton: float = KAMMERTON) -> int:
     """Frequency to MIDI note number (equal temperament)."""
     # TODO(atheler): To be deprecated?
     return 69 + 12 * np.log2(frequency / kammerton)
 
 
-def pitch_2_frequency(noteNumber, kammerton=KAMMERTON):
+def pitch_2_frequency(noteNumber: int, kammerton: float = KAMMERTON) -> float:
     """MIDI note number to frequency (equal temperament)."""
     # TODO(atheler): To be deprecated?
     return (2 ** ((noteNumber - 69) / 12)) * kammerton
 
 
-def note_name_2_pitch(note, midi=False):
+def note_name_2_pitch(note: str, midi: bool = False) -> int:  # TODO: Rename note arg -> noteName? Or simply name?
     """Convert note name to pitch number. Uses scientific pitch notation by
     default (one octave difference compared to MIDI).
 
@@ -78,7 +78,7 @@ def note_name_2_pitch(note, midi=False):
     return pitch + shift + octave * DODE
 
 
-def pitch_2_note_name(pitch, midi=False):
+def pitch_2_note_name(pitch: int, midi: bool = False) -> str:
     """Convert pitch number(s) to note name(s)."""
     """
     octave, note = np.divmod(pitch, DODE)

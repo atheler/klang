@@ -6,6 +6,7 @@ scale. A scale can be converted to pitches with cumsum. [0, 2, 4, 5, 7, 9, 11].
 Resources:
   - https://ianring.com/musictheory/scales/
 """
+from typing import Sequence, List, Dict
 import pkgutil
 
 import numpy as np
@@ -24,28 +25,28 @@ __all__ = [
 MASK = 2 ** PITCH_CLASSES
 """array: Pitch number values for encoding."""
 
-ALL_POSSIBLE_SCALES = []
-"""list: All possible scales. Ordered by binary code."""
+ALL_POSSIBLE_SCALES: List[np.ndarray] = []
+"""All possible scales. Ordered by binary code."""
 
-KNOWN_SCALES = {}
-"""dict: Scale name (str) -> Scale code (int)."""
+KNOWN_SCALES: Dict[str, int] = {}
+"""Scale name to scale code."""
 
 _ANGLES = np.linspace(0, TAU, DODE, endpoint=False)
 """array: Chromatic angles."""
 
 
-def find_scale(name):
+def find_scale(name: str) -> np.ndarray:
     """Find scale by name in database."""
     code = find_item(KNOWN_SCALES, name)
     return ALL_POSSIBLE_SCALES[code]
 
 
-def scale_2_pitches(scale):
+def scale_2_pitches(scale: Sequence[int]) -> np.ndarray:
     """Get scale pitches."""
     return np.roll(np.cumsum(scale), shift=1) % DODE
 
 
-def pitches_2_scale(pitches):
+def pitches_2_scale(pitches: Sequence[int]) -> np.ndarray:
     """Convert pitches to intervals scale representation."""
     pitches = np.sort(np.mod(pitches, DODE))
     return np.diff(pitches, append=DODE)
@@ -56,13 +57,13 @@ assert np.all(
 )
 
 
-def scale_2_code(scale):
+def scale_2_code(scale: Sequence[int]) -> int:
     """Get binary scale code for scale."""
     pitches = scale_2_pitches(scale)
     return MASK[pitches].sum()
 
 
-def code_2_scale(code):
+def code_2_scale(code: int) -> np.ndarray:
     """Build scale from binary scale code."""
     assert 0 <= code <= 2 ** DODE
     pitches = []
@@ -73,14 +74,14 @@ def code_2_scale(code):
     return pitches_2_scale(pitches)
 
 
-def all_possible_scales():
+def all_possible_scales() -> List[np.ndarray]:
     """All 2048 possible music scales in an octave."""
     return [
         code_2_scale(code) for code in range(2 ** DODE)
     ]
 
 
-def _load_known_scales():
+def _load_known_scales() -> Dict[str, np.ndarray]:
     data = pkgutil.get_data('klang.music', 'data/scales.csv')
     scales = {
         name: scale_2_code(scale)

@@ -1,7 +1,6 @@
 """Audio effects blocks."""
-from typing import Tuple, Union
+from typing import Tuple
 import functools
-import fractions
 import math
 
 import numpy as np
@@ -10,17 +9,16 @@ import samplerate
 
 from klang.audio.filters import BackwardCombFilter
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
-from klang.audio.oscillators import Oscillator, PwmOscillator
-from klang.audio.waves import sine
+from klang.audio.oscillators import PwmOscillator
 from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 from klang.block import Block
 from klang.composite import Composite
 from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
-from klang.connections import Input, Relay, Output
+from klang.connections import Input, Relay
 from klang.constants import PI, INF
 from klang.constants import TAU, MONO, STEREO
 from klang.math import clip, blend, linear_mapping
-from klang.music.tempo import compute_duration
+from klang.music.tempo import compute_duration, TimeOrNoteValue
 from klang.primes import find_next_primes
 from klang.ring_buffer import RingBuffer
 
@@ -30,9 +28,6 @@ __all__ = [
     'Filter', 'Subsampler', 'Bitcrusher', 'OctaveDistortion', 'TanhDistortion',
     'PitchShifter', 'Transformer', 'Reverb',
 ]
-
-
-FrequencyOrTempoAware = Union[float, fractions.Fraction]
 
 
 def sub_sample(array, skip):
@@ -120,7 +115,7 @@ class Tremolo(Composite):
         zi: Low pass filter state.
     """
 
-    def __init__(self, rate: FrequencyOrTempoAware = 3., depth: float = .8,
+    def __init__(self, rate: TimeOrNoteValue = 3., depth: float = .8,
                  smoothness: float = 1., dutyCycle: float = .5):
         """Kwargs:
             rate: Rate of tremolo.
