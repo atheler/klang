@@ -7,6 +7,7 @@ from klang.audio import (
 from klang.klang import run_klang
 from klang.messages import Note
 from klang.sequencer import Sequencer
+from klang.music.note_values import WHOLE_NOTE
 
 
 Alow = Note(pitch=57)
@@ -38,8 +39,9 @@ if __name__ == '__main__':
     # Bass synthesizer
     sequencer = Sequencer(
         pattern=[[38, 41, 0, 0, 36, 34, 0, 0]],
-        tempo=15,
-        relNoteDuration=1.
+        tempo=120,
+        relNoteLength=1.,
+        grid=WHOLE_NOTE,
     )
     bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
 
@@ -47,6 +49,5 @@ if __name__ == '__main__':
     lfo | fil.frequency
     mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
     mixer.gains = [1., .3]
-    dac = mixer | Dac(nChannels=1)
 
-    run_klang(dac)
+    run_klang(mixer | Dac())

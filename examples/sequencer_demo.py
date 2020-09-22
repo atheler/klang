@@ -19,7 +19,7 @@ if __name__ == '__main__':
     seq = Sequencer(
         PATTERN,
         tempo=TEMPO,
-        relNoteDuration=.8
+        relNoteLength=.8
     )
 
     # Create synthesizer
@@ -34,4 +34,4 @@ if __name__ == '__main__':
             + (seq.outputs[2] | synthesizer | Delay(time=.25, feedback=.25))
     mixer.gains = [.7, .1, 1.]
 
-    run_klang(mixer | Dac(nChannels=1))
+    run_klang(mixer | Dac())

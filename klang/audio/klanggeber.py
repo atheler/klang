@@ -73,7 +73,7 @@ class Dac(Block):
 
     """Sound card audio output."""
 
-    def __init__(self, nChannels):
+    def __init__(self, nChannels=MONO):
         super().__init__(nInputs=nChannels)
         self.nChannels = nChannels
         self.mute_inputs()

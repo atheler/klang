@@ -14,7 +14,4 @@ if __name__ == '__main__':
     voice = Voice(osc, env)
     synthesizer = MonophonicSynthesizer(voice)
 
-    dac = Dac(nChannels=1)
-    keyboard | synthesizer | dac
-
-    run_klang(dac)
+    run_klang(keyboard | synthesizer | Dac())

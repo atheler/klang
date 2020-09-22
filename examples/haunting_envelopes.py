@@ -7,6 +7,7 @@ import fractions
 from klang.audio import (
     AR, Dac, Oscillator, StereoMixer, Voice, sine, triangle
 )
+from klang.constants import STEREO
 from klang.klang import run_klang
 from klang.math import blend
 from klang.messages import Note
@@ -90,4 +91,4 @@ if __name__ == '__main__':
         print(note)
         voice.input.push(note)
 
-    run_klang(mixer | Dac(nChannels=2))
+    run_klang(mixer | Dac(nChannels=STEREO))
