@@ -30,37 +30,6 @@ __all__ = [
 ]
 
 
-def sub_sample(array, skip):
-    """Sub / downsample sample array.
-
-    Usage:
-        >>> samples = np.arange(6)
-        ... sub_sample(samples, 2)
-        array([0, 0, 2, 2, 4, 4])
-    """
-    return np.repeat(array[..., ::skip], skip, axis=-1)
-
-
-def bit_crush(samples, nBits):
-    """Bit crush samples.
-
-    Usage:
-        >>> bit_crush(np.arange(-4, 4), nBits=1)
-        array([-4, -4, -2, -2,  0,  0,  2,  2])
-    """
-    return (samples >> nBits) << nBits
-
-
-def octave_distortion(samples):
-    """Non-linear octaver distortion."""
-    return 2. * samples ** 2 - 1.
-
-
-def tanh_distortion(samples, drive=1.):
-    """Tanh distortion. Only odd harmonics."""
-    return np.tanh(drive * samples)
-
-
 @functools.lru_cache()
 def low_pass_coefficients(frequency: float) -> Tuple[list, list]:
     """Filter coefficients for single pole low pass IIR filter. For decay use
@@ -429,9 +398,20 @@ class Subsampler(Block):
         super().__init__(nInputs=1, nOutputs=1)
         self.factor = factor
 
+    @staticmethod
+    def sub_sample(array, skip):
+        """Sub / downsample sample array.
+
+        Usage:
+            >>> samples = np.arange(6)
+            ... sub_sample(samples, 2)
+            array([0, 0, 2, 2, 4, 4])
+        """
+        return np.repeat(array[..., ::skip], skip, axis=-1)
+
     def update(self):
         samples = self.input.get_value()
-        subSamples = sub_sample(samples, self.factor)
+        subSamples = self.sub_sample(samples, self.factor)
         self.output.set_value(subSamples)
 
 
@@ -450,12 +430,21 @@ class Bitcrusher(Block):
         super().__init__(nInputs=1, nOutputs=1)
         self.nBits = nBits
 
+    @staticmethod
+    def bit_crush(samples, nBits):
+        """Bit crush float samples.
+
+        Usage:
+            >>> bit_crush(np.arange(-4, 4), nBits=1)
+            array([-4, -4, -2, -2,  0,  0,  2,  2])
+        """
+        samplesI = convert_samples_to_int(samples)
+        crushedSamplesI = (samplesI >> nBits) << nBits
+        return convert_samples_to_float(crushedSamplesI)
+
     def update(self):
         samples = self.input.get_value()
-        samples = convert_samples_to_int(samples)
-        samples = bit_crush(samples, self.nBits)
-        samples = convert_samples_to_float(samples)
-        self.output.set_value(samples)
+        self.output.set_value(self.bit_crush(samples, self.nBits))
 
 
 class OctaveDistortion(Block):
@@ -465,9 +454,14 @@ class OctaveDistortion(Block):
     def __init__(self):
         super().__init__(nInputs=1, nOutputs=1)
 
+    @staticmethod
+    def octave_distortion(samples):
+        """Non-linear octaver distortion."""
+        return 2. * samples ** 2 - 1.
+
     def update(self):
         samples = self.input.get_value()
-        self.output.set_value(octave_distortion(samples))
+        self.output.set_value(self.octave_distortion(samples))
 
 
 class TanhDistortion(Block):
@@ -481,9 +475,14 @@ class TanhDistortion(Block):
         super().__init__(nInputs=1, nOutputs=1)
         self.drive = drive
 
+    @staticmethod
+    def tanh_distortion(samples, drive=1.):
+        """Tanh distortion. Only odd harmonics."""
+        return np.tanh(drive * samples)
+
     def update(self):
         samples = self.input.get_value()
-        self.output.set_value(tanh_distortion(samples, self.drive))
+        self.output.set_value(self.tanh_distortion(samples, self.drive))
 
 
 class PitchShifter(Block):
@@ -564,6 +563,8 @@ class Reverb(Block):
 
     """Simple comb filter / echo based reverb effect.
 
+    Prime number delay taps.
+
     TODO:
       - Different gain policies.
       - Bandpass in feedback path of filters
@@ -571,6 +572,13 @@ class Reverb(Block):
 
     def __init__(self, decay: float = 1.5, preDelay: float = .03, dryWet: float
                  = .7, nEchos: int = 10, echoType: type = BackwardCombFilter):
+        """Kwargs:
+            decay: Decay value in seconds (~approx).
+            preDelay: Lower bound of all delay times.
+            dryWet: Amount of dry and effected audio portion.
+            nEchos: Number of echo taps.
+            echoType: Filter type for delay taps.
+        """
         assert nEchos > 0
         super().__init__(nInputs=1, nOutputs=1)
         self.dryWet = clip(dryWet, 0., 1.)
