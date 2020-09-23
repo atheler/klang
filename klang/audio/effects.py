@@ -1,5 +1,5 @@
 """Audio effects blocks."""
-from typing import Tuple
+from typing import Tuple, Callable
 import functools
 import math
 
@@ -9,14 +9,14 @@ import samplerate
 
 from klang.audio.filters import BackwardCombFilter
 from klang.audio.helpers import NYQUIST_FREQUENCY, get_silence
-from klang.audio.oscillators import PwmOscillator
+from klang.audio.oscillators import Oscillator, PwmOscillator
+from klang.audio.waves import square
 from klang.audio.wavfile import convert_samples_to_float, convert_samples_to_int
 from klang.block import Block
 from klang.composite import Composite
 from klang.config import BUFFER_SIZE, SAMPLING_RATE, KAMMERTON
 from klang.connections import Input, Relay
-from klang.constants import PI, INF
-from klang.constants import TAU, MONO, STEREO
+from klang.constants import PI, TAU, INF, MONO, STEREO
 from klang.math import clip, blend, linear_mapping
 from klang.music.tempo import compute_duration, TimeOrNoteValue
 from klang.primes import find_next_primes
@@ -60,12 +60,14 @@ class Gain(Block):
     """Simple gain block."""
 
     def __init__(self, gain=1.):
-        super().__init__(nInputs=1, nOutputs=1)
-        self.gain = gain
+        super().__init__(nInputs=2, nOutputs=1)
+        _, self.gain = self.inputs
+        self.gain.set_value(gain)
 
     def update(self):
+        gain = self.gain.value
         samples = self.input.value
-        self.output.set_value(self.gain * samples)
+        self.output.set_value(gain * samples)
 
 
 class Tremolo(Composite):
@@ -611,3 +613,49 @@ class Reverb(Block):
 
         y /= len(self.filters)
         self.output.set_value(blend(x, y, self.dryWet))
+
+
+class RingModulator(Composite):
+
+    """LFO modulated ring modulator."""
+
+    def __init__(self, frequency: float = 500., rate: float = 2., amount: float =
+                 20, wave_func: Callable = square, dryWet: float = 1.):
+        """Kwargs:
+            frequency: AM base frequency.
+            rate: LFO rate.
+            amount: Amount of FM modulation.
+            wave_func: LFO wave function.
+            dryWet: Blend level.
+        """
+        super().__init__()
+        self.inputs = [
+            Input(owner=self), Input(owner=self), Relay(owner=self),
+            Input(owner=self), Input(owner=self),
+        ]
+        self.outputs = [Relay(owner=self)]
+        _, self.frequency, self.rate, self.amount, self.dryWet = self.inputs
+        self.frequency.set_value(frequency)
+        self.rate.set_value(rate)
+        self.amount.set_value(amount)
+        self.dryWet.set_value(dryWet)
+
+        self.lfo = Oscillator(wave_func=wave_func)
+        self.modulator = Oscillator()
+
+        self.rate | self.lfo
+
+    def update(self):
+        # Frequency with modulation from lfo
+        self.lfo.update()
+        freqs = self.frequency.value + self.amount.value * self.lfo.output.value
+
+        # AM envelope from modulator
+        self.modulator.frequency.set_value(freqs)
+        self.modulator.update()
+        amSignal = self.modulator.output.value
+
+        # Blend signals
+        x = self.input.value
+        y = blend(x, amSignal * x, self.dryWet.value)
+        self.output.set_value(y)
