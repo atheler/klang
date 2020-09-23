@@ -3,7 +3,7 @@ import unittest
 
 from klang.audio.mixer import Mixer
 from klang.block import fetch_output, fetch_input, Block
-from klang.connections import IncompatibleError
+from klang.connections import IncompatibleConnection
 
 
 class TestPipeingOperator(unittest.TestCase):

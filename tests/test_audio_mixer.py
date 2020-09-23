@@ -2,7 +2,7 @@ import unittest
 
 from klang.block import fetch_output, fetch_input, Block
 from klang.audio.mixer import Mixer
-from klang.connections import IncompatibleError
+from klang.connections import IncompatibleConnection
 
 
 class TestOperatorOverloading(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestOperatorOverloading(unittest.TestCase):
 
     def test_mixing(self):
         # __add__(mixer, input)
-        with self.assertRaises(IncompatibleError):
+        with self.assertRaises(IncompatibleConnection):
             Mixer(nInputs=0) + Block(1, 1).input
 
         # __add__(mixer, output)
@@ -35,7 +35,7 @@ class TestOperatorOverloading(unittest.TestCase):
         self.assert_is_connected(block, mixer.inputs[0])
 
         # __radd__(input, mixer)
-        with self.assertRaises(IncompatibleError):
+        with self.assertRaises(IncompatibleConnection):
             Block(1, 1).input + Mixer(nInputs=0)
 
         # __radd__(output, mixer)

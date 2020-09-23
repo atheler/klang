@@ -10,6 +10,7 @@ Relays can be used for block composites and they connect with inputs and
 outputs. E.g. Output -> Relay -> Input.
 """
 import collections
+import itertools
 
 from klang.errors import KlangError
 
@@ -19,60 +20,97 @@ __all__ = [
 ]
 
 
+class InputAlreadyConnected(KlangError):
+
+    """Can not connect to already connected input."""
+
+
+class IncompatibleConnection(KlangError):
+
+    """The two components can not be connected with each other."""
+
+
 def is_valid_connection(output, input_):
     """Check if connection types are connectable."""
+    outputType = type(output)
+    inputType = type(input_)
     validConnectionTypes = {
-        OutputBase: (RelayBase, InputBase),
-        RelayBase: (RelayBase, InputBase),
-        Output: (Relay, Input),
-        Relay: (Relay, Input),
-        MessageOutput: (MessageRelay, MessageInput),
-        MessageRelay: (MessageRelay, MessageInput),
+        # Base classes
+        (OutputBase, RelayBase),
+        (OutputBase, InputBase),
+        (RelayBase, RelayBase),
+        (RelayBase, InputBase),
+
+        # Value classes
+        (Output, Relay),
+        (Output, Input),
+        (Relay, Relay),
+        (Relay, Input),
+
+        # Message classes
+        (MessageOutput, MessageRelay),
+        (MessageOutput, MessageInput),
+        (MessageRelay, MessageRelay),
+        (MessageRelay, MessageInput),
     }
 
-    validInputTypes = validConnectionTypes.get(type(output), ())
-
-    # pylint: disable=unidiomatic-typecheck
-    # Idiomatic isinstance(input_, validInputTypes) check would also include
-    # parent classes. We do not want that (e.g. Connecting BaseOutput with a
-    # MessageInput)
-    return type(input_) in validInputTypes
+    return (outputType, inputType) in validConnectionTypes
 
 
 def validate_connection(output, input_):
     """Validate connection coupling tuple.
 
     Raises:
-        IncompatibleError: When it is not possible to connect output with
+        IncompatibleConnection: When it is not possible to connect output with
             input.
     """
     if not is_valid_connection(output, input_):
         fmt = 'Can not connect %s with %s!'
         msg = fmt % (type(output).__name__, type(input_).__name__)
-        raise IncompatibleError(msg)
-
-
-def validate_input_free(input_):
-    """Validate if input_ is connectable."""
-    if input_.connected:
-        msg = '%s is already connected to another output!' % input_
-        raise AlreadyConnectedError(msg)
+        raise IncompatibleConnection(msg)
 
 
 def make_connection(output, input_):
     """Make directional connection from output -> input_."""
-    assert isinstance(output, OutputBase)
-    assert isinstance(input_, InputBase)
+    validate_connection(output, input_)
+    if input_.connected:
+        msg = '%s is already connected to another output!' % input_
+        raise InputAlreadyConnected(msg)
+
+    # Make the actual connection
     output.outgoingConnections.add(input_)
     input_.incomingConnection = output
 
 
 def break_connection(output, input_):
     """Break directional connection from output -> input_."""
-    assert isinstance(output, OutputBase)
-    assert isinstance(input_, InputBase)
+    validate_connection(output, input_)
+
+    # Break the actual connection
     output.outgoingConnections.remove(input_)
     input_.incomingConnection = None
+
+
+def is_connected(output, input_):
+    """Check if output is connected to input_."""
+    if not is_valid_connection(output, input_):
+        return False
+
+    return output is input_.incomingConnection and input_ in output.outgoingConnections
+
+
+def are_connected(*connectables):
+    """Check if each pair in a chain of connectalbes are connected to each
+    other.
+    """
+    # Iterate over pairs
+    outputs, inputs = itertools.tee(connectables)
+    next(inputs, None)
+    for output, input_ in zip(outputs, inputs):
+        if not is_connected(output, input_):
+            return False
+
+    return True
 
 
 def str_function(connection):
@@ -87,27 +125,6 @@ def str_function(connection):
         infos.append('not connected')
 
     return '%s(%s)' % (type(connection).__name__, ', '.join(infos))
-
-
-class NotConnectedError(KlangError):
-
-    """Connectable is not connected."""
-
-    pass
-
-
-class AlreadyConnectedError(KlangError):
-
-    """Connectable already connected."""
-
-    pass
-
-
-class IncompatibleError(KlangError):
-
-    """The two components can not be connected with each other."""
-
-    pass
 
 
 class OutputBase:
@@ -130,8 +147,6 @@ class OutputBase:
 
     def connect(self, input_):
         """Connect with input."""
-        validate_connection(self, input_)
-        validate_input_free(input_)
         make_connection(self, input_)
 
     def disconnect(self, input_):
@@ -161,8 +176,6 @@ class InputBase:
 
     def connect(self, output):
         """Connect with output."""
-        validate_connection(output, self)
-        validate_input_free(self)
         make_connection(output, self)
 
     def disconnect(self, output):
@@ -188,16 +201,16 @@ class RelayBase(InputBase, OutputBase):
     def connect(self, other):
         # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
-            OutputBase.connect(self, other)
+            make_connection(self, other)
         else:
-            InputBase.connect(self, other)
+            make_connection(other, self)
 
     def disconnect(self, other):
         # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
-            OutputBase.disconnect(self, other)
+            break_connection(self, other)
         else:
-            InputBase.disconnect(self, other)
+            break_connection(other, self)
 
 
 class _ValueContainer:
@@ -275,8 +288,6 @@ class Relay(RelayBase, Input):
 
     Will fetch value from connected outputs.
     """
-
-    pass
 
 
 class _MessageQueue:

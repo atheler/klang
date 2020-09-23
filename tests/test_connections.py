@@ -4,10 +4,9 @@ therefore some duplicated tests.
 import unittest
 
 from klang.connections import (
-    is_valid_connection,
-    AlreadyConnectedError,
-    IncompatibleError,
+    IncompatibleConnection,
     Input,
+    InputAlreadyConnected,
     InputBase,
     MessageInput,
     MessageOutput,
@@ -16,93 +15,97 @@ from klang.connections import (
     OutputBase,
     Relay,
     RelayBase,
+    are_connected,
+    is_connected,
+    is_valid_connection,
 )
 
 
-class TestConnectables(unittest.TestCase):
-    def test_connection(self):
-        a = OutputBase(owner=None)
-        b = InputBase(owner=None)
-        a.connect(b)
+class TestConnections(unittest.TestCase):
 
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
+    """Helper functions for connection testing."""
 
-        self.assertIn(b, a.outgoingConnections)
-        self.assertEqual(a, b.incomingConnection)
+    def assert_connected(self, *connectables):
+        for con in connectables:
+            self.assertTrue(con.connected)
 
-    def test_disconnect(self):
-        a = OutputBase(owner=None)
-        b = InputBase(owner=None)
-        a.connect(b)
+        self.assertTrue(are_connected(*connectables))
 
-        a.disconnect(b)
+    def assert_not_connected(self, *connectables):
+        for con in connectables:
+            self.assertFalse(con.connected)
 
-        self.assertFalse(a.connected)
-        self.assertFalse(b.connected)
+        self.assertFalse(are_connected(*connectables))
+
+
+class TestConnectables(TestConnections):
+    def test_connect_and_disconnect(self):
+        src = OutputBase()
+        dst = InputBase()
+
+        self.assert_not_connected(src, dst)
+
+        src.connect(dst)
+
+        self.assert_connected(src, dst)
+
+        src.disconnect(dst)
+
+        self.assert_not_connected(src, dst)
+
+        # And reverse direction
+        dst.connect(src)
+
+        self.assert_connected(src, dst)
+
+    def test_wrong_coupling(self):
+        with self.assertRaises(IncompatibleConnection):
+            InputBase().connect(InputBase())
+
+        with self.assertRaises(IncompatibleConnection):
+            OutputBase().connect(OutputBase())
 
     def test_one_to_many_connections(self):
-        a = OutputBase(owner=None)
-        b = InputBase(owner=None)
-        c = InputBase(owner=None)
+        src = OutputBase()
+        destinatons = [
+            InputBase(),
+            InputBase(),
+            InputBase(),
+        ]
 
-        a.connect(b)
-        a.connect(c)
+        for dst in destinatons:
+            src.connect(dst)
 
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
-        self.assertTrue(c.connected)
+        for dst in destinatons:
+            self.assert_connected(src, dst)
 
-        self.assertIn(b, a.outgoingConnections)
-        self.assertIn(c, a.outgoingConnections)
-        self.assertIs(a, b.incomingConnection)
-        self.assertIs(a, c.incomingConnection)
+    def test_input_already_connected(self):
+        anOutput = OutputBase()
+        input_ = InputBase()
+        anOtherOutput = OutputBase()
+        anOutput.connect(input_)
 
-    def test_already_connected(self):
-        a = OutputBase()
-        b = InputBase()
-        c = OutputBase()
-        a.connect(b)
-
-        with self.assertRaises(AlreadyConnectedError):
-            c.connect(b)
-
-        b.disconnect(a)
-        #c.connect(b)
+        with self.assertRaises(InputAlreadyConnected):
+            anOtherOutput.connect(input_)
 
 
-class TestInputOutput(unittest.TestCase):
-    def test_one_to_many(self):
-        src = Output(None)
-        a = Input(None)
-        b = Input(None)
+class TestValueConnections(TestConnections):
+    def test_default_value(self):
+        src = Output(value=42)
+        dst = Input(value=0)
 
-        src.connect(a)
-        src.connect(b)
+        self.assertEqual(src.value, 42)
+        self.assertEqual(dst.value, 0)
 
-        self.assertTrue(src.connected)
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
+        src.connect(dst)
 
-        self.assertIs(src, a.incomingConnection)
-        self.assertIs(src, b.incomingConnection)
-        self.assertIn(a, src.outgoingConnections)
-        self.assertIn(b, src.outgoingConnections)
-
-    def test_only_one_connection_per_input(self):
-        a = Output(None)
-        b = Output(None)
-        dst = Input(None)
-
-        dst.connect(b)
-
-        with self.assertRaises(AlreadyConnectedError):
-            dst.connect(b)
+        self.assertEqual(src.value, 42)
+        self.assertEqual(dst.value, 42)
 
     def test_value_transfer(self):
         nothing = 'not yet set'
-        src = Output(None, value=nothing)
-        dst = Input(None, value=nothing)
+        src = Output(value=nothing)
+        dst = Input(value=nothing)
         src.connect(dst)
 
         self.assertEqual(src.value, nothing)
@@ -110,52 +113,60 @@ class TestInputOutput(unittest.TestCase):
         self.assertEqual(src.get_value(), nothing)
         self.assertEqual(dst.get_value(), nothing)
 
-        src.value = 42
+        src.set_value(42)
 
         self.assertEqual(src.value, 42)
         self.assertEqual(dst.value, 42)
         self.assertEqual(src.get_value(), 42)
         self.assertEqual(dst.get_value(), 42)
 
+        src.value = 43
+
+        self.assertEqual(src.value, 43)
+        self.assertEqual(dst.value, 43)
+        self.assertEqual(src.get_value(), 43)
+        self.assertEqual(dst.get_value(), 43)
+
     def test_only_input_to_output_connections(self):
-        with self.assertRaises(IncompatibleError):
+        with self.assertRaises(IncompatibleConnection):
             Output().connect(Output())
 
-        with self.assertRaises(IncompatibleError):
+        with self.assertRaises(IncompatibleConnection):
             Input().connect(Input())
 
 
 class TestMessageInputOutput(unittest.TestCase):
-    def test_message_flow(self):
-        src = MessageOutput(None)
-        dst = MessageInput(None)
-
+    def test_message_flow_and_receive(self):
+        src = MessageOutput()
+        dst = MessageInput()
         src.connect(dst)
         msg = 'Hello World!'
         src.send(msg)
 
-        self.assertEqual(next(dst.receive()), msg)
+        self.assertEqual(list(dst.queue), [msg])
 
     def test_receive(self):
-        input = MessageInput()
+        input_ = MessageInput()
         messages = list(range(10))
         for msg in messages:
-            input.push(msg)
+            input_.push(msg)
 
-        self.assertEqual(list(input.receive()), messages)
-        self.assertEqual(len(input.queue), 0)
+        self.assertEqual(len(input_.queue), 10)
+        self.assertEqual(list(input_.receive()), messages)
+        self.assertEqual(len(input_.queue), 0)
 
     def test_receive_latest(self):
-        input = MessageInput()
+        input_ = MessageInput()
 
-        self.assertIs(input.receive_latest(), None)
+        self.assertIs(input_.receive_latest(), None)
 
         messages = list(range(10))
         for msg in messages:
-            input.push(msg)
+            input_.push(msg)
 
-        self.assertEqual(input.receive_latest(), 9)
-        self.assertEqual(len(input.queue), 0)
+        self.assertEqual(len(input_.queue), 10)
+        self.assertEqual(input_.receive_latest(), 9)
+        self.assertEqual(len(input_.queue), 0)
 
     def test_one_to_many(self):
         src = MessageOutput()
@@ -171,7 +182,7 @@ class TestMessageInputOutput(unittest.TestCase):
             self.assertEqual(list(dst.receive()), messages)
 
 
-class TestNewConnections(unittest.TestCase):
+class TestNewConnections(TestConnections):
     def test_is_valid_connection(self):
         self.assertTrue(is_valid_connection(OutputBase(), InputBase()))
         self.assertTrue(is_valid_connection(OutputBase(), RelayBase()))
@@ -183,142 +194,93 @@ class TestNewConnections(unittest.TestCase):
         self.assertTrue(is_valid_connection(RelayBase(), RelayBase()))
         self.assertFalse(is_valid_connection(OutputBase(), OutputBase()))
 
-
         # Value
         self.assertFalse(is_valid_connection(MessageOutput(), InputBase()))
         self.assertFalse(is_valid_connection(MessageOutput(), RelayBase()))
         self.assertFalse(is_valid_connection(OutputBase(), MessageInput()))
         self.assertFalse(is_valid_connection(RelayBase(), MessageInput()))
 
-    def test_input_output_base_classes(self):
-        a = OutputBase()
-        b = InputBase()
+    def test_connect_and_disconnect_with_relay(self):
+        src = OutputBase()
+        relay = RelayBase()
+        dst = InputBase()
 
-        self.assertFalse(a.connected)
-        self.assertFalse(b.connected)
+        self.assert_not_connected(src, relay, dst)
 
-        with self.assertRaises(IncompatibleError):
-            a.connect(a)
+        src.connect(relay)
 
-        with self.assertRaises(IncompatibleError):
-            b.connect(b)
+        self.assert_connected(src, relay)
+        #self.assert_not_connected(relay, dst)  # relay is .connected
+        self.assertFalse(is_connected(relay, dst))
 
-        a.connect(b)
+        relay.connect(dst)
 
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
+        self.assert_connected(src, relay, dst)
 
-        with self.assertRaises(AlreadyConnectedError):
-            a.connect(b)
+        src.disconnect(relay)
+        relay.disconnect(dst)
 
-    def test_connecting_both_ways(self):
-        a = OutputBase()
-        b = InputBase()
+        self.assertFalse(is_connected(relay, dst))
 
-        a.connect(b)
+        # Test reverse direction
+        dst.connect(relay)
+        relay.connect(src)
 
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
+        self.assert_connected(src, relay, dst)
 
-        a.disconnect(b)
+    def test_value_flow_with_relay(self):
+        src = Output(value=42)
+        dst = Input(value=-1)
+        relay = Relay()
 
-        self.assertFalse(a.connected)
-        self.assertFalse(b.connected)
+        self.assertEqual(src.value, 42)
+        self.assertEqual(dst.value, -1)
 
-        b.connect(a)
+        src.connect(relay)
+        relay.connect(dst)
 
-        self.assertTrue(a.connected)
-        self.assertTrue(b.connected)
+        self.assertEqual(src.value, 42)
+        self.assertEqual(dst.value, 42)
 
-    def test_relay_base_class(self):
-        a = OutputBase()
-        b = InputBase()
-        r = RelayBase()
+        src.set_value(666)
 
-        a.connect(r)
-        r.connect(b)
-
-        self.assertTrue(r.connected)
-
-    def test_relay_base_class_in_reverse_direction(self):
-        a = OutputBase()
-        b = InputBase()
-        r = RelayBase()
-
-        b.connect(r)
-        r.connect(a)
-
-        self.assertTrue(r.connected)
-
-    def test_value_connection(self):
-        a = Output()
-        b = Input()
-
-        self.assertEqual(a.value, 0.)
-        self.assertEqual(b.value, 0.)
-
-        a.connect(b)
-        a.set_value(666)
-
-        self.assertEqual(a.value, 666)
-        self.assertEqual(b.value, 666)
-
-    def test_value_connection_with_relay(self):
-        a = Output()
-        b = Input()
-        r = Relay()
-
-        a.connect(r)
-        r.connect(b)
-
-        a.set_value(666)
-
-        self.assertEqual(b.value, 666)
+        self.assertEqual(src.value, 666)
+        self.assertEqual(dst.value, 666)
 
     def test_message_connection(self):
-        a = MessageOutput()
-        b = MessageInput()
-        c = MessageInput()
+        src = MessageOutput()
+        destinatons = [
+            MessageInput(),
+            MessageInput(),
+            MessageInput(),
+        ]
+        for dst in destinatons:
+            src.connect(dst)
 
-        a.connect(b)
-        a.connect(c)
+        src.send('this')
+        src.send('is')
+        src.send('it')
 
-        a.send('this')
-        a.send('is')
-        a.send('it')
-
-        self.assertEqual(list(b.receive()), ['this', 'is', 'it'])
-        self.assertEqual(c.receive_latest(), 'it')
+        for dst in destinatons:
+            recv = list(dst.receive())
+            self.assertEqual(recv, ['this', 'is', 'it'])
 
     def test_message_connection_with_relay(self):
-        a = MessageOutput()
-        b = MessageInput()
-        r = MessageRelay()
+        src = MessageOutput()
+        dst = MessageInput()
+        relay = MessageRelay()
+        src.connect(relay)
+        relay.connect(dst)
+        src.send('Hello World')
 
-        a.connect(r)
-        r.connect(b)
-
-        a.send('Hello World')
-
-        self.assertEqual(b.receive_latest(), 'Hello World')
+        self.assertEqual(dst.receive_latest(), 'Hello World')
 
     def test_relay_base_only_one_input_connection(self):
-        a = OutputBase()
-        r = RelayBase()
-        a.connect(r)
-        b = OutputBase()
+        relay = RelayBase()
+        OutputBase().connect(relay)
 
-        with self.assertRaises(AlreadyConnectedError):
-            b.connect(r)
-
-
-class TestIncompatibleConnections(unittest.TestCase):
-    def test_some_incompatible_connections(self):
-        with self.assertRaises(IncompatibleError):
-            Output().connect(MessageInput())
-
-        with self.assertRaises(IncompatibleError):
-            MessageOutput().connect(Input())
+        with self.assertRaises(InputAlreadyConnected):
+            OutputBase().connect(relay)
 
 
 if __name__ == '__main__':
