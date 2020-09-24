@@ -26,12 +26,16 @@ class TestConnections(unittest.TestCase):
     """Helper functions for connection testing."""
 
     def assert_connected(self, *connectables):
+        """Assert that each pair of connectables is connected to each other."""
         for con in connectables:
             self.assertTrue(con.connected)
 
         self.assertTrue(are_connected(*connectables))
 
     def assert_not_connected(self, *connectables):
+        """Assert that each pair of connectables is NOT connected to each
+        other.
+        """
         for con in connectables:
             self.assertFalse(con.connected)
 
@@ -102,7 +106,7 @@ class TestValueConnections(TestConnections):
         self.assertEqual(src.value, 42)
         self.assertEqual(dst.value, 42)
 
-    def test_value_transfer(self):
+    def test_value_flow(self):
         nothing = 'not yet set'
         src = Output(value=nothing)
         dst = Input(value=nothing)
@@ -135,15 +139,24 @@ class TestValueConnections(TestConnections):
             Input().connect(Input())
 
 
-class TestMessageInputOutput(unittest.TestCase):
-    def test_message_flow_and_receive(self):
+class TestMessageConnections(unittest.TestCase):
+    def test_message_flow_from_one_to_many(self):
         src = MessageOutput()
-        dst = MessageInput()
-        src.connect(dst)
-        msg = 'Hello World!'
-        src.send(msg)
+        destinatons = [
+            MessageInput(),
+            MessageInput(),
+            MessageInput(),
+        ]
 
-        self.assertEqual(list(dst.queue), [msg])
+        for dst in destinatons:
+            src.connect(dst)
+
+        messages = ['This', 'is', 'it']
+        for msg in messages:
+            src.send(msg)
+
+        for dst in destinatons:
+            self.assertEqual(list(dst.queue), messages)
 
     def test_receive(self):
         input_ = MessageInput()
@@ -168,21 +181,8 @@ class TestMessageInputOutput(unittest.TestCase):
         self.assertEqual(input_.receive_latest(), 9)
         self.assertEqual(len(input_.queue), 0)
 
-    def test_one_to_many(self):
-        src = MessageOutput()
-        destinations = [MessageInput(), MessageInput(), MessageInput()]
-        for dst in destinations:
-            src.connect(dst)
 
-        messages = ['This', 'is', 'it']
-        for msg in messages:
-            src.send(msg)
-
-        for dst in destinations:
-            self.assertEqual(list(dst.receive()), messages)
-
-
-class TestNewConnections(TestConnections):
+class TestRelay(TestConnections):
     def test_is_valid_connection(self):
         self.assertTrue(is_valid_connection(OutputBase(), InputBase()))
         self.assertTrue(is_valid_connection(OutputBase(), RelayBase()))
@@ -200,29 +200,77 @@ class TestNewConnections(TestConnections):
         self.assertFalse(is_valid_connection(OutputBase(), MessageInput()))
         self.assertFalse(is_valid_connection(RelayBase(), MessageInput()))
 
-    def test_connect_and_disconnect_with_relay(self):
-        src = OutputBase()
+    def test_relay_base_only_one_input_connection(self):
         relay = RelayBase()
-        dst = InputBase()
+        OutputBase().connect(relay)
 
-        self.assert_not_connected(src, relay, dst)
+        with self.assertRaises(InputAlreadyConnected):
+            OutputBase().connect(relay)
 
+    @staticmethod
+    def fresh_connections():
+        """Generate a fresh connection triple"""
+        return OutputBase(), RelayBase(), InputBase()
+
+    def test_connect_and_disconnect_with_relay(self):
+
+        # Note: assertFalse(is_connected(...)) instead of
+        # assert_not_connected(...) since a relay can be "connected" to e.g. an
+        # output whilst not being connected to another input.
+
+        # src -> relay -> dst
+        src, relay, dst = self.fresh_connections()
+        src.connect(relay)
+        relay.connect(dst)
+
+        self.assert_connected(src, relay, dst)
+
+        # src -> relay, relay -> dst
+        src, relay, dst = self.fresh_connections()
         src.connect(relay)
 
-        self.assert_connected(src, relay)
-        #self.assert_not_connected(relay, dst)  # relay is .connected
+        self.assertTrue(is_connected(src, relay))
         self.assertFalse(is_connected(relay, dst))
 
         relay.connect(dst)
 
         self.assert_connected(src, relay, dst)
 
-        src.disconnect(relay)
-        relay.disconnect(dst)
+        # relay -> dst, src -> relay
+        src, relay, dst = self.fresh_connections()
+        relay.connect(dst)
 
+        self.assertFalse(is_connected(src, relay))
+        self.assertTrue(is_connected(relay, dst))
+
+        src.connect(relay)
+
+        self.assert_connected(src, relay, dst)
+
+        # relay <- src, dst <- relay
+        src, relay, dst = self.fresh_connections()
+        relay.connect(src)
+
+        self.assertTrue(is_connected(src, relay))
         self.assertFalse(is_connected(relay, dst))
 
-        # Test reverse direction
+        dst.connect(relay)
+
+        self.assert_connected(src, relay, dst)
+
+        # dst <- relay, relay <- src,
+        src, relay, dst = self.fresh_connections()
+        dst.connect(relay)
+
+        self.assertFalse(is_connected(src, relay))
+        self.assertTrue(is_connected(relay, dst))
+
+        relay.connect(src)
+
+        self.assert_connected(src, relay, dst)
+
+        # dst <- relay <- src
+        src, relay, dst = self.fresh_connections()
         dst.connect(relay)
         relay.connect(src)
 
@@ -247,25 +295,7 @@ class TestNewConnections(TestConnections):
         self.assertEqual(src.value, 666)
         self.assertEqual(dst.value, 666)
 
-    def test_message_connection(self):
-        src = MessageOutput()
-        destinatons = [
-            MessageInput(),
-            MessageInput(),
-            MessageInput(),
-        ]
-        for dst in destinatons:
-            src.connect(dst)
-
-        src.send('this')
-        src.send('is')
-        src.send('it')
-
-        for dst in destinatons:
-            recv = list(dst.receive())
-            self.assertEqual(recv, ['this', 'is', 'it'])
-
-    def test_message_connection_with_relay(self):
+    def test_message_flow_with_relay(self):
         src = MessageOutput()
         dst = MessageInput()
         relay = MessageRelay()
@@ -275,12 +305,25 @@ class TestNewConnections(TestConnections):
 
         self.assertEqual(dst.receive_latest(), 'Hello World')
 
-    def test_relay_base_only_one_input_connection(self):
-        relay = RelayBase()
-        OutputBase().connect(relay)
+    def test_message_flow_from_one_to_many_with_relay(self):
+        src = MessageOutput()
+        relay = MessageRelay()
+        destinatons = [
+            MessageInput(),
+            MessageInput(),
+            MessageInput(),
+        ]
 
-        with self.assertRaises(InputAlreadyConnected):
-            OutputBase().connect(relay)
+        src.connect(relay)
+
+        for dst in destinatons:
+            relay.connect(dst)
+
+        msg = 'this is it'
+        src.send(msg)
+
+        for dst in destinatons:
+            self.assertEqual(dst.receive_latest(), msg)
 
 
 if __name__ == '__main__':
