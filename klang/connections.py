@@ -113,18 +113,18 @@ def are_connected(*connectables):
     return True
 
 
-def str_function(connection):
+def str_function(connectable):
     """__str__ function for OutputBase and InputBase."""
     infos = []
-    if connection.owner:
-        infos.append('owner: %s' % connection.owner)
+    if connectable.owner:
+        infos.append('owner: %s' % connectable.owner)
 
-    if connection.connected:
+    if connectable.connected:
         infos.append('connected')
     else:
         infos.append('not connected')
 
-    return '%s(%s)' % (type(connection).__name__, ', '.join(infos))
+    return '%s(%s)' % (type(connectable).__name__, ', '.join(infos))
 
 
 class OutputBase:
@@ -137,6 +137,9 @@ class OutputBase:
     """
 
     def __init__(self, owner=None):
+        """Kwargs:
+            owner (Block): Parent block owning this output.
+        """
         self.owner = owner
         self.outgoingConnections = set()
 
@@ -166,6 +169,9 @@ class InputBase:
     """
 
     def __init__(self, owner=None):
+        """Kwargs:
+            owner (Block): Parent block owning this input.
+        """
         self.owner = owner
         self.incomingConnection = None
 
@@ -199,6 +205,11 @@ class RelayBase(InputBase, OutputBase):
         OutputBase.__init__(self, owner)
 
     def connect(self, other):
+        """Connect to another connectable.
+
+        Args:
+            other (OutputBase, InputBase, RelayBase): Connectable instance.
+        """
         # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
             make_connection(self, other)
@@ -206,6 +217,11 @@ class RelayBase(InputBase, OutputBase):
             make_connection(other, self)
 
     def disconnect(self, other):
+        """Disconnect from another connectable.
+
+        Args:
+            other (OutputBase, InputBase, RelayBase): Connectable instance.
+        """
         # pylint: disable=arguments-differ
         if isinstance(other, InputBase):
             break_connection(self, other)
@@ -261,12 +277,19 @@ class Input(InputBase, _ValueContainer):
 
     @property
     def value(self):
+        """Try to fetch value from connected output."""
         if self.connected:
             return self.incomingConnection.value
 
         return self._value
 
+    @value.setter
+    def value(self, value):
+        """Set value."""
+        self._value = value
+
     def get_value(self):
+        """Try to fetch value from connected output."""
         if self.connected:
             return self.incomingConnection.value
 

@@ -3,6 +3,8 @@ therefore some duplicated tests.
 """
 import unittest
 
+from klang.block import Block
+from klang.composite import Composite
 from klang.connections import (
     IncompatibleConnection,
     Input,
@@ -62,7 +64,7 @@ class TestConnectables(TestConnections):
 
         self.assert_connected(src, dst)
 
-    def test_wrong_coupling(self):
+    def test_incompatible_connections(self):
         with self.assertRaises(IncompatibleConnection):
             InputBase().connect(InputBase())
 
@@ -84,52 +86,56 @@ class TestConnectables(TestConnections):
             self.assert_connected(src, dst)
 
     def test_input_already_connected(self):
-        anOutput = OutputBase()
         input_ = InputBase()
-        anOtherOutput = OutputBase()
-        anOutput.connect(input_)
+        input_.connect(OutputBase())
 
         with self.assertRaises(InputAlreadyConnected):
-            anOtherOutput.connect(input_)
+            input_.connect(OutputBase())
 
 
 class TestValueConnections(TestConnections):
-    def test_default_value(self):
-        src = Output(value=42)
-        dst = Input(value=0)
+    def test_output_value_access(self):
+        output = Output(value='nothingSet')
 
-        self.assertEqual(src.value, 42)
-        self.assertEqual(dst.value, 0)
+        self.assertEqual(output.value, 'nothingSet')
+        self.assertEqual(output.get_value(), 'nothingSet')
 
+        output.set_value(42)
+
+        self.assertEqual(output.value, 42)
+        self.assertEqual(output.get_value(), 42)
+
+        output.value = 666
+
+        self.assertEqual(output.value, 666)
+        self.assertEqual(output.get_value(), 666)
+
+    def test_input_value_access(self):
+        input_ = Input(value='nothingSet')
+
+        self.assertEqual(input_.value, 'nothingSet')
+        self.assertEqual(input_.get_value(), 'nothingSet')
+
+        input_.set_value(42)
+
+        self.assertEqual(input_.value, 42)
+        self.assertEqual(input_.get_value(), 42)
+
+        input_.value = 666
+
+        self.assertEqual(input_.value, 666)
+        self.assertEqual(input_.get_value(), 666)
+
+    def test_input_value_when_connected_to_an_output(self):
+        src = Output(value='something')
+        dst = Input()
         src.connect(dst)
 
-        self.assertEqual(src.value, 42)
-        self.assertEqual(dst.value, 42)
-
-    def test_value_flow(self):
-        nothing = 'not yet set'
-        src = Output(value=nothing)
-        dst = Input(value=nothing)
-        src.connect(dst)
-
-        self.assertEqual(src.value, nothing)
-        self.assertEqual(dst.value, nothing)
-        self.assertEqual(src.get_value(), nothing)
-        self.assertEqual(dst.get_value(), nothing)
+        self.assertTrue('something' == src.value == dst.value == dst.get_value())
 
         src.set_value(42)
 
-        self.assertEqual(src.value, 42)
-        self.assertEqual(dst.value, 42)
-        self.assertEqual(src.get_value(), 42)
-        self.assertEqual(dst.get_value(), 42)
-
-        src.value = 43
-
-        self.assertEqual(src.value, 43)
-        self.assertEqual(dst.value, 43)
-        self.assertEqual(src.get_value(), 43)
-        self.assertEqual(dst.get_value(), 43)
+        self.assertTrue(42 == src.value == dst.value == dst.get_value())
 
     def test_only_input_to_output_connections(self):
         with self.assertRaises(IncompatibleConnection):
@@ -183,7 +189,7 @@ class TestMessageConnections(unittest.TestCase):
 
 
 class TestRelay(TestConnections):
-    def test_is_valid_connection(self):
+    def test_is_valid_connection_function(self):
         self.assertTrue(is_valid_connection(OutputBase(), InputBase()))
         self.assertTrue(is_valid_connection(OutputBase(), RelayBase()))
         self.assertTrue(is_valid_connection(RelayBase(), RelayBase()))
@@ -278,22 +284,16 @@ class TestRelay(TestConnections):
 
     def test_value_flow_with_relay(self):
         src = Output(value=42)
-        dst = Input(value=-1)
+        dst = Input()
         relay = Relay()
-
-        self.assertEqual(src.value, 42)
-        self.assertEqual(dst.value, -1)
-
         src.connect(relay)
         relay.connect(dst)
 
-        self.assertEqual(src.value, 42)
-        self.assertEqual(dst.value, 42)
+        self.assertTrue(42 == src.value == relay.value == dst.value)
 
         src.set_value(666)
 
-        self.assertEqual(src.value, 666)
-        self.assertEqual(dst.value, 666)
+        self.assertTrue(666 == src.value == relay.value == dst.value)
 
     def test_message_flow_with_relay(self):
         src = MessageOutput()
@@ -313,9 +313,7 @@ class TestRelay(TestConnections):
             MessageInput(),
             MessageInput(),
         ]
-
         src.connect(relay)
-
         for dst in destinatons:
             relay.connect(dst)
 
