@@ -30,9 +30,9 @@ from klang.music.tunings import EQUAL_TEMPERAMENT
 
 
 __all__ = [
-    'CRUDE_RESAMPLER_MODES', 'VALID_MODES', 'sum_to_mono', 'number_of_channels',
-    'number_of_channels', 'CrudeResampler', 'Sample', 'AudioFile', 'Sampler',
-    'SampleVoice'
+    'AudioFile', 'CRUDE_RESAMPLER_MODES', 'CrudeResampler', 'Sample',
+    'SampleVoice', 'Sampler', 'VALID_MODES', 'number_of_channels',
+    'sum_to_mono',
 ]
 
 
@@ -40,7 +40,7 @@ SAMPLERATE_CONVERTER_TYPES = set(samplerate.converters.ConverterType.__members__
 """set: All possible converter types of samplerate library."""
 
 CRUDE_RESAMPLER_MODES = {'crude', 'very_crude'}
-"""set: All possible mode for CrudeResampler."""
+"""set: All possible modes for CrudeResampler."""
 
 VALID_MODES = SAMPLERATE_CONVERTER_TYPES.union(CRUDE_RESAMPLER_MODES)
 """set: All possible resampler modes."""

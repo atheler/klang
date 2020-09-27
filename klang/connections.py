@@ -1,13 +1,21 @@
 """Connections.
 
-Connectable input and output objects.
+Connectable outputs and inputs objects. In general it is always possible to
+connect one output to multiple inputs but not the other way round.
 
-Two types of connections:
-  - Value: Propagate some values from output to inputs. Gets updated every tick.
+A connection is a (output, input) tuple.
+
+There are two types of connections:
+  - Value: Propagate some value through the connections in very tick
+    (corresponds to continuous data stream).
   - Message: Send discrete messages from an output to all connected inputs.
 
-Relays can be used for block composites and they connect with inputs and
-outputs. E.g. Output -> Relay -> Input.
+Relays can be used to pass on data from an output to inputs. They are used as
+the gateway between the outside and the inside world when building composite
+blocks. They work as an output and an input at the same time. E.g. Output ->
+Relay -> Input (note that there can be multiple relays between an output and an
+input).
+
 """
 import collections
 import itertools
@@ -265,10 +273,8 @@ class _ValueContainer:
 
 class Input(InputBase, _ValueContainer):
 
-    """Value input.
-
-    Will fetch value from output when connected to one. Also has its own _value
-    attribute for developing purposes.
+    """Value input. Will fetch value from connected output. Also has its own
+    _value attribute as a fallback when not connected.
     """
 
     def __init__(self, owner=None, value=0.):
@@ -298,7 +304,7 @@ class Input(InputBase, _ValueContainer):
 
 class Output(OutputBase, _ValueContainer):
 
-    """Value output."""
+    """Value output. Will propagate its value to connected inputs."""
 
     def __init__(self, owner=None, value=0.):
         super().__init__(owner)
@@ -307,9 +313,8 @@ class Output(OutputBase, _ValueContainer):
 
 class Relay(RelayBase, Input):
 
-    """Value relay.
-
-    Will fetch value from connected outputs.
+    """Value relay. Passes value from connected output to all connected
+    inputs.
     """
 
 
@@ -344,7 +349,9 @@ class _MessageQueue:
 
 class MessageInput(InputBase, _MessageQueue):
 
-    """Message input. Has message queue."""
+    """Message input. Has its own message queue where it receives from a
+    connected MessageOutput.
+    """
 
     def __init__(self, owner=None):
         super().__init__(owner)
@@ -353,7 +360,7 @@ class MessageInput(InputBase, _MessageQueue):
 
 class MessageOutput(OutputBase):
 
-    """Message output. Sends messages to connected message inputs."""
+    """Message output. Sends messages to all connected message inputs."""
 
     def send(self, message):
         """Send message to all connected message inputs."""
@@ -363,6 +370,8 @@ class MessageOutput(OutputBase):
 
 class MessageRelay(RelayBase, MessageOutput):
 
-    """Message relay. Pass on all messages to connected inputs."""
+    """Message relay. Passes on all messages from a connected MessageOutput to
+    all connected MessageInputs.
+    """
 
     push = MessageOutput.send

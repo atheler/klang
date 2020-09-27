@@ -1,17 +1,18 @@
-import fractions
+"""Klang config module. Some global Klang parameters."""
+from fractions import Fraction
 
 
-BUFFER_SIZE = 256
-"""int: Internal buffer size."""
+BUFFER_SIZE: int = 256
+"""Internal buffer size."""
 
-KAMMERTON = 440.
-"""float: Concert pitch frequency."""
+KAMMERTON: float = 440.
+"""Concert pitch frequency."""
 
-SAMPLING_RATE = 44100
-"""int: WAV sampling rate."""
+SAMPLING_RATE: int = 44100
+"""Audio sampling rate."""
 
-TEMPO = 120.
-"""float: Tempo in beats per minute."""
+TEMPO: float = 120.
+"""Tempo in beats per minute."""
 
-METRE = fractions.Fraction(4, 4, _normalize=False)
-"""Fraction: Time signature."""
+METRE: Fraction = Fraction(4, 4, _normalize=False)
+"""Time signature."""

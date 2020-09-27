@@ -78,4 +78,5 @@ class Composite(Block):
         self.execOrder = execOrder
 
     def update(self):
+        """Execute internal composite blocks."""
         execute(self.execOrder)

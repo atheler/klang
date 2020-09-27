@@ -1,6 +1,7 @@
 """All things graph related.
 
-Graph helper functions. Graph is defined as an sparse adjacency matrix and a node is an index.
+Graph helper functions. Graph is defined as an sparse adjacency matrix and a
+node is an index.
 """
 import collections
 
@@ -14,10 +15,10 @@ def graph_matrix(edges, directed=True, order=-1):
         edges (list): List of edges (tuples).
 
     Kwargs:
-        directed (bool): If directed graph. Undirected otherwise.
-        order (int): Predefined graph order (number of nodes). Has to be bigger
-            than the maximum node index in edges. If < 0 will be determined from
-            unique nodes in edges.
+        directed (bool): If directed graph. Undirected otherwise.  order (int):
+            Predefined graph order (number of nodes). Has to be bigger than the
+            maximum node index in edges. If < 0 will be determined from unique
+            nodes in edges.
 
     Returns:
         array: Dense graph matrix.

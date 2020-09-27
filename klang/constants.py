@@ -2,38 +2,38 @@
 import math
 
 
-PI = math.pi
-"""float: Half the circle constant."""
+PI: float = math.pi
+"""Half the circle constant."""
 
-TAU = 2. * math.pi
-"""float: Circle constant."""
+TAU: float = 2. * math.pi
+"""Circle constant."""
 
-INF = float('inf')
-"""float: To infinity and beyond."""
+INF: float = float('inf')
+"""To infinity and beyond."""
 
-DODE = 12
-"""int: Greek twelve."""
+DODE: int = 12
+"""Greek twelve."""
 
-REF_OCTAVE = 5
-"""int: Main octave number (MIDI notes 60-71)."""
+REF_OCTAVE: int = 5
+"""Main octave number (MIDI notes 60-71)."""
 
-SEMITONES_PER_OCTAVE = 12
-"""int: Number of semitones in an octave."""
+SEMITONES_PER_OCTAVE: int = 12
+"""Number of semitones in an octave."""
 
-MONO = 1
-"""int: Mono."""
+MONO: int = 1
+"""Mono."""
 
-STEREO = 2
-"""int: Stereo."""
+STEREO: int = 2
+"""Stereo."""
 
-ONE_D = 1
-"""int: TODO."""
+ONE_D: int = 1
+"""It is one dimensional. What is there more to say."""
 
-TWO_D = 2
-"""int: TODO."""
+TWO_D: int = 2
+"""Two dimensional."""
 
-CENT_PER_OCTAVE = 1200
-"""int: Cents per octave."""
+CENT_PER_OCTAVE: int = 1200
+"""Cents per octave."""
 
-SCALAR = 1
-"""int: Scalar shape."""
+SCALAR: int = 1
+"""Scalar array shape."""

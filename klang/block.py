@@ -194,7 +194,7 @@ class Block:
     def input(self):
         """First input."""
         if not self.inputs:
-            raise AttributeError('Block has no inputs!')
+            raise AttributeError('%s has no inputs!' % self)
 
         return self.inputs[0]
 
@@ -202,7 +202,7 @@ class Block:
     def output(self):
         """First output."""
         if not self.outputs:
-            raise AttributeError('Block has no outputs!')
+            raise AttributeError('%s has no outputs!' % self)
 
         return self.outputs[0]
 

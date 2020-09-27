@@ -41,12 +41,6 @@ STEREO_SILENCE = get_silence((2, BUFFER_SIZE))
 T = get_time(BUFFER_SIZE, DT)
 """array: Buffer time points."""
 
-T1 = get_time(BUFFER_SIZE + 1, DT)
-"""array: Buffer time points plus one (continuation)."""
-
-ONES = np.ones(BUFFER_SIZE)
-"""array: Nothing but ones."""
-
 
 # Make all numpy ndarray's in this module read-only.
 # TODO(atheler): Deprecated. To be deleted.
