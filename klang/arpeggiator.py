@@ -1,319 +1,190 @@
-"""Arpeggiator and helpers.
+"""Arpeggio and Arpeggiator.
 
 An arpeggio is playing individual chord notes sequentially
-(https://en.wikipedia.org/wiki/Arpeggio). This can happen in different orders
-and dictates the state dimensions. One dimensional for simpler patterns, two
-dimensional for the bit more complex (see initial_arpeggio_state(...)).
+(https://en.wikipedia.org/wiki/Arpeggio). This can happen in different orders.
 """
+from typing import List
 import bisect
-import functools
+import collections
+import itertools
+import math
 import random
 
 from klang.audio.oscillators import Phasor
-from klang.sequencer import pizza_slice_number, PizzaSlicer
-from klang.block import Block
 from klang.composite import Composite
-from klang.connections import MessageInput, MessageRelay, MessageOutput
-from klang.note_effects import NoteLengthener
+from klang.connections import MessageInput, MessageOutput
+from klang.messages import Note
+from klang.music.tempo import compute_duration
 
 
-ARPEGGIO_ORDERS = [
-    'up',
-    'down',
-    'upDown',
-    'downUp',
-    'random',
-    'alternating',
-]
-"""list: All supported arpeggio orders."""
+VALID_ORDERS = ['up', 'down', 'upDown', 'downUp', 'alternating', 'random']
+"""Possible arpeggio orders."""
 
 
-def initial_arpeggio_state(length, order):
-    """Get initial arpeggiator state. Depending on the order we need a one ore
-    two dimensional state (e.g. simply up or alternating vs. upDown).
+def validate_order(order):
+    """Validate arpeggio order."""
+    if order not in VALID_ORDERS:
+        possibilities = ', '.join(map(repr, VALID_ORDERS))
+        raise ValueError(f'Invalid order {order!r}! Either: {possibilities}.')
 
-    Args:
-        length (int): Number of notes in arpeggio.
-        order (str): Arpeggio note order.
 
-    Returns:
-        list: Initial arpeggio state vector.
+def interleave(first, second):
+    """Interleave two lists with each other. If they are not of equal length
+    extend with the excess elements of the longer lists.
     """
-    first = 0
-    last = length - 1
+    commonLength = min(len(first), len(second))
+    ret = list(itertools.chain(*zip(first[:commonLength], second[:commonLength])))
+    ret.extend(first[commonLength:])
+    ret.extend(second[commonLength:])
+    return ret
+
+
+def arpeggio_index_permutation(order, length):
+    """Index permutations for different arpeggio orders and lengths."""
+    validate_order(order)
+    if length == 1:
+        return [0]
+
+    upwards = list(range(length))
+    downwards = list(reversed(upwards))
     if order == 'up':
-        return [first]
+        return upwards
 
     if order == 'down':
-        return [last]
+        return downwards
 
-    up = 1
-    down = -1
     if order == 'upDown':
-        return [first, up]
+        return upwards[:-1] + downwards[:-1]
 
     if order == 'downUp':
-        return [last, down]
-
-    if order == 'random':
-        return [random.randint(first, last)]
+        return downwards[:-1] + upwards[:-1]
 
     if order == 'alternating':
-        return [first]
+        # Alternating note order like:
+        # 'abc01' -> ['a', '0', 'b', '1', 'c']
+        halfway = int(math.ceil(.5 * length))
+        lower = upwards[:halfway]
+        upper = upwards[halfway:]
+        return interleave(lower, list(reversed(upper)))
 
-    raise ValueError('Unknown arpeggio note order %r!' % order)
-
-
-def alternate(n, length):
-    """Indices of alternating note order. Index -> number.
-
-    Illustration for 4 notes:
-
-      Notes
-        ^
-        |     B
-        |             G
-        |         E
-        | C
-        ----------------> Time
-
-    Usage:
-        >>> for i in range(10):
-        ...     print(alternate(i, length=5))
-        0
-        4
-        1
-        3
-        2
-        0
-        4
-        1
-        3
-        2
-    """
-    n = n % length
-    if n % 2 == 0:
-        return (n // 2) % length
-    else:
-        return (-n // 2) % length
-
-
-@functools.lru_cache()
-def alternating_jump_sequence(length):
-    """Get jump index array for alternating pattern."""
-    table = length * [0]
-    for i in range(length):
-        src = alternate(i, length)
-        dst = alternate(i + 1, length)
-        table[src] = dst
-
-    return table
-
-    """
-    # Same function. More cryptic.
-    half = length // 2
-    if length % 2 == 0:
-        half -= 1
-
-    left = list(range(length-1, half, -1))
-    right = list(range(half, 0, -1))
-    return left + [0] + right
-    """
-
-
-def step_arpeggio_state(state, length, order):
-    """Calculate next arpeggiator state.
-
-    Args:
-        state (list): Arpeggio state.
-        length (int): Number of notes.
-        order (str): Arpeggio order.
-
-    Returns:
-        list: Arpeggio state vector.
-    """
     if order == 'random':
-        return initial_arpeggio_state(length, order='random')
-
-    position = state[0]
-    if order == 'up':
-        return [(position + 1) % length]
-
-    if order == 'down':
-        return [(position - 1) % length]
-
-    if order == 'alternating':
-        jump = alternating_jump_sequence(length)
-        return [jump[position % length]]
-
-    first = 0
-    last = length - 1
-    velocity = state[1]
-    if order in {'upDown', 'downUp'}:
-        if (
-            (position == last and velocity > 0)  # Reached top
-            or (position == first and velocity < 0)  # Reached bottom
-        ):
-            velocity *= -1  # Turn around
-        return [(position + velocity) % length, velocity]
-
-    raise ValueError('Unknown arpeggio note order %r!' % order)
+        permut = list(range(length))
+        random.shuffle(permut)
+        return permut
 
 
-class Arpeggio(Block):
+class Arpeggio(collections.abc.Sequence):
 
-    """Arpeggio container. Can receive new notes in trigger the next arpeggio
-    note when triggered.
+    """Note arpeggio container. Holds multiple notes and cycles through them for
+    different orderings.
 
     Attributes:
-        order (str): Arpeggio order.
-        notes (list): Current note in the arpeggio.
-        state (list): Current arpeggio state.
+        order: Arpeggio note order.
+        notes: Current arpeggio notes.
+        permutation: Current to note index mapping.
     """
 
-    def __init__(self, order='up', initialNotes=[]):
-        if order not in ARPEGGIO_ORDERS:
-            raise ValueError('Invalid order %r!' % order)
-
-        super().__init__()
-        self.inputs = _, self.trigger = [
-            MessageInput(owner=self),
-            MessageInput(owner=self),
-        ]
-        self.outputs = [MessageOutput(owner=self)]
-        self.order = order
-        self.notes = []
-        self.state = initial_arpeggio_state(length=len(self.notes), order=order)
-        for note in initialNotes:
-            self.add_note(note)
-
-    def add_note(self, newNote):
-        """Add a new note to the arpeggio. Will be in-sorted accordingly. Should
-        be a note-on (but we do not assert).
+    def __init__(self, order: str = 'up', initialNotes: List[Note] = None):
+        """Kwargs:
+            order: Arpeggio play order.
+            initialNotes: Initial music notes.
         """
-        # Check if we already have pitch registered
-        for note in self.notes:
-            if note.pitch == newNote.pitch:
-                return
+        validate_order(order)
+        self.order = order
+        self.notes: List[Note] = []
+        self.permutation: List[int] = []
+        self.current = 0
+        if initialNotes:
+            for note in initialNotes:
+                self.add_note(note)
 
-        bisect.insort(self.notes, newNote)
-
-    def remove_note(self, note):
-        """Remove / deactivate a note in the arpeggio."""
-        for i, oldNote in enumerate(self.notes):
-            if oldNote.pitch == note.pitch:
-                break
-        else:  # If no break
-            return
-
-        self.notes.remove(oldNote)
-
-        # Roll back arpeggiator state if necessary
-        if self.state[0] > i:
-            self.state[0] -= 1
-
-        self.state[0] %= len(self.notes)
-
-    def process_note(self, note):
-        """Process single note."""
-        if note.on:
-            self.add_note(note)
+    def wrap_current(self):
+        """Wrap current index around corresponding the active permutation."""
+        length = len(self.permutation)
+        if length == 0:
+            self.current = 0
         else:
-            self.remove_note(note)
+            self.current %= length
 
-    def process_notes(self, *notes):
-        """Process multiple notes at once."""
-        for note in notes:
-            self.process_note(note)
+    def update_state(self):
+        """Update internal arpeggio state."""
+        permut = arpeggio_index_permutation(self.order, len(self))
+        self.permutation = permut
+        self.wrap_current()
 
-    def update(self):
-        for note in self.input.receive():
-            self.process_note(note)
+    def add_note(self, note: Note):
+        """Add new note to arpeggio."""
+        if note not in self:
+            bisect.insort(self.notes, note)
+            self.update_state()
 
-        for _ in self.trigger.receive():
-            arpNote = next(self)
-            if arpNote:
-                self.output.send(arpNote)
+    def remove_note(self, note: Note):
+        """Remove note from arpeggio."""
+        for n in self:
+            if n.pitch == note.pitch:
+                self.notes.remove(n)
+                self.update_state()
+                break
+        else:
+            raise ValueError('No note with pitch %d in Arpeggio' % note.pitch)
+
+    def __getitem__(self, index):
+        return self.notes[index]
+
+    def __len__(self):
+        return len(self.notes)
+
+    def __contains__(self, note):
+        return any(note.pitch == n.pitch for n in self.notes)
 
     def __next__(self):
-        """Get next note to play from arpeggiator."""
-        if not self.notes:
-            return
+        """Return the next arpeggio note."""
+        if not self:
+            raise StopIteration
 
-        currentNote = self.notes[self.state[0]]
-        self.state = step_arpeggio_state(
-            self.state,
-            length=len(self.notes),
-            order=self.order
-        )
-        return currentNote
+        #if self.order == 'random':
+        #    return random.choice(self.notes)
 
-    def __str__(self):
-        return '%s(%d notes)' % (type(self).__name__, len(self.notes))
-
-
-class Pulsar(Block):
-
-    """Pulsar / clock block.
-
-    Outputs discrete trigger messages for each step.
-    """
-
-    def __init__(self, frequency, nSteps, initialPhase=0.):
-        super().__init__()
-        self.nSteps = nSteps
-        self.currentNr = -1
-        self.outputs = [MessageOutput(owner=self)]
-        self.phasor = Phasor(frequency, initialPhase)
-
-    def increment(self):
-        """Go to next step."""
-        self.currentNr = (self.currentNr + 1) % self.nSteps
-
-    def update(self):
-        self.phasor.update()
-        phase = self.phasor.output.value
-        nr = pizza_slice_number(phase, self.nSteps)
-        for _ in range(nr - self.currentNr):
-            self.increment()
-            self.output.send(self.currentNr)
+        idx = self.permutation[self.current]
+        self.current += 1
+        self.wrap_current()
+        return self[idx]
 
     def __str__(self):
-        return '%s(%.1f Hz, %d steps)' % (
+        return '%s(%s)' % (
             type(self).__name__,
-            self.phasor.frequency,
-            self.nSteps,
+            self.notes,
         )
 
 
 class Arpeggiator(Composite):
-
-    """Note arpeggiator block."""
-
-    def __init__(self, frequency, nSteps, order='up', duration=.1):
-        """Args:
-            frequency (float): Arpeggio frequency.
-            nSteps (int): Number of steps (?)
-
-        Kwargs:
-            order (str): Arpeggio order.
-            duration (float): Note duration.
-        """
+    def __init__(self, interval=.1, *args, **kwargs):
         super().__init__()
-        self.inputs = [MessageRelay(owner=self)]
-        self.outputs = [MessageRelay(owner=self)]
+        interval = compute_duration(interval)
+        self.inputs = [MessageInput(owner=self)]
+        self.outputs = [MessageOutput(owner=self)]
+        self.prevPhase = 0.
+        self.prevNote = None
+        self.phasor = Phasor(1./interval)
+        self.arpeggio = Arpeggio(*args, **kwargs)
 
-        # Init internal blocks
-        phasor = Phasor(frequency)
-        pizzaSlicer = PizzaSlicer(nSteps)
-        self.arpeggio = Arpeggio(order)
-        noteLengthener = NoteLengthener(duration)
+    def update(self):
+        for newNote in self.input.receive():
+            if newNote.on:
+                self.arpeggio.add_note(newNote)
+            elif newNote in self.arpeggio:
+                self.arpeggio.remove_note(newNote)
 
-        # Make connections of internal notes
-        self.input.connect(self.arpeggio.input)
-        self.arpeggio.output.connect(noteLengthener.input)
-        noteLengthener.output.connect(self.output)
-        phasor.output.connect(pizzaSlicer.input)
-        pizzaSlicer.output.connect(self.arpeggio.trigger)
+        self.phasor.update()
+        phase = self.phasor.output.value
+        if phase <= self.prevPhase:
+            if self.prevNote:
+                noteOff = self.prevNote.silence()
+                self.output.send(noteOff)
 
-        self.update_internal_exec_order()
+            if self.arpeggio:
+                note = next(self.arpeggio)
+                self.output.send(note)
+                self.prevNote = note
+
+        self.prevPhase = phase

@@ -29,8 +29,9 @@ def build_synthesizer(attack=.1, decay=.2, sustain=.3, release=.4, wave_func=sin
 
 if __name__ == '__main__':
     # Arp synthesizer
-    arp = Arpeggiator(frequency=.2, nSteps=16, order='alternating')
-    arp.arpeggio.process_notes(Alow, C, E, F, G, A)
+    arp = Arpeggiator(interval=5./16, order='alternating', initialNotes=[
+        Alow, C, E, F, G, A,
+    ])
     synthesizer = build_synthesizer(wave_func=sawtooth)
     lfo = Lfo(frequency=.1, wave_func=triangle, outputRange=(100, 3000))
     fil = Filter(frequency=220.)
