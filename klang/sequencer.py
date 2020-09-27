@@ -16,8 +16,7 @@ from klang.messages import Note
 from klang.music.note_values import QUARTER_NOTE, SIXTEENTH_NOTE
 from klang.music.rhythm import MicroRhyhtm
 from klang.music.tempo import tempo_2_period
-from klang.note_effects import NoteLengthener
-
+from klang.note_effects import NoteLengthener, MessageMixer
 
 __all__ = [
     'random_pattern', 'pizza_slice_number', 'PizzaSlicer', 'PatternLookup',
@@ -142,10 +141,10 @@ class PatternLookup(Block):
     def update(self):
         for nr in self.input.receive():
             # TODO: Support for chords
-            pitch = self.pattern[nr]
-            if pitch:
-                note = Note(pitch=pitch, velocity=1.)
-                self.output.send(note)
+            for pitch in atleast_1d(self.pattern[nr]):
+                if pitch:
+                    note = Note(pitch=pitch, velocity=1.)
+                    self.output.send(note)
 
     def __str__(self):
         return '%s(%s)' % (type(self).__name__, self.pattern)
@@ -240,23 +239,44 @@ class Sequence(Composite):
 
 class Sequencer(Composite):
 
-    """Pattern sequencer."""
+    """Pattern sequencer.
 
-    def __init__(self, pattern: Pattern, *args, **kwargs):
-        """See Sequence (not Sequencer) for help."""
+    Attributes:
+        pattern: Playing sequence pattern.
+    """
+
+    def __init__(self, pattern: Pattern, *args, splitOutputs: bool = True, **kwargs):
+        """Kwargs:
+            splitOutputs: Route every individual sequence to a separate output.
+
+        Rest of arguments get passed on to Sequence (not Sequencer) constructor.
+        See help(Sequence) for help.
+        """
         super().__init__()
         self.pattern = atleast_2d(pattern)
+        self.splitOutputs = splitOutputs
         self.sequences: List[Sequence] = []
-        for row in self.pattern:
-            self.add_channel(row, *args, **kwargs)
+        if not self.splitOutputs:
+            self.msgMixer = MessageMixer(nInputs=0)
+            self.outputs = [MessageRelay(owner=self)]
+            self.msgMixer | self.output
 
-    def add_channel(self, *args, **kwargs):
+        for row in self.pattern:
+            self.add_new_channel(row, *args, **kwargs)
+
+    def add_new_channel(self, *args, **kwargs):
         """Add a new sequence channel."""
         newSeq = Sequence(self, *args, **kwargs)
         self.sequences.append(newSeq)
-        relay = MessageRelay(owner=self)
-        newSeq.output.connect(relay)
-        self.outputs.append(relay)
+        if self.splitOutputs:
+            relay = MessageRelay(owner=self)
+            self.outputs.append(relay)
+            newSeq | relay
+
+        else:
+            self.msgMixer.add_new_channel()
+            newSeq | self.msgMixer.inputs[-1]
+
         self.update_internal_exec_order()
 
     @property

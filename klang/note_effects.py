@@ -48,3 +48,47 @@ class NoteLengthener(Block):
                 entry = (now + self.duration, note)
                 self.activeNotes.append(entry)
                 self.output.send(note)
+
+
+class MaxNotes(Block):
+
+    """Manages an maximum number of active notes. Old notes will be deactivated
+    by sending out note-off messages.
+    """
+
+    def __init__(self, nNotes=1):
+        super().__init__()
+        self.inputs = [MessageInput(owner=self)]
+        self.outputs = [MessageOutput(owner=self)]
+        self.nNotes = nNotes
+        self.activeNotes = collections.deque([], maxlen=nNotes + 1)
+
+    def update(self):
+        for newNote in self.input.receive():
+            if newNote.on:
+                self.activeNotes.append(newNote)
+                while len(self.activeNotes) > self.nNotes:
+                    oldNote = self.activeNotes.popleft()
+                    self.output.send(oldNote.silence())
+
+                self.output.send(newNote)
+
+
+class MessageMixer(Block):
+
+    """Combines received messages and sends them to output."""
+
+    def __init__(self, nInputs=2):
+        super().__init__()
+        self.outputs = [MessageOutput(owner=self)]
+        for _ in range(nInputs):
+            self.add_new_channel()
+
+    def add_new_channel(self):
+        """Add a new message input."""
+        self.inputs.append(MessageInput(owner=self))
+
+    def update(self):
+        for input_ in self.inputs:
+            for msg in input_.receive():
+                self.output.send(msg)
