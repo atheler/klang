@@ -72,7 +72,7 @@ class Composite(Block):
         with temporarily_unpatch(self):
             execOrder = determine_execution_order(blocks)
 
-        if self in execOrder:
+        while self in execOrder:
             execOrder.remove(self)
 
         self.execOrder = execOrder
