@@ -141,18 +141,9 @@ class TestArpeggio(unittest.TestCase):
         self.assertEqual(next(arp), C)
 
 
-class TestableNoteLengthener(NoteLengthener):
-    def __init__(self, duration=2):
-        super().__init__(duration)
-        self.currentTime = 0.
-
-    def clock(self):
-        return self.currentTime
-
-
 class TestNoteLengthener(unittest.TestCase):
     def test_scenario(self):
-        nl = TestableNoteLengthener(duration=2)
+        nl = NoteLengthener(duration=2)
         recv = MessageInput()
         nl.output.connect(recv)
         nl.input.push(C)  # Add first note at time 0.
@@ -162,7 +153,7 @@ class TestNoteLengthener(unittest.TestCase):
             (2, C),
         ])
 
-        nl.currentTime = 1
+        nl.set_current_time(1.)
         nl.input.push(E)  # Add second note at time 1.
         nl.update()
 
@@ -171,7 +162,7 @@ class TestNoteLengthener(unittest.TestCase):
             (3, E),
         ])
 
-        nl.currentTime = 2
+        nl.set_current_time(2.)
         nl.update()
 
         self.assertEqual(list(nl.activeNotes), [

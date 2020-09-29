@@ -1,12 +1,14 @@
 """Main entry point function."""
-import time
-import logging
 import collections
+import logging
+import math
+import time
 
 from klang.audio.helpers import INTERVAL
 # pylint: disable=unused-import
 from klang.audio.klanggeber import Dac, Adc
 from klang.audio.klanggeber import look_for_audio_blocks, run_audio_engine
+from klang.clock import ClockMixin
 from klang.composite import Composite
 from klang.execution import determine_execution_order
 
@@ -46,8 +48,23 @@ def validate_global_execution_order(execOrder, logger):
         logger.warning(fmt, duplicates)
 
 
-def run_klang(*blocks, filepath=''):
-    """Run klang block network."""
+def sleep_until_next_cycle():
+    """Sleep until next cycle and return timestamp."""
+    now = time.perf_counter()
+    then = math.ceil(now / INTERVAL) * INTERVAL
+    time.sleep(max(0, then - now))
+    return then
+
+
+def run_klang(*blocks, **kwargs):
+    """Run klang block network.
+
+    Args:
+        blocks: Klang blocks to run.
+
+    Kwargs:
+        See help(klang.audio.run_audio_engine) for options.
+    """
     if not blocks:
         raise ValueError('No blocks to run specified!')
 
@@ -56,19 +73,18 @@ def run_klang(*blocks, filepath=''):
     execOrder = determine_execution_order(blocks)
     validate_global_execution_order(execOrder, logger)
 
-    def callback():
+    def execute_all_blocks():
         for block in execOrder:
             block.update()
 
     # Do we have audio?
     adc, dac = look_for_audio_blocks(execOrder)
     if adc.nChannels > 0 or dac.nChannels > 0:
-        return run_audio_engine(adc, dac, callback, filepath)
+        return run_audio_engine(adc, dac, execute_all_blocks, **kwargs)
 
     logger.warning('Did not find any audio activity')
     logger.info('Starting non-audio main loop')
     while True:
-        start = time.time()
-        callback()
-        end = time.time()
-        time.sleep(max(0, INTERVAL - (end - start)))
+        now = sleep_until_next_cycle()
+        ClockMixin.set_current_time(now)
+        execute_all_blocks()

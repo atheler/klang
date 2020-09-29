@@ -1,21 +1,18 @@
 """All kind of note message effects."""
 from typing import Deque, Tuple, Generator
 import collections
-import time
 
-from klang.messages import Note
 from klang.block import Block
+from klang.clock import ClockMixin
 from klang.connections import MessageInput, MessageOutput
+from klang.messages import Note
 
 
-class NoteLengthener(Block):
+class NoteLengthener(Block, ClockMixin):
 
     """Convert note-ons to actual notes (note-on followed by a note-off later on
     in the future).
     """
-
-    clock = time.time
-    """callable: Clock giver."""
 
     def __init__(self, duration: float):
         """Args:
