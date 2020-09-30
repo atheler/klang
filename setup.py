@@ -43,7 +43,7 @@ if not library_exists('portaudio.h'):
     raise SystemExit(msg)
 
 
-with open('README.md', 'r') as fh:
+with open('README.rst', 'r') as fh:
     LONG_DESCRIPTION = fh.read()
 
 
