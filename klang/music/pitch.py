@@ -3,13 +3,12 @@ import re
 
 import numpy as np
 
-from klang.config import KAMMERTON
 from klang.constants import DODE
 
 
 __all__ = [
-    'PITCH_CLASSES', 'PITCH_NAMES', 'CIRCLE_OF_FIFTHS', 'frequency_2_pitch',
-    'pitch_2_frequency', 'note_name_2_pitch', 'pitch_2_note_name',
+    'PITCH_CLASSES', 'PITCH_NAMES', 'CIRCLE_OF_FIFTHS', 'note_name_2_pitch',
+    'pitch_2_note_name',
 ]
 
 PITCH_CLASSES = np.arange(DODE)
@@ -21,7 +20,7 @@ PITCH_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 CIRCLE_OF_FIFTHS = (7 * PITCH_CLASSES) % DODE
 """array: Pitches of the circle of fifths."""
 
-SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([CDEFGAB])([#b]*)([-0123456789]+)')
+SCIENTIFIC_PITCH_NOTATION_RE = re.compile(r'([CDEFGAB])([#b]{0,2})([-0123456789]+)')
 """re.pattern: Regex pattern for scientific note name."""
 
 ACCIDENTAL_SHIFTS = {
@@ -34,52 +33,33 @@ ACCIDENTAL_SHIFTS = {
 """dict: Accidental string (str) -> Pitch modifier value (int)."""
 
 
-def frequency_2_pitch(frequency: float, kammerton: float = KAMMERTON) -> int:
-    """Frequency to MIDI note number (equal temperament)."""
-    # TODO(atheler): To be deprecated?
-    return 69 + 12 * np.log2(frequency / kammerton)
-
-
-def pitch_2_frequency(noteNumber: int, kammerton: float = KAMMERTON) -> float:
-    """MIDI note number to frequency (equal temperament)."""
-    # TODO(atheler): To be deprecated?
-    return (2 ** ((noteNumber - 69) / 12)) * kammerton
-
-
-def note_name_2_pitch(note: str, midi: bool = False) -> int:  # TODO: Rename note arg -> noteName? Or simply name?
-    """Convert note name to pitch number. Uses scientific pitch notation by
-    default (one octave difference compared to MIDI).
+def note_name_2_pitch(noteName: str) -> int:
+    """Convert note name to pitch number (scientific pitch notation).
 
     Args:
-        note (str): Note name.
-
-    Kwargs:
-        midi (bool): Use scientific (false) or MIDI format (true).
+        noteName: Scietific pitch notation.
 
     Returns:
-        int: Pitch number.
+        Pitch number.
 
     Usage:
         >>> note_name_2_pitch('G##4')
         69
-
-        >>> note_name_2_pitch('A4') == note_name_2_pitch('A5', midi=True)
-        True
     """
-    note = note.title()
-    match = SCIENTIFIC_PITCH_NOTATION_RE.match(note)
-    if match is None:
-        raise ValueError('Can not parse note %r' % note)
+    match = SCIENTIFIC_PITCH_NOTATION_RE.match(noteName.title())
+    if not match:
+        raise ValueError('Can not parse note %r' % noteName)
 
     pitchChar, shiftStr, octaveStr = match.groups()
     pitch = PITCH_NAMES.index(pitchChar)
     shift = ACCIDENTAL_SHIFTS[shiftStr]
-    octave = int(octaveStr) + 1 - int(midi)
+    octave = int(octaveStr) + 1
     return pitch + shift + octave * DODE
 
 
-def pitch_2_note_name(pitch: int, midi: bool = False) -> str:
+def pitch_2_note_name(pitch: int) -> str:
     """Convert pitch number(s) to note name(s)."""
+    # TODO: Support for numpy arrays? Do we need this? Via chords?
     """
     octave, note = np.divmod(pitch, DODE)
 
@@ -90,5 +70,5 @@ def pitch_2_note_name(pitch: int, midi: bool = False) -> str:
     ).squeeze()
     """
     octave, note = divmod(pitch, DODE)
-    noteName = PITCH_NAMES[note] + str(octave - 1 + int(midi))
+    noteName = PITCH_NAMES[note] + str(octave - 1)
     return noteName.upper()
