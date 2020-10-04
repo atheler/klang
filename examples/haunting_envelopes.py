@@ -72,23 +72,24 @@ def get_voice_params(voiceNr):
     return duration, wave_func, frequency, velocity, panLevel
 
 
+mixer = StereoMixer()
+for voiceNr in range(N_VOICES):
+    duration, wave_func, frequency, velocity, panLevel = get_voice_params(voiceNr)
+
+    # Setup voice
+    osc = Oscillator(wave_func=wave_func)  # frequency will be set by note
+    attack = RATIO * duration
+    release = (1 - RATIO) * duration
+    env = AR(attack, release, loop=True)
+    voice = Voice(osc, env)
+    mixer += voice
+    mixer.pannings[-1] = panLevel
+
+    # Activate voice (dummy pitch number)
+    note = Note(0, velocity, frequency=frequency)
+    voice.input.push(note)
+
+dac = mixer | Dac(nChannels=STEREO)
+
 if __name__ == '__main__':
-    mixer = StereoMixer()
-    for voiceNr in range(N_VOICES):
-        duration, wave_func, frequency, velocity, panLevel = get_voice_params(voiceNr)
-
-        # Setup voice
-        osc = Oscillator(wave_func=wave_func)  # frequency will be set by note
-        attack = RATIO * duration
-        release = (1 - RATIO) * duration
-        env = AR(attack, release, loop=True)
-        voice = Voice(osc, env)
-        mixer += voice
-        mixer.pannings[-1] = panLevel
-
-        # Activate voice (dummy pitch number)
-        note = Note(0, velocity, frequency=frequency)
-        print(note)
-        voice.input.push(note)
-
-    run_klang(mixer | Dac(nChannels=STEREO))
+    run_klang(dac)

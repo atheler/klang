@@ -31,4 +31,7 @@ lower = Sequencer([
     53, 60, 55, 60, 57, 60, 62, 60,
 ], TEMPO, grid=DOTTED_EIGHT_NOTE, relNoteLength=.25) | create_synthesizer()
 mixer = (base + upper + lower)
-run_klang(mixer | Reverb(decay=3., dryWet=.7) | Dac())
+dac = mixer | Reverb(decay=3., dryWet=.7) | Dac()
+
+if __name__ == '__main__':
+    run_klang(dac)

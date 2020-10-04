@@ -27,28 +27,29 @@ def build_synthesizer(attack=.1, decay=.2, sustain=.3, release=.4, wave_func=sin
     return MonophonicSynthesizer(voice)
 
 
+# Arp synthesizer
+arp = Arpeggiator(interval=5./16, order='alternating', initialNotes=[
+    Alow, C, E, F, G, A,
+])
+synthesizer = build_synthesizer(wave_func=sawtooth)
+lfo = Lfo(frequency=.1, wave_func=triangle, outputRange=(100, 3000))
+fil = Filter(frequency=220.)
+delay = Delay(time=0.76, feedback=.9)
+
+# Bass synthesizer
+sequencer = Sequencer(
+    pattern=[[38, 41, 0, 0, 36, 34, 0, 0]],
+    tempo=120,
+    relNoteLength=1.,
+    grid=WHOLE_NOTE,
+)
+bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
+
+# Make block connections
+lfo | fil.frequency
+mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
+mixer.gains = [1., .3]
+dac = mixer | Dac()
+
 if __name__ == '__main__':
-    # Arp synthesizer
-    arp = Arpeggiator(interval=5./16, order='alternating', initialNotes=[
-        Alow, C, E, F, G, A,
-    ])
-    synthesizer = build_synthesizer(wave_func=sawtooth)
-    lfo = Lfo(frequency=.1, wave_func=triangle, outputRange=(100, 3000))
-    fil = Filter(frequency=220.)
-    delay = Delay(time=0.76, feedback=.9)
-
-    # Bass synthesizer
-    sequencer = Sequencer(
-        pattern=[[38, 41, 0, 0, 36, 34, 0, 0]],
-        tempo=120,
-        relNoteLength=1.,
-        grid=WHOLE_NOTE,
-    )
-    bass = build_synthesizer(wave_func=sine, attack=4., sustain=1., release=4.)
-
-    # Make block connections
-    lfo | fil.frequency
-    mixer = (arp | synthesizer | fil | delay) + (sequencer | bass)
-    mixer.gains = [1., .3]
-
-    run_klang(mixer | Dac())
+    run_klang(dac)

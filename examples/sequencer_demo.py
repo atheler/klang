@@ -15,23 +15,24 @@ PATTERN = [
 ]
 
 
+seq = Sequencer(
+    PATTERN,
+    tempo=TEMPO,
+    relNoteLength=.8
+)
+
+# Create synthesizer
+osc = Oscillator()
+env = AR(attack=.1, release=.02)
+voice = Voice(envelope=env, oscillator=osc)
+synthesizer = PolyphonicSynthesizer(voice)
+
+# Setup audio path
+mixer = (seq.outputs[0] | Kick(decay=.8))\
+        + (seq.outputs[1] | HiHat())\
+        + (seq.outputs[2] | synthesizer | Delay(time=.25, feedback=.25))
+mixer.gains = [.7, .1, 1.]
+dac = mixer | Dac()
+
 if __name__ == '__main__':
-    seq = Sequencer(
-        PATTERN,
-        tempo=TEMPO,
-        relNoteLength=.8
-    )
-
-    # Create synthesizer
-    osc = Oscillator()
-    env = AR(attack=.1, release=.02)
-    voice = Voice(envelope=env, oscillator=osc)
-    synthesizer = PolyphonicSynthesizer(voice)
-
-    # Setup audio path
-    mixer = (seq.outputs[0] | Kick(decay=.8))\
-            + (seq.outputs[1] | HiHat())\
-            + (seq.outputs[2] | synthesizer | Delay(time=.25, feedback=.25))
-    mixer.gains = [.7, .1, 1.]
-
-    run_klang(mixer | Dac())
+    run_klang(dac)

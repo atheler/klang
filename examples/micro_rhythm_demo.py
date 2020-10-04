@@ -18,18 +18,19 @@ MICRO_RHYTHM_NOTES = [EIGHT_NOTE, SIXTEENTH_NOTE, SIXTEENTH_NOTE, EIGHT_NOTE]
 RATE = .05
 
 
+# Setup sequencer / synthesizers
+sequencer = Sequencer(PATTERN, tempo=TEMPO)
+mixer = (sequencer.outputs[0] | Kick()) + (sequencer.outputs[1] | HiHat())
+mixer.gains = [1., .2]
+
+# Apply micro rhythm to Hi-Hat sequence. The phrasing of the micro rhythm is
+# controlled by an LFO. apply_micro_rhythm() method has to be called last!
+# So that the LFO is included in the internal execOrder of the Sequencer.
+lfo = Lfo(frequency=RATE, wave_func=triangle)
+mr = MicroRhyhtm(MICRO_RHYTHM_NOTES)
+lfo | mr.phrasing
+sequencer.apply_micro_rhythm(mr, channel=1)
+dac = mixer | Dac()
+
 if __name__ == '__main__':
-    # Setup sequencer / synthesizers
-    sequencer = Sequencer(PATTERN, tempo=TEMPO)
-    mixer = (sequencer.outputs[0] | Kick()) + (sequencer.outputs[1] | HiHat())
-    mixer.gains = [1., .2]
-
-    # Apply micro rhythm to Hi-Hat sequence. The phrasing of the micro rhythm is
-    # controlled by an LFO. apply_micro_rhythm() method has to be called last!
-    # So that the LFO is included in the internal execOrder of the Sequencer.
-    lfo = Lfo(frequency=RATE, wave_func=triangle)
-    mr = MicroRhyhtm(MICRO_RHYTHM_NOTES)
-    lfo | mr.phrasing
-    sequencer.apply_micro_rhythm(mr, channel=1)
-
-    run_klang(mixer | Dac())
+    run_klang(dac)
