@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1] - 2020-10-06
+
+### Added
+- MP3 bounces of examples
+
+### Changed
+- RST readme for pypi
+
 ## [0.2.0] - 2020-09-30
 
 ### Added

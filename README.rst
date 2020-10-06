@@ -9,12 +9,9 @@ Getting Started
 Prerequisites
 ^^^^^^^^^^^^^
 
-We use Python bindings for PortAudio_ and RtMidi_. On Mac they can be installed
-via Homebrew_.
-
-.. _PortAudio: http://www.portaudio.com
-.. _RtMidi: https://www.music.mcgill.ca/~gary/rtmidi/
-.. _Homebrew: https://brew.sh
+We use Python bindings for `PortAudio <http://www.portaudio.com>`_ and `RtMidi
+<https://www.music.mcgill.ca/~gary/rtmidi/>`_. On Mac they can be installed via
+`Homebrew <https://brew.sh>`_.
 
 Installing
 ^^^^^^^^^^
@@ -24,17 +21,13 @@ are some audio C extensions. Python fallbacks exists.
 
 .. code-block:: bash
 
-  python3 setup.py build_ext --inplace
-
-..
+    python3 setup.py build_ext --inplace
 
 For developing you can link your working copy with
 
 .. code-block:: bash
 
-  python3 setup.py develop
-
-..
+    python3 setup.py develop
 
 Running the tests
 -----------------
@@ -44,8 +37,6 @@ Tests can be run via with
 .. code-block:: bash
 
     python3 setup.py test
-
-..
 
 Safety First
 ------------
@@ -82,15 +73,12 @@ send to the sound card.
 
     # Run it
     run_klang(dac)
-..
 
 Audio can be written to disk as a WAV file with the `filepath` argument.
 
 .. code-block:: python
 
-  run_klang(*blocks, filepath='some/filepath.wav')
-
-..
+    run_klang(*blocks, filepath='some/filepath.wav')
 
 Connections
 ^^^^^^^^^^^
@@ -131,8 +119,6 @@ the other way round. As a shorthand there are two overloaded operators:
     # >>> a.output.connect(b.input)
     # ... b.output.connect(c.input)
 
-..
-
 .. code-block:: python
 
     # Mix operator
@@ -146,29 +132,29 @@ the other way round. As a shorthand there are two overloaded operators:
     # ... b.output.connect(mixer.inputs[-1])
     # ... mixer.add_new_channel()
     # ... c.output.connect(mixer.inputs[-1])
-..
 
 Examples
 --------
 
-See the `examples/` directory with a couple example script which illustrate the
+See the ``examples`` directory with a couple example script which illustrate the
 core functionality of Klang. Currently there are:
 
-- `hello_world.py`: 440 Hz sine wave generator
-- `aeolian_arp.py`: More fun with random ever changing arpeggios.
-- `arpeggiator_demo.py`: Two synthesizer patch with an arpeggiator and some sound effects
-- `audio_file_demo.py`: Looped audio file playback (`gong.wav` sample) with audio effects
-- `haunting_envelopes.py`: Multiple oscillators controlled by looping envelopes
-- `micro_rhythm_demo.py`: Kick and Hi-Hat pattern where the latter is phrased with a micro rhythm
-- `reverberation_demo.py`: Ambient loop showcasing the reverb effect.
-- `sequencer_demo.py`: Techno patch with sequencer
-- `synthesizer_demo.py`: This has to be started as root. Computer keyboard playable monophonic synthesizer
-- `tempo_aware_effects.py`: Modulated noise with time synced effects
+- `hello_world.py <https://github.com/atheler/klang/blob/master/examples/hello_world.py>`_: 440 Hz sine wave generator
+- `aeolian_arp.py <https://github.com/atheler/klang/blob/master/examples/aeolian_arp.py>`_: More fun with random ever changing arpeggios.
+- `arpeggiator_demo.py <https://github.com/atheler/klang/blob/master/examples/arpeggiator_demo.py>`_: Two synthesizer patch with an arpeggiator and some sound effects
+- `audio_file_demo.py <https://github.com/atheler/klang/blob/master/examples/audio_file_demo.py>`_: Looped audio file playback (`gong.wav` sample) with audio effects
+- `haunting_envelopes.py <https://github.com/atheler/klang/blob/master/examples/haunting_envelopes.py>`_: Multiple oscillators controlled by looping envelopes
+- `micro_rhythm_demo.py <https://github.com/atheler/klang/blob/master/examples/micro_rhythm_demo.py>`_: Kick and Hi-Hat pattern where the latter is phrased with a micro rhythm
+- `reverberation_demo.py <https://github.com/atheler/klang/blob/master/examples/reverberation_demo.py>`_: Ambient loop showcasing the reverb effect.
+- `sequencer_demo.py <https://github.com/atheler/klang/blob/master/examples/sequencer_demo.py>`_: Techno patch with sequencer
+- `synthesizer_demo.py <https://github.com/atheler/klang/blob/master/examples/synthesizer_demo.py>`_: This has to be started as root. Computer keyboard playable monophonic synthesizer
+- `tempo_aware_effects.py <https://github.com/atheler/klang/blob/master/examples/tempo_aware_effects.py>`_: Modulated noise with time synced effects
 
 Coding Style
 ------------
 
-PEP8 / Google flavored. With the one exception for variable and argument names (`camelCase`). Function and in methods are `snake_case()`.
+PEP8 / Google flavored. With the one exception for variable and argument names
+(`camelCase`). Function and in methods are `snake_case()`.
 
 Author
 ------
@@ -180,7 +166,6 @@ Acknowledgments
 
 Thanks for the support and inputs!
 
-- Nico Neureiter (`GitHub <https://github.com/NicoNeureiter>`_)
-- Andreas Steiner (`Smoke And Mirrors <http://smokeandmirrors.ch>`_)
-- Lawrence Markwalder (`GitHub <https://github.com/lmarkwalder>`_)
-
+- `Nico Neureiter <https://github.com/NicoNeureiter>`_
+- `Andreas Steiner <http://smokeandmirrors.ch>`_
+- `Lawrence Markwalder <https://github.com/lmarkwalder>`_

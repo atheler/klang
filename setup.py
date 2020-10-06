@@ -83,7 +83,7 @@ KWARGS = dict(
     ],
     keywords='synthesis music library',
     long_description=LONG_DESCRIPTION,
-    long_description_content_type='text/markdown',
+    long_description_content_type='text/x-rst',
     name='klang',
     package_data={
         'klang.audio': ['samples/gong.wav'],
