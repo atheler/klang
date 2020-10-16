@@ -3,7 +3,7 @@
 An arpeggio is playing individual chord notes sequentially
 (https://en.wikipedia.org/wiki/Arpeggio). This can happen in different orders.
 """
-from typing import List
+from typing import List, Sequence
 import bisect
 import collections
 import itertools
@@ -28,9 +28,13 @@ def validate_order(order):
         raise ValueError(f'Invalid order {order!r}! Either: {possibilities}.')
 
 
-def interleave(first, second):
+def interleave(first: Sequence, second: Sequence) -> List:
     """Interleave two lists with each other. If they are not of equal length
     extend with the excess elements of the longer lists.
+
+    Usage:
+        >>> interleave('ab', [0, 1, 2])
+        ['a', 0, 'b', 1, 2]
     """
     commonLength = min(len(first), len(second))
     ret = list(itertools.chain(*zip(first[:commonLength], second[:commonLength])))
